@@ -18,7 +18,16 @@ export const authenticate = async (
       return;
     }
 
-    const token = authHeader.substring(7);
+    const token = authHeader.substring(7).trim();
+    
+    if (!token) {
+      res.status(401).json({
+        success: false,
+        message: 'Access token required'
+      });
+      return;
+    }
+
     const payload = AuthService.verifyToken(token);
     
     req.user = {
