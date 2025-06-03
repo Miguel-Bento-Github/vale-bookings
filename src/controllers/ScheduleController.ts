@@ -10,7 +10,7 @@ export class ScheduleController {
     try {
       const { locationId } = req.params;
 
-      const schedules = await this.scheduleService.getLocationSchedules(locationId);
+      const schedules = await this.scheduleService.getLocationSchedules(locationId!);
 
       res.status(200).json({
         success: true,
@@ -136,7 +136,7 @@ export class ScheduleController {
         return;
       }
 
-      const schedule = await this.scheduleService.updateSchedule(id, updateData);
+      const schedule = await this.scheduleService.updateSchedule(id!, updateData);
 
       if (!schedule) {
         res.status(404).json({
@@ -180,7 +180,7 @@ export class ScheduleController {
 
       const { id } = req.params;
 
-      await this.scheduleService.deleteSchedule(id);
+      await this.scheduleService.deleteSchedule(id!);
 
       res.status(200).json({
         success: true,

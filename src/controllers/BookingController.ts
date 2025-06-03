@@ -54,7 +54,7 @@ export class BookingController {
         return;
       }
 
-      const booking = await this.bookingService.findById(id);
+      const booking = await this.bookingService.findById(id!);
 
       if (!booking) {
         res.status(404).json({
@@ -167,7 +167,7 @@ export class BookingController {
         return;
       }
 
-      const booking = await this.bookingService.findById(id);
+      const booking = await this.bookingService.findById(id!);
 
       if (!booking) {
         res.status(404).json({
@@ -186,7 +186,7 @@ export class BookingController {
         return;
       }
 
-      const updatedBooking = await this.bookingService.updateBookingStatus(id, status as BookingStatus);
+      const updatedBooking = await this.bookingService.updateBookingStatus(id!, status as BookingStatus);
 
       res.status(200).json({
         success: true,
@@ -221,7 +221,7 @@ export class BookingController {
         return;
       }
 
-      const booking = await this.bookingService.findById(id);
+      const booking = await this.bookingService.findById(id!);
 
       if (!booking) {
         res.status(404).json({
@@ -240,7 +240,7 @@ export class BookingController {
         return;
       }
 
-      const cancelledBooking = await this.bookingService.cancelBooking(id);
+      const cancelledBooking = await this.bookingService.cancelBooking(id!);
 
       res.status(200).json({
         success: true,

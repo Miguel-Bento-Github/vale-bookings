@@ -78,6 +78,14 @@ export class LocationController {
     try {
       const { id } = req.params;
 
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: 'Location ID is required'
+        });
+        return;
+      }
+
       const location = await this.locationService.findById(id);
 
       if (!location) {
@@ -179,6 +187,14 @@ export class LocationController {
       const { id } = req.params;
       const updateData = req.body;
 
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: 'Location ID is required'
+        });
+        return;
+      }
+
       if (updateData.coordinates && !validateCoordinates(updateData.coordinates.latitude, updateData.coordinates.longitude)) {
         res.status(400).json({
           success: false,
@@ -230,6 +246,14 @@ export class LocationController {
       }
 
       const { id } = req.params;
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: 'Location ID is required'
+        });
+        return;
+      }
 
       const location = await this.locationService.deactivateLocation(id);
 
