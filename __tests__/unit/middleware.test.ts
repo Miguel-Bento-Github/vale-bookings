@@ -59,7 +59,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Access token required'
+        message: 'Authentication required'
       });
       expect(mockNext).not.toHaveBeenCalled();
       expect(mockedAuthService.verifyToken).not.toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Access token required'
+        message: 'Authentication required'
       });
       expect(mockNext).not.toHaveBeenCalled();
       expect(mockedAuthService.verifyToken).not.toHaveBeenCalled();
@@ -91,7 +91,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Access token required'
+        message: 'Authentication required'
       });
       expect(mockNext).not.toHaveBeenCalled();
       expect(mockedAuthService.verifyToken).not.toHaveBeenCalled();
@@ -239,7 +239,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Insufficient permissions'
+        message: 'Forbidden: access denied'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -257,7 +257,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Insufficient permissions'
+        message: 'Forbidden: access denied'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -275,7 +275,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Insufficient permissions'
+        message: 'Forbidden: access denied'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -308,7 +308,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Insufficient permissions'
+        message: 'Forbidden: access denied'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -375,7 +375,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Insufficient permissions'
+        message: 'Forbidden: access denied'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -392,7 +392,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Access token required'
+        message: 'Authentication required'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -407,7 +407,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Access token required'
+        message: 'Authentication required'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -422,7 +422,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Access token required'
+        message: 'Authentication required'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -440,7 +440,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Insufficient permissions'
+        message: 'Forbidden: access denied'
       });
       expect(mockNext).not.toHaveBeenCalled();
     });

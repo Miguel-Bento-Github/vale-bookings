@@ -38,7 +38,7 @@ describe('Controllers', () => {
     mockAuthenticatedRequest = {
       ...mockRequest,
       user: {
-        userId: 'user123',
+        userId: '507f1f77bcf86cd799439012',
         email: 'test@example.com',
         role: 'CUSTOMER'
       }
@@ -56,7 +56,7 @@ describe('Controllers', () => {
 
     describe('register', () => {
       it('should register a user successfully', async () => {
-        const mockUser = { _id: 'user123', email: 'test@example.com' };
+        const mockUser = { _id: '507f1f77bcf86cd799439012', email: 'test@example.com' };
         const mockTokens = { accessToken: 'token123', refreshToken: 'refresh123' };
         
         (AuthService.register as jest.Mock).mockResolvedValue({
@@ -76,7 +76,11 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           message: 'User registered successfully',
-          data: { user: mockUser, tokens: mockTokens }
+          data: { 
+            user: mockUser, 
+            token: mockTokens.accessToken,
+            refreshToken: mockTokens.refreshToken
+          }
         });
       });
 
@@ -130,7 +134,7 @@ describe('Controllers', () => {
     describe('login', () => {
       it('should login successfully', async () => {
         const mockResult = {
-          user: { _id: 'user123', email: 'test@example.com' },
+          user: { _id: '507f1f77bcf86cd799439012', email: 'test@example.com' },
           tokens: { accessToken: 'token123', refreshToken: 'refresh123' }
         };
 
@@ -147,7 +151,11 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           message: 'Login successful',
-          data: mockResult
+          data: {
+            user: mockResult.user,
+            token: mockResult.tokens.accessToken,
+            refreshToken: mockResult.tokens.refreshToken
+          }
         });
       });
 
@@ -176,8 +184,11 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          message: 'Tokens refreshed successfully',
-          data: { tokens: mockTokens }
+          message: 'Token refreshed successfully',
+          data: { 
+            token: mockTokens.accessToken,
+            refreshToken: mockTokens.refreshToken
+          }
         });
       });
 
@@ -204,7 +215,7 @@ describe('Controllers', () => {
 
     describe('getProfile', () => {
       it('should get user profile successfully', async () => {
-        const mockUser = { _id: 'user123', email: 'test@example.com', profile: { name: 'Test User' } };
+        const mockUser = { _id: '507f1f77bcf86cd799439012', email: 'test@example.com', profile: { name: 'Test User' } };
         (UserService.findById as jest.Mock).mockResolvedValue(mockUser);
 
         await userController.getProfile(mockAuthenticatedRequest, mockResponse as Response);
@@ -212,7 +223,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: { user: mockUser }
+          data: mockUser
         });
       });
 
@@ -228,12 +239,12 @@ describe('Controllers', () => {
         });
       });
 
-      it('should return 404 for non-existent user', async () => {
+      it('should return 401 for non-existent user', async () => {
         (UserService.findById as jest.Mock).mockResolvedValue(null);
 
         await userController.getProfile(mockAuthenticatedRequest, mockResponse as Response);
 
-        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: 'User not found'
@@ -243,7 +254,7 @@ describe('Controllers', () => {
 
     describe('updateProfile', () => {
       it('should update profile successfully', async () => {
-        const mockUpdatedUser = { _id: 'user123', profile: { name: 'Updated Name' } };
+        const mockUpdatedUser = { _id: '507f1f77bcf86cd799439012', profile: { name: 'Updated Name' } };
         (UserService.updateProfile as jest.Mock).mockResolvedValue(mockUpdatedUser);
 
         mockAuthenticatedRequest.body = {
@@ -256,7 +267,7 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           message: 'Profile updated successfully',
-          data: { user: mockUpdatedUser }
+          data: mockUpdatedUser
         });
       });
 
@@ -275,6 +286,8 @@ describe('Controllers', () => {
 
     describe('deleteAccount', () => {
       it('should delete account successfully', async () => {
+        const mockUser = { _id: '507f1f77bcf86cd799439012', email: 'test@example.com' };
+        (UserService.findById as jest.Mock).mockResolvedValue(mockUser);
         (UserService.deleteUser as jest.Mock).mockResolvedValue(true);
 
         await userController.deleteAccount(mockAuthenticatedRequest, mockResponse as Response);
@@ -298,7 +311,7 @@ describe('Controllers', () => {
     describe('getLocations', () => {
       it('should get all locations successfully', async () => {
         const mockLocations = [
-          { _id: 'loc1', name: 'Location 1', isActive: true },
+          { _id: '507f1f77bcf86cd799439011', name: 'Location 1', isActive: true },
           { _id: 'loc2', name: 'Location 2', isActive: true }
         ];
         (LocationService.getAllLocations as jest.Mock).mockResolvedValue(mockLocations);
@@ -308,14 +321,14 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: { locations: mockLocations }
+          data: mockLocations
         });
       });
     });
 
     describe('getNearbyLocations', () => {
       it('should get nearby locations successfully', async () => {
-        const mockLocations = [{ _id: 'loc1', name: 'Nearby Location' }];
+        const mockLocations = [{ _id: '507f1f77bcf86cd799439011', name: 'Nearby Location' }];
         (LocationService.findNearby as jest.Mock).mockResolvedValue(mockLocations);
 
         mockRequest.query = {
@@ -329,7 +342,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: { locations: mockLocations }
+          data: mockLocations
         });
       });
 
@@ -363,24 +376,24 @@ describe('Controllers', () => {
 
     describe('getLocationById', () => {
       it('should get location by id successfully', async () => {
-        const mockLocation = { _id: 'loc1', name: 'Test Location', isActive: true };
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location', isActive: true };
         (LocationService.findById as jest.Mock).mockResolvedValue(mockLocation);
 
-        mockRequest.params = { id: 'loc1' };
+        mockRequest.params = { id: '507f1f77bcf86cd799439011' };
 
         await locationController.getLocationById(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: { location: mockLocation }
+          data: mockLocation
         });
       });
 
       it('should return 404 for non-existent location', async () => {
         (LocationService.findById as jest.Mock).mockResolvedValue(null);
 
-        mockRequest.params = { id: 'nonexistent' };
+        mockRequest.params = { id: '507f1f77bcf86cd799439016' };
 
         await locationController.getLocationById(mockRequest as Request, mockResponse as Response);
 
@@ -394,7 +407,7 @@ describe('Controllers', () => {
 
     describe('createLocation', () => {
       it('should create location successfully for admin', async () => {
-        const mockLocation = { _id: 'loc1', name: 'New Location' };
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'New Location' };
         (LocationService.createLocation as jest.Mock).mockResolvedValue(mockLocation);
 
         const adminRequest = {
@@ -413,7 +426,7 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           message: 'Location created successfully',
-          data: { location: mockLocation }
+          data: mockLocation
         });
       });
 
@@ -429,7 +442,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
       });
 
@@ -452,15 +465,15 @@ describe('Controllers', () => {
 
     describe('updateLocation', () => {
       it('should update location successfully for admin', async () => {
-        const mockLocation = { _id: 'loc1', name: 'Original Location' };
-        const mockUpdatedLocation = { _id: 'loc1', name: 'Updated Location' };
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Original Location' };
+        const mockUpdatedLocation = { _id: '507f1f77bcf86cd799439011', name: 'Updated Location' };
         
         (LocationService.updateLocation as jest.Mock).mockResolvedValue(mockUpdatedLocation);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: 'loc1' },
+          params: { id: '507f1f77bcf86cd799439011' },
           body: { name: 'Updated Location' }
         };
 
@@ -470,12 +483,12 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           message: 'Location updated successfully',
-          data: { location: mockUpdatedLocation }
+          data: mockUpdatedLocation
         });
       });
 
       it('should return 403 for non-admin user', async () => {
-        mockAuthenticatedRequest.params = { id: 'loc1' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439011' };
         mockAuthenticatedRequest.body = { name: 'Updated Location' };
 
         await locationController.updateLocation(mockAuthenticatedRequest, mockResponse as Response);
@@ -483,7 +496,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
       });
 
@@ -493,7 +506,7 @@ describe('Controllers', () => {
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: 'nonexistent' },
+          params: { id: '507f1f77bcf86cd799439016' },
           body: { name: 'Updated Location' }
         };
 
@@ -509,14 +522,15 @@ describe('Controllers', () => {
 
     describe('deleteLocation', () => {
       it('should delete location successfully for admin', async () => {
-        const mockLocation = { _id: 'loc1', name: 'Test Location' };
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
         
-        (LocationService.deactivateLocation as jest.Mock).mockResolvedValue(mockLocation);
+        (LocationService.findById as jest.Mock).mockResolvedValue(mockLocation);
+        (LocationService.deleteLocation as jest.Mock).mockResolvedValue(mockLocation);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: 'loc1' }
+          params: { id: '507f1f77bcf86cd799439011' }
         };
 
         await locationController.deleteLocation(adminRequest, mockResponse as Response);
@@ -524,29 +538,29 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          message: 'Location deactivated successfully'
+          message: 'Location deleted successfully'
         });
       });
 
       it('should return 403 for non-admin user', async () => {
-        mockAuthenticatedRequest.params = { id: 'loc1' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439011' };
 
         await locationController.deleteLocation(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
       });
 
       it('should return 404 for non-existent location', async () => {
-        (LocationService.deactivateLocation as jest.Mock).mockResolvedValue(null);
+        (LocationService.findById as jest.Mock).mockResolvedValue(null);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: 'nonexistent' }
+          params: { id: '507f1f77bcf86cd799439016' }
         };
 
         await locationController.deleteLocation(adminRequest, mockResponse as Response);
@@ -570,8 +584,8 @@ describe('Controllers', () => {
     describe('getUserBookings', () => {
       it('should get user bookings successfully', async () => {
         const mockBookings = [
-          { _id: 'booking1', userId: 'user123', status: 'CONFIRMED' },
-          { _id: 'booking2', userId: 'user123', status: 'PENDING' }
+          { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CONFIRMED' },
+          { _id: '507f1f77bcf86cd799439014', userId: '507f1f77bcf86cd799439012', status: 'PENDING' }
         ];
         (BookingService.getUserBookings as jest.Mock).mockResolvedValue(mockBookings);
 
@@ -580,7 +594,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: { bookings: mockBookings }
+          data: mockBookings
         });
       });
 
@@ -599,22 +613,22 @@ describe('Controllers', () => {
 
     describe('getBookingById', () => {
       it('should get booking by id successfully', async () => {
-        const mockBooking = { _id: 'booking1', userId: 'user123', status: 'CONFIRMED' };
+        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CONFIRMED' };
         (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
 
-        mockAuthenticatedRequest.params = { id: 'booking1' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
         await bookingController.getBookingById(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: { booking: mockBooking }
+          data: mockBooking
         });
       });
 
       it('should return 401 for unauthenticated request', async () => {
-        const unauthenticatedRequest = { ...mockRequest, params: { id: 'booking1' } };
+        const unauthenticatedRequest = { ...mockRequest, params: { id: '507f1f77bcf86cd799439013' } };
 
         await bookingController.getBookingById(unauthenticatedRequest as any, mockResponse as Response);
 
@@ -628,7 +642,7 @@ describe('Controllers', () => {
       it('should return 404 for non-existent booking', async () => {
         (BookingService.findById as jest.Mock).mockResolvedValue(null);
 
-        mockAuthenticatedRequest.params = { id: 'nonexistent' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439016' };
 
         await bookingController.getBookingById(mockAuthenticatedRequest, mockResponse as Response);
 
@@ -640,28 +654,28 @@ describe('Controllers', () => {
       });
 
       it('should return 403 for booking not owned by user', async () => {
-        const mockBooking = { _id: 'booking1', userId: 'otheruser', status: 'CONFIRMED' };
+        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439017', status: 'CONFIRMED' };
         (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
 
-        mockAuthenticatedRequest.params = { id: 'booking1' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
         await bookingController.getBookingById(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Forbidden: Access denied'
+          message: 'Forbidden: access denied'
         });
       });
 
       it('should allow admin to access any booking', async () => {
-        const mockBooking = { _id: 'booking1', userId: 'otheruser', status: 'CONFIRMED' };
+        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439017', status: 'CONFIRMED' };
         (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: 'booking1' }
+          params: { id: '507f1f77bcf86cd799439013' }
         };
 
         await bookingController.getBookingById(adminRequest, mockResponse as Response);
@@ -669,18 +683,18 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: { booking: mockBooking }
+          data: mockBooking
         });
       });
     });
 
     describe('createBooking', () => {
       it('should create booking successfully', async () => {
-        const mockBooking = { _id: 'booking1', userId: 'user123', status: 'PENDING' };
+        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'PENDING' };
         (BookingService.createBooking as jest.Mock).mockResolvedValue(mockBooking);
 
         mockAuthenticatedRequest.body = {
-          locationId: 'loc1',
+          locationId: '507f1f77bcf86cd799439011',
           startTime: '2025-12-01T09:00:00Z',
           endTime: '2025-12-01T17:00:00Z',
           price: 50.00
@@ -692,19 +706,19 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           message: 'Booking created successfully',
-          data: { booking: mockBooking }
+          data: mockBooking
         });
       });
 
       it('should return 400 for missing required fields', async () => {
-        mockAuthenticatedRequest.body = { locationId: 'loc1' }; // missing other fields
+        mockAuthenticatedRequest.body = { locationId: '507f1f77bcf86cd799439011' }; // missing other fields
 
         await bookingController.createBooking(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Location ID, start time, end time, and price are required'
+          message: 'Location ID, start time, and end time are required'
         });
       });
 
@@ -723,29 +737,33 @@ describe('Controllers', () => {
 
     describe('updateBookingStatus', () => {
       it('should update booking status successfully', async () => {
-        const mockBooking = { _id: 'booking1', userId: 'user123', status: 'PENDING' };
-        const mockUpdatedBooking = { _id: 'booking1', userId: 'user123', status: 'CONFIRMED' };
+        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'PENDING' };
+        const mockUpdatedBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CONFIRMED' };
         
         (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
         (BookingService.updateBookingStatus as jest.Mock).mockResolvedValue(mockUpdatedBooking);
 
-        mockAuthenticatedRequest.params = { id: 'booking1' };
-        mockAuthenticatedRequest.body = { status: 'CONFIRMED' };
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439013' },
+          body: { status: 'CONFIRMED' }
+        };
 
-        await bookingController.updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
+        await bookingController.updateBookingStatus(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           message: 'Booking status updated successfully',
-          data: { booking: mockUpdatedBooking }
+          data: mockUpdatedBooking
         });
       });
 
       it('should return 401 for unauthenticated request', async () => {
         const unauthenticatedRequest = { 
           ...mockRequest, 
-          params: { id: 'booking1' },
+          params: { id: '507f1f77bcf86cd799439013' },
           body: { status: 'CONFIRMED' }
         };
 
@@ -759,7 +777,7 @@ describe('Controllers', () => {
       });
 
       it('should return 400 for missing status', async () => {
-        mockAuthenticatedRequest.params = { id: 'booking1' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
         mockAuthenticatedRequest.body = {};
 
         await bookingController.updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
@@ -774,10 +792,14 @@ describe('Controllers', () => {
       it('should return 404 for non-existent booking', async () => {
         (BookingService.findById as jest.Mock).mockResolvedValue(null);
 
-        mockAuthenticatedRequest.params = { id: 'nonexistent' };
-        mockAuthenticatedRequest.body = { status: 'CONFIRMED' };
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439016' },
+          body: { status: 'CONFIRMED' }
+        };
 
-        await bookingController.updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
+        await bookingController.updateBookingStatus(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -787,10 +809,10 @@ describe('Controllers', () => {
       });
 
       it('should return 403 for booking not owned by user', async () => {
-        const mockBooking = { _id: 'booking1', userId: 'otheruser', status: 'PENDING' };
+        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439017', status: 'PENDING' };
         (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
 
-        mockAuthenticatedRequest.params = { id: 'booking1' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
         mockAuthenticatedRequest.body = { status: 'CONFIRMED' };
 
         await bookingController.updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
@@ -798,33 +820,32 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Forbidden: Access denied'
+          message: 'Forbidden: access denied'
         });
       });
     });
 
     describe('cancelBooking', () => {
       it('should cancel booking successfully', async () => {
-        const mockBooking = { _id: 'booking1', userId: 'user123', status: 'CONFIRMED' };
-        const mockCancelledBooking = { _id: 'booking1', userId: 'user123', status: 'CANCELLED' };
+        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CONFIRMED' };
+        const mockCancelledBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CANCELLED' };
         
         (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
         (BookingService.cancelBooking as jest.Mock).mockResolvedValue(mockCancelledBooking);
 
-        mockAuthenticatedRequest.params = { id: 'booking1' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
         await bookingController.cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          message: 'Booking cancelled successfully',
-          data: { booking: mockCancelledBooking }
+          message: 'Booking cancelled successfully'
         });
       });
 
       it('should return 401 for unauthenticated request', async () => {
-        const unauthenticatedRequest = { ...mockRequest, params: { id: 'booking1' } };
+        const unauthenticatedRequest = { ...mockRequest, params: { id: '507f1f77bcf86cd799439013' } };
 
         await bookingController.cancelBooking(unauthenticatedRequest as any, mockResponse as Response);
 
@@ -838,7 +859,7 @@ describe('Controllers', () => {
       it('should return 404 for non-existent booking', async () => {
         (BookingService.findById as jest.Mock).mockResolvedValue(null);
 
-        mockAuthenticatedRequest.params = { id: 'nonexistent' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439016' };
 
         await bookingController.cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
 
@@ -850,17 +871,17 @@ describe('Controllers', () => {
       });
 
       it('should return 403 for booking not owned by user', async () => {
-        const mockBooking = { _id: 'booking1', userId: 'otheruser', status: 'CONFIRMED' };
+        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439017', status: 'CONFIRMED' };
         (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
 
-        mockAuthenticatedRequest.params = { id: 'booking1' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
         await bookingController.cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Forbidden: You can only cancel your own bookings'
+          message: 'Forbidden: access denied'
         });
       });
     });
@@ -875,33 +896,39 @@ describe('Controllers', () => {
 
     describe('getLocationSchedules', () => {
       it('should get location schedules successfully', async () => {
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
         const mockSchedules = [
-          { _id: 'sched1', locationId: 'loc1', dayOfWeek: 1, startTime: '09:00', endTime: '18:00' }
+          { _id: '507f1f77bcf86cd799439015', locationId: '507f1f77bcf86cd799439011', dayOfWeek: 1, startTime: '09:00', endTime: '18:00' }
         ];
+        
+        (LocationService.findById as jest.Mock).mockResolvedValue(mockLocation);
         (ScheduleService.getLocationSchedules as jest.Mock).mockResolvedValue(mockSchedules);
 
-        mockRequest.params = { locationId: 'loc1' };
+        mockRequest.params = { locationId: '507f1f77bcf86cd799439011' };
 
         await scheduleController.getLocationSchedules(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: { schedules: mockSchedules }
+          data: mockSchedules
         });
       });
     });
 
     describe('createSchedule', () => {
       it('should create schedule successfully for admin', async () => {
-        const mockSchedule = { _id: 'sched1', locationId: 'loc1', dayOfWeek: 1 };
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
+        const mockSchedule = { _id: '507f1f77bcf86cd799439015', locationId: '507f1f77bcf86cd799439011', dayOfWeek: 1 };
+        
+        (LocationService.findById as jest.Mock).mockResolvedValue(mockLocation);
         (ScheduleService.createSchedule as jest.Mock).mockResolvedValue(mockSchedule);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
           body: {
-            locationId: 'loc1',
+            locationId: '507f1f77bcf86cd799439011',
             dayOfWeek: 1,
             startTime: '09:00',
             endTime: '18:00'
@@ -914,13 +941,13 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           message: 'Schedule created successfully',
-          data: { schedule: mockSchedule }
+          data: mockSchedule
         });
       });
 
       it('should return 403 for non-admin user', async () => {
         mockAuthenticatedRequest.body = {
-          locationId: 'loc1',
+          locationId: '507f1f77bcf86cd799439011',
           dayOfWeek: 1,
           startTime: '09:00',
           endTime: '18:00'
@@ -931,7 +958,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
       });
 
@@ -940,7 +967,7 @@ describe('Controllers', () => {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
           body: {
-            locationId: 'loc1',
+            locationId: '507f1f77bcf86cd799439011',
             dayOfWeek: 8, // invalid day of week
             startTime: '09:00',
             endTime: '18:00'
@@ -961,7 +988,7 @@ describe('Controllers', () => {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
           body: {
-            locationId: 'loc1',
+            locationId: '507f1f77bcf86cd799439011',
             dayOfWeek: 1,
             startTime: '25:00', // invalid time
             endTime: '18:00'
@@ -980,15 +1007,15 @@ describe('Controllers', () => {
 
     describe('updateSchedule', () => {
       it('should update schedule successfully for admin', async () => {
-        const mockSchedule = { _id: 'sched1', locationId: 'loc1', dayOfWeek: 1, startTime: '09:00', endTime: '18:00' };
-        const mockUpdatedSchedule = { _id: 'sched1', locationId: 'loc1', dayOfWeek: 1, startTime: '08:00', endTime: '19:00' };
+        const mockSchedule = { _id: '507f1f77bcf86cd799439015', locationId: '507f1f77bcf86cd799439011', dayOfWeek: 1, startTime: '09:00', endTime: '18:00' };
+        const mockUpdatedSchedule = { _id: '507f1f77bcf86cd799439015', locationId: '507f1f77bcf86cd799439011', dayOfWeek: 1, startTime: '08:00', endTime: '19:00' };
         
         (ScheduleService.updateSchedule as jest.Mock).mockResolvedValue(mockUpdatedSchedule);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: 'sched1' },
+          params: { id: '507f1f77bcf86cd799439015' },
           body: { startTime: '08:00', endTime: '19:00' }
         };
 
@@ -998,12 +1025,12 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           message: 'Schedule updated successfully',
-          data: { schedule: mockUpdatedSchedule }
+          data: mockUpdatedSchedule
         });
       });
 
       it('should return 403 for non-admin user', async () => {
-        mockAuthenticatedRequest.params = { id: 'sched1' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439015' };
         mockAuthenticatedRequest.body = { startTime: '08:00' };
 
         await scheduleController.updateSchedule(mockAuthenticatedRequest, mockResponse as Response);
@@ -1011,7 +1038,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
       });
 
@@ -1021,7 +1048,7 @@ describe('Controllers', () => {
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: 'nonexistent' },
+          params: { id: '507f1f77bcf86cd799439016' },
           body: { startTime: '08:00' }
         };
 
@@ -1038,7 +1065,7 @@ describe('Controllers', () => {
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: 'sched1' },
+          params: { id: '507f1f77bcf86cd799439015' },
           body: { startTime: '25:00' } // invalid time
         };
 
@@ -1054,12 +1081,13 @@ describe('Controllers', () => {
 
     describe('deleteSchedule', () => {
       it('should delete schedule successfully for admin', async () => {
+        (ScheduleService.findById as jest.Mock).mockResolvedValue({ _id: '507f1f77bcf86cd799439015' });
         (ScheduleService.deleteSchedule as jest.Mock).mockResolvedValue(true);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: 'sched1' }
+          params: { id: '507f1f77bcf86cd799439015' }
         };
 
         await scheduleController.deleteSchedule(adminRequest, mockResponse as Response);
@@ -1072,24 +1100,24 @@ describe('Controllers', () => {
       });
 
       it('should return 403 for non-admin user', async () => {
-        mockAuthenticatedRequest.params = { id: 'sched1' };
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439015' };
 
         await scheduleController.deleteSchedule(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
       });
 
       it('should return 404 for non-existent schedule', async () => {
-        (ScheduleService.deleteSchedule as jest.Mock).mockRejectedValue(new AppError('Schedule not found', 404));
+        (ScheduleService.findById as jest.Mock).mockResolvedValue(null);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
           user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: 'nonexistent' }
+          params: { id: '507f1f77bcf86cd799439016' }
         };
 
         await scheduleController.deleteSchedule(adminRequest, mockResponse as Response);

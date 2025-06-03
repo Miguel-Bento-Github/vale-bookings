@@ -47,7 +47,7 @@ app.use('*', (req, res) => {
 // Database connection and server start
 const startServer = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/valet_db';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/vale_db';
     await mongoose.connect(mongoUri);
     console.log('Connected to MongoDB');
     
