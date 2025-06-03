@@ -361,6 +361,37 @@ describe('Controllers', () => {
       });
     });
 
+    describe('getLocationById', () => {
+      it('should get location by id successfully', async () => {
+        const mockLocation = { _id: 'loc1', name: 'Test Location', isActive: true };
+        (LocationService.findById as jest.Mock).mockResolvedValue(mockLocation);
+
+        mockRequest.params = { id: 'loc1' };
+
+        await locationController.getLocationById(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: { location: mockLocation }
+        });
+      });
+
+      it('should return 404 for non-existent location', async () => {
+        (LocationService.findById as jest.Mock).mockResolvedValue(null);
+
+        mockRequest.params = { id: 'nonexistent' };
+
+        await locationController.getLocationById(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Location not found'
+        });
+      });
+    });
+
     describe('createLocation', () => {
       it('should create location successfully for admin', async () => {
         const mockLocation = { _id: 'loc1', name: 'New Location' };
@@ -418,6 +449,115 @@ describe('Controllers', () => {
         });
       });
     });
+
+    describe('updateLocation', () => {
+      it('should update location successfully for admin', async () => {
+        const mockLocation = { _id: 'loc1', name: 'Original Location' };
+        const mockUpdatedLocation = { _id: 'loc1', name: 'Updated Location' };
+        
+        (LocationService.updateLocation as jest.Mock).mockResolvedValue(mockUpdatedLocation);
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: 'loc1' },
+          body: { name: 'Updated Location' }
+        };
+
+        await locationController.updateLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          message: 'Location updated successfully',
+          data: { location: mockUpdatedLocation }
+        });
+      });
+
+      it('should return 403 for non-admin user', async () => {
+        mockAuthenticatedRequest.params = { id: 'loc1' };
+        mockAuthenticatedRequest.body = { name: 'Updated Location' };
+
+        await locationController.updateLocation(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(403);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Forbidden: Admin access required'
+        });
+      });
+
+      it('should return 404 for non-existent location', async () => {
+        (LocationService.updateLocation as jest.Mock).mockResolvedValue(null);
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: 'nonexistent' },
+          body: { name: 'Updated Location' }
+        };
+
+        await locationController.updateLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Location not found'
+        });
+      });
+    });
+
+    describe('deleteLocation', () => {
+      it('should delete location successfully for admin', async () => {
+        const mockLocation = { _id: 'loc1', name: 'Test Location' };
+        
+        (LocationService.deactivateLocation as jest.Mock).mockResolvedValue(mockLocation);
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: 'loc1' }
+        };
+
+        await locationController.deleteLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          message: 'Location deactivated successfully'
+        });
+      });
+
+      it('should return 403 for non-admin user', async () => {
+        mockAuthenticatedRequest.params = { id: 'loc1' };
+
+        await locationController.deleteLocation(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(403);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Forbidden: Admin access required'
+        });
+      });
+
+      it('should return 404 for non-existent location', async () => {
+        (LocationService.deactivateLocation as jest.Mock).mockResolvedValue(null);
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: 'nonexistent' }
+        };
+
+        await locationController.deleteLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Location not found'
+        });
+      });
+    });
   });
 
   describe('BookingController', () => {
@@ -457,6 +597,83 @@ describe('Controllers', () => {
       });
     });
 
+    describe('getBookingById', () => {
+      it('should get booking by id successfully', async () => {
+        const mockBooking = { _id: 'booking1', userId: 'user123', status: 'CONFIRMED' };
+        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
+
+        mockAuthenticatedRequest.params = { id: 'booking1' };
+
+        await bookingController.getBookingById(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: { booking: mockBooking }
+        });
+      });
+
+      it('should return 401 for unauthenticated request', async () => {
+        const unauthenticatedRequest = { ...mockRequest, params: { id: 'booking1' } };
+
+        await bookingController.getBookingById(unauthenticatedRequest as any, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(401);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Unauthorized'
+        });
+      });
+
+      it('should return 404 for non-existent booking', async () => {
+        (BookingService.findById as jest.Mock).mockResolvedValue(null);
+
+        mockAuthenticatedRequest.params = { id: 'nonexistent' };
+
+        await bookingController.getBookingById(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Booking not found'
+        });
+      });
+
+      it('should return 403 for booking not owned by user', async () => {
+        const mockBooking = { _id: 'booking1', userId: 'otheruser', status: 'CONFIRMED' };
+        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
+
+        mockAuthenticatedRequest.params = { id: 'booking1' };
+
+        await bookingController.getBookingById(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(403);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Forbidden: Access denied'
+        });
+      });
+
+      it('should allow admin to access any booking', async () => {
+        const mockBooking = { _id: 'booking1', userId: 'otheruser', status: 'CONFIRMED' };
+        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: 'booking1' }
+        };
+
+        await bookingController.getBookingById(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: { booking: mockBooking }
+        });
+      });
+    });
+
     describe('createBooking', () => {
       it('should create booking successfully', async () => {
         const mockBooking = { _id: 'booking1', userId: 'user123', status: 'PENDING' };
@@ -488,6 +705,162 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: 'Location ID, start time, end time, and price are required'
+        });
+      });
+
+      it('should return 401 for unauthenticated request', async () => {
+        const unauthenticatedRequest = { ...mockRequest, body: {} };
+
+        await bookingController.createBooking(unauthenticatedRequest as any, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(401);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Unauthorized'
+        });
+      });
+    });
+
+    describe('updateBookingStatus', () => {
+      it('should update booking status successfully', async () => {
+        const mockBooking = { _id: 'booking1', userId: 'user123', status: 'PENDING' };
+        const mockUpdatedBooking = { _id: 'booking1', userId: 'user123', status: 'CONFIRMED' };
+        
+        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
+        (BookingService.updateBookingStatus as jest.Mock).mockResolvedValue(mockUpdatedBooking);
+
+        mockAuthenticatedRequest.params = { id: 'booking1' };
+        mockAuthenticatedRequest.body = { status: 'CONFIRMED' };
+
+        await bookingController.updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          message: 'Booking status updated successfully',
+          data: { booking: mockUpdatedBooking }
+        });
+      });
+
+      it('should return 401 for unauthenticated request', async () => {
+        const unauthenticatedRequest = { 
+          ...mockRequest, 
+          params: { id: 'booking1' },
+          body: { status: 'CONFIRMED' }
+        };
+
+        await bookingController.updateBookingStatus(unauthenticatedRequest as any, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(401);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Unauthorized'
+        });
+      });
+
+      it('should return 400 for missing status', async () => {
+        mockAuthenticatedRequest.params = { id: 'booking1' };
+        mockAuthenticatedRequest.body = {};
+
+        await bookingController.updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Status is required'
+        });
+      });
+
+      it('should return 404 for non-existent booking', async () => {
+        (BookingService.findById as jest.Mock).mockResolvedValue(null);
+
+        mockAuthenticatedRequest.params = { id: 'nonexistent' };
+        mockAuthenticatedRequest.body = { status: 'CONFIRMED' };
+
+        await bookingController.updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Booking not found'
+        });
+      });
+
+      it('should return 403 for booking not owned by user', async () => {
+        const mockBooking = { _id: 'booking1', userId: 'otheruser', status: 'PENDING' };
+        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
+
+        mockAuthenticatedRequest.params = { id: 'booking1' };
+        mockAuthenticatedRequest.body = { status: 'CONFIRMED' };
+
+        await bookingController.updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(403);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Forbidden: Access denied'
+        });
+      });
+    });
+
+    describe('cancelBooking', () => {
+      it('should cancel booking successfully', async () => {
+        const mockBooking = { _id: 'booking1', userId: 'user123', status: 'CONFIRMED' };
+        const mockCancelledBooking = { _id: 'booking1', userId: 'user123', status: 'CANCELLED' };
+        
+        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
+        (BookingService.cancelBooking as jest.Mock).mockResolvedValue(mockCancelledBooking);
+
+        mockAuthenticatedRequest.params = { id: 'booking1' };
+
+        await bookingController.cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          message: 'Booking cancelled successfully',
+          data: { booking: mockCancelledBooking }
+        });
+      });
+
+      it('should return 401 for unauthenticated request', async () => {
+        const unauthenticatedRequest = { ...mockRequest, params: { id: 'booking1' } };
+
+        await bookingController.cancelBooking(unauthenticatedRequest as any, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(401);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Unauthorized'
+        });
+      });
+
+      it('should return 404 for non-existent booking', async () => {
+        (BookingService.findById as jest.Mock).mockResolvedValue(null);
+
+        mockAuthenticatedRequest.params = { id: 'nonexistent' };
+
+        await bookingController.cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Booking not found'
+        });
+      });
+
+      it('should return 403 for booking not owned by user', async () => {
+        const mockBooking = { _id: 'booking1', userId: 'otheruser', status: 'CONFIRMED' };
+        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
+
+        mockAuthenticatedRequest.params = { id: 'booking1' };
+
+        await bookingController.cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(403);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Forbidden: You can only cancel your own bookings'
         });
       });
     });
@@ -601,6 +974,130 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: 'Time must be in HH:MM format'
+        });
+      });
+    });
+
+    describe('updateSchedule', () => {
+      it('should update schedule successfully for admin', async () => {
+        const mockSchedule = { _id: 'sched1', locationId: 'loc1', dayOfWeek: 1, startTime: '09:00', endTime: '18:00' };
+        const mockUpdatedSchedule = { _id: 'sched1', locationId: 'loc1', dayOfWeek: 1, startTime: '08:00', endTime: '19:00' };
+        
+        (ScheduleService.updateSchedule as jest.Mock).mockResolvedValue(mockUpdatedSchedule);
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: 'sched1' },
+          body: { startTime: '08:00', endTime: '19:00' }
+        };
+
+        await scheduleController.updateSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          message: 'Schedule updated successfully',
+          data: { schedule: mockUpdatedSchedule }
+        });
+      });
+
+      it('should return 403 for non-admin user', async () => {
+        mockAuthenticatedRequest.params = { id: 'sched1' };
+        mockAuthenticatedRequest.body = { startTime: '08:00' };
+
+        await scheduleController.updateSchedule(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(403);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Forbidden: Admin access required'
+        });
+      });
+
+      it('should return 404 for non-existent schedule', async () => {
+        (ScheduleService.updateSchedule as jest.Mock).mockResolvedValue(null);
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: 'nonexistent' },
+          body: { startTime: '08:00' }
+        };
+
+        await scheduleController.updateSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Schedule not found'
+        });
+      });
+
+      it('should return 400 for invalid time format', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: 'sched1' },
+          body: { startTime: '25:00' } // invalid time
+        };
+
+        await scheduleController.updateSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Start time must be in HH:MM format'
+        });
+      });
+    });
+
+    describe('deleteSchedule', () => {
+      it('should delete schedule successfully for admin', async () => {
+        (ScheduleService.deleteSchedule as jest.Mock).mockResolvedValue(true);
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: 'sched1' }
+        };
+
+        await scheduleController.deleteSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          message: 'Schedule deleted successfully'
+        });
+      });
+
+      it('should return 403 for non-admin user', async () => {
+        mockAuthenticatedRequest.params = { id: 'sched1' };
+
+        await scheduleController.deleteSchedule(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(403);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Forbidden: Admin access required'
+        });
+      });
+
+      it('should return 404 for non-existent schedule', async () => {
+        (ScheduleService.deleteSchedule as jest.Mock).mockRejectedValue(new AppError('Schedule not found', 404));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: 'nonexistent' }
+        };
+
+        await scheduleController.deleteSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Schedule not found'
         });
       });
     });
