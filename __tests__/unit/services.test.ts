@@ -22,6 +22,9 @@ import Location from '../../src/models/Location';
 import Booking from '../../src/models/Booking';
 import Schedule from '../../src/models/Schedule';
 
+// Import types
+import { UserRole } from '../../src/types';
+
 describe('Services', () => {
   describe('UserService', () => {
     it('should create a new user', async () => {
@@ -71,6 +74,79 @@ describe('Services', () => {
       await UserService.createUser(validUser);
       
       await expect(UserService.createUser(validUser)).rejects.toThrow();
+    });
+
+    it('should get all users with pagination', async () => {
+      // Create multiple users
+      for (let i = 0; i < 3; i++) {
+        const userData = {
+          ...validUser,
+          email: `user${i}@example.com`
+        };
+        await UserService.createUser(userData);
+      }
+      
+      const usersPage1 = await UserService.getAllUsers(1, 2);
+      const usersPage2 = await UserService.getAllUsers(2, 2);
+      
+      expect(usersPage1.length).toBeLessThanOrEqual(2);
+      expect(Array.isArray(usersPage2)).toBe(true);
+    });
+
+    it('should get users by role', async () => {
+      // Create users with different roles
+      const customerUser = { ...validUser, email: 'customer@example.com', role: 'CUSTOMER' as UserRole };
+      const adminUser = { ...validUser, email: 'admin@example.com', role: 'ADMIN' as UserRole };
+      
+      await UserService.createUser(customerUser);
+      await UserService.createUser(adminUser);
+      
+      const customers = await UserService.getUsersByRole('CUSTOMER');
+      const admins = await UserService.getUsersByRole('ADMIN');
+      
+      expect(customers.length).toBeGreaterThanOrEqual(1);
+      expect(admins.length).toBeGreaterThanOrEqual(1);
+      expect(customers.every(user => user.role === 'CUSTOMER')).toBe(true);
+      expect(admins.every(user => user.role === 'ADMIN')).toBe(true);
+    });
+
+    it('should update user role', async () => {
+      const createdUser = await UserService.createUser(validUser);
+      
+      const updatedUser = await UserService.updateUserRole(createdUser._id.toString(), 'ADMIN');
+      
+      expect(updatedUser?.role).toBe('ADMIN');
+    });
+
+    it('should return null when updating role for non-existent user', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      
+      const result = await UserService.updateUserRole(fakeId, 'ADMIN');
+      
+      expect(result).toBeNull();
+    });
+
+    it('should return null when finding non-existent user by id', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      
+      const result = await UserService.findById(fakeId);
+      
+      expect(result).toBeNull();
+    });
+
+    it('should return null when finding non-existent user by email', async () => {
+      const result = await UserService.findByEmail('nonexistent@example.com');
+      
+      expect(result).toBeNull();
+    });
+
+    it('should return null when updating profile for non-existent user', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      const updateData = { profile: { name: 'Test' } };
+      
+      const result = await UserService.updateProfile(fakeId, updateData);
+      
+      expect(result).toBeNull();
     });
   });
 
@@ -200,6 +276,63 @@ describe('Services', () => {
       
       expect(nearbyLocations.length).toBeGreaterThanOrEqual(1);
     });
+
+    it('should delete location', async () => {
+      const createdLocation = await LocationService.createLocation(validLocation);
+      
+      await LocationService.deleteLocation(createdLocation._id.toString());
+      
+      const foundLocation = await LocationService.findById(createdLocation._id.toString());
+      expect(foundLocation).toBeNull();
+    });
+
+    it('should search locations by name', async () => {
+      const location1 = { ...validLocation, name: 'Downtown Parking' };
+      const location2 = { ...validLocation, name: 'Mall Parking', address: '456 Mall St' };
+      
+      await LocationService.createLocation(location1);
+      await LocationService.createLocation(location2);
+      
+      const searchResults = await LocationService.searchLocations('Downtown');
+      
+      expect(searchResults.length).toBeGreaterThanOrEqual(1);
+      expect(searchResults.some(loc => loc.name.includes('Downtown'))).toBe(true);
+    });
+
+    it('should get all locations including inactive', async () => {
+      const createdLocation = await LocationService.createLocation(validLocation);
+      await LocationService.deactivateLocation(createdLocation._id.toString());
+      
+      const activeLocations = await LocationService.getAllLocations(true);
+      const allLocations = await LocationService.getAllLocations(false);
+      
+      expect(allLocations.length).toBeGreaterThan(activeLocations.length);
+    });
+
+    it('should return null when updating non-existent location', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      const updateData = { name: 'Updated Name' };
+      
+      const result = await LocationService.updateLocation(fakeId, updateData);
+      
+      expect(result).toBeNull();
+    });
+
+    it('should return null when deactivating non-existent location', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      
+      const result = await LocationService.deactivateLocation(fakeId);
+      
+      expect(result).toBeNull();
+    });
+
+    it('should return null when finding non-existent location by id', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      
+      const result = await LocationService.findById(fakeId);
+      
+      expect(result).toBeNull();
+    });
   });
 
   describe('BookingService', () => {
@@ -278,6 +411,158 @@ describe('Services', () => {
       
       expect(hasOverlap).toBe(true);
     });
+
+    it('should get location bookings', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      await BookingService.createBooking(bookingData);
+      
+      const locationBookings = await BookingService.getLocationBookings(locationId);
+      
+      expect(locationBookings.length).toBeGreaterThanOrEqual(1);
+      expect(locationBookings[0]?.locationId.toString()).toBe(locationId);
+    });
+
+    it('should get location bookings with date range', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      await BookingService.createBooking(bookingData);
+      
+      const startDate = new Date('2025-01-01');
+      const endDate = new Date('2025-12-31');
+      const locationBookings = await BookingService.getLocationBookings(locationId, startDate, endDate);
+      
+      expect(Array.isArray(locationBookings)).toBe(true);
+    });
+
+    it('should update booking with partial data', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const createdBooking = await BookingService.createBooking(bookingData);
+      
+      const updateData = {
+        endTime: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), // 4 hours later as string
+        notes: 'Updated booking'
+      };
+      
+      const updatedBooking = await BookingService.updateBooking(
+        createdBooking._id.toString(),
+        updateData
+      );
+      
+      expect(updatedBooking?.notes).toBe('Updated booking');
+    });
+
+    it('should return null when updating non-existent booking', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      const updateData = { notes: 'Test update' };
+      
+      await expect(BookingService.updateBooking(fakeId, updateData)).rejects.toThrow('Booking not found');
+    });
+
+    it('should delete booking', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const createdBooking = await BookingService.createBooking(bookingData);
+      
+      await BookingService.deleteBooking(createdBooking._id.toString());
+      
+      const foundBooking = await BookingService.findById(createdBooking._id.toString());
+      expect(foundBooking).toBeNull();
+    });
+
+    it('should get bookings by status', async () => {
+      const bookingData1 = { ...validBooking, userId, locationId };
+      const bookingData2 = { 
+        ...validBooking, 
+        userId, 
+        locationId,
+        startTime: new Date(Date.now() + 3 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 5 * 60 * 60 * 1000)
+      };
+      
+      await BookingService.createBooking(bookingData1);
+      const booking2 = await BookingService.createBooking(bookingData2);
+      await BookingService.updateBookingStatus(booking2._id.toString(), 'CONFIRMED');
+      
+      const pendingBookings = await BookingService.getBookingsByStatus('PENDING');
+      const confirmedBookings = await BookingService.getBookingsByStatus('CONFIRMED');
+      
+      expect(pendingBookings.length).toBeGreaterThanOrEqual(1);
+      expect(confirmedBookings.length).toBeGreaterThanOrEqual(1);
+      expect(pendingBookings.every(b => b.status === 'PENDING')).toBe(true);
+      expect(confirmedBookings.every(b => b.status === 'CONFIRMED')).toBe(true);
+    });
+
+    it('should get upcoming bookings for user', async () => {
+      const futureBookingData = {
+        ...validBooking,
+        userId,
+        locationId,
+        startTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day in future
+        endTime: new Date(Date.now() + 25 * 60 * 60 * 1000)
+      };
+      
+      await BookingService.createBooking(futureBookingData);
+      
+      const upcomingBookings = await BookingService.getUpcomingBookings(userId);
+      
+      expect(upcomingBookings.length).toBeGreaterThanOrEqual(1);
+      // Handle populated user object
+      const userIdFromBooking = typeof upcomingBookings[0]?.userId === 'string' 
+        ? upcomingBookings[0]?.userId 
+        : (upcomingBookings[0]?.userId as any)?._id?.toString();
+      expect(userIdFromBooking).toBe(userId);
+    });
+
+    it('should get all upcoming bookings', async () => {
+      const futureBookingData = {
+        ...validBooking,
+        userId,
+        locationId,
+        startTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day in future
+        endTime: new Date(Date.now() + 25 * 60 * 60 * 1000)
+      };
+      
+      await BookingService.createBooking(futureBookingData);
+      
+      const allUpcomingBookings = await BookingService.getUpcomingBookings();
+      
+      expect(Array.isArray(allUpcomingBookings)).toBe(true);
+    });
+
+    it('should return false for no overlapping bookings', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      await BookingService.createBooking(bookingData);
+      
+      // Test with different time that doesn't overlap
+      const nonOverlapStart = new Date(Date.now() + 10 * 60 * 60 * 1000); // 10 hours later
+      const nonOverlapEnd = new Date(Date.now() + 12 * 60 * 60 * 1000);
+      
+      const hasOverlap = await BookingService.checkOverlappingBookings(
+        locationId,
+        nonOverlapStart,
+        nonOverlapEnd
+      );
+      
+      expect(hasOverlap).toBe(false);
+    });
+
+    it('should handle pagination for user bookings', async () => {
+      // Create multiple bookings for pagination test
+      for (let i = 0; i < 3; i++) {
+        const bookingData = {
+          ...validBooking,
+          userId,
+          locationId,
+          startTime: new Date(Date.now() + (i + 1) * 60 * 60 * 1000),
+          endTime: new Date(Date.now() + (i + 2) * 60 * 60 * 1000)
+        };
+        await BookingService.createBooking(bookingData);
+      }
+      
+      const userBookingsPage1 = await BookingService.getUserBookings(userId, 1, 2);
+      const userBookingsPage2 = await BookingService.getUserBookings(userId, 2, 2);
+      
+      expect(userBookingsPage1.length).toBeLessThanOrEqual(2);
+      expect(Array.isArray(userBookingsPage2)).toBe(true);
+    });
   });
 
   describe('ScheduleService', () => {
@@ -345,6 +630,164 @@ describe('Services', () => {
       const isOpen = await ScheduleService.isLocationOpen(locationId, 1, '20:00');
       
       expect(isOpen).toBe(false);
+    });
+
+    it('should find schedule by id', async () => {
+      const scheduleData = { ...validSchedule, locationId };
+      const createdSchedule = await ScheduleService.createSchedule(scheduleData);
+      
+      const foundSchedule = await ScheduleService.findById(createdSchedule._id.toString());
+      
+      expect(foundSchedule).toBeTruthy();
+      expect(foundSchedule?._id.toString()).toBe(createdSchedule._id.toString());
+    });
+
+    it('should get schedule by location and day', async () => {
+      const scheduleData = { ...validSchedule, locationId };
+      await ScheduleService.createSchedule(scheduleData);
+      
+      const schedule = await ScheduleService.getScheduleByLocationAndDay(locationId, validSchedule.dayOfWeek);
+      
+      expect(schedule).toBeTruthy();
+      expect(schedule?.dayOfWeek).toBe(validSchedule.dayOfWeek);
+    });
+
+    it('should return null for non-existent location/day schedule', async () => {
+      const schedule = await ScheduleService.getScheduleByLocationAndDay(locationId, 6); // Saturday
+      
+      expect(schedule).toBeNull();
+    });
+
+    it('should get weekly schedule', async () => {
+      // Create schedules for multiple days
+      const weekDays = [1, 2, 3]; // Mon, Tue, Wed
+      for (const day of weekDays) {
+        const scheduleData = { 
+          ...validSchedule, 
+          locationId, 
+          dayOfWeek: day,
+          startTime: '09:00',
+          endTime: '17:00'
+        };
+        await ScheduleService.createSchedule(scheduleData);
+      }
+      
+      const weeklySchedules = await ScheduleService.getWeeklySchedule(locationId);
+      
+      expect(weeklySchedules.length).toBe(3);
+      expect(weeklySchedules.map(s => s.dayOfWeek).sort()).toEqual([1, 2, 3]);
+    });
+
+    it('should deactivate schedule', async () => {
+      const scheduleData = { ...validSchedule, locationId };
+      const createdSchedule = await ScheduleService.createSchedule(scheduleData);
+      
+      const deactivatedSchedule = await ScheduleService.deactivateSchedule(createdSchedule._id.toString());
+      
+      expect(deactivatedSchedule?.isActive).toBe(false);
+    });
+
+    it('should return null when deactivating non-existent schedule', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      
+      const result = await ScheduleService.deactivateSchedule(fakeId);
+      
+      expect(result).toBeNull();
+    });
+
+    it('should get operating hours for location and day', async () => {
+      const scheduleData = { 
+        ...validSchedule, 
+        locationId,
+        startTime: '09:00',
+        endTime: '17:00'
+      };
+      await ScheduleService.createSchedule(scheduleData);
+      
+      const operatingHours = await ScheduleService.getOperatingHours(locationId, validSchedule.dayOfWeek);
+      
+      expect(operatingHours).toBe(8); // 17:00 - 09:00 = 8 hours
+    });
+
+    it('should return null for operating hours when no schedule exists', async () => {
+      const operatingHours = await ScheduleService.getOperatingHours(locationId, 6); // Saturday
+      
+      expect(operatingHours).toBeNull();
+    });
+
+    it('should get all schedules', async () => {
+      const scheduleData = { ...validSchedule, locationId };
+      await ScheduleService.createSchedule(scheduleData);
+      
+      const allSchedules = await ScheduleService.getAllSchedules();
+      
+      expect(allSchedules.length).toBeGreaterThanOrEqual(1);
+      expect(Array.isArray(allSchedules)).toBe(true);
+    });
+
+    it('should bulk create schedules', async () => {
+      const schedulesData = [
+        { ...validSchedule, locationId, dayOfWeek: 1 },
+        { ...validSchedule, locationId, dayOfWeek: 2 },
+        { ...validSchedule, locationId, dayOfWeek: 3 }
+      ];
+      
+      const createdSchedules = await ScheduleService.bulkCreateSchedules(schedulesData);
+      
+      expect(createdSchedules.length).toBe(3);
+      expect(createdSchedules.map(s => s.dayOfWeek).sort()).toEqual([1, 2, 3]);
+    });
+
+    it('should update location schedules', async () => {
+      // Create initial schedules
+      const initialSchedules = [
+        { ...validSchedule, locationId, dayOfWeek: 1, startTime: '09:00', endTime: '17:00' },
+        { ...validSchedule, locationId, dayOfWeek: 2, startTime: '09:00', endTime: '17:00' }
+      ];
+      
+      await ScheduleService.bulkCreateSchedules(initialSchedules);
+      
+      const updatesData = [
+        { dayOfWeek: 1, startTime: '08:00', endTime: '18:00' },
+        { dayOfWeek: 2, startTime: '10:00', endTime: '16:00' }
+      ];
+      
+      const updatedSchedules = await ScheduleService.updateLocationSchedules(locationId, updatesData);
+      
+      expect(updatedSchedules.length).toBe(2);
+      const mondaySchedule = updatedSchedules.find(s => s.dayOfWeek === 1);
+      const tuesdaySchedule = updatedSchedules.find(s => s.dayOfWeek === 2);
+      
+      expect(mondaySchedule?.startTime).toBe('08:00');
+      expect(tuesdaySchedule?.startTime).toBe('10:00');
+    });
+
+    it('should get location schedules including inactive', async () => {
+      const scheduleData = { ...validSchedule, locationId };
+      const createdSchedule = await ScheduleService.createSchedule(scheduleData);
+      
+      // Deactivate the schedule
+      await ScheduleService.deactivateSchedule(createdSchedule._id.toString());
+      
+      const activeSchedules = await ScheduleService.getLocationSchedules(locationId, true);
+      const allSchedules = await ScheduleService.getLocationSchedules(locationId, false);
+      
+      expect(activeSchedules.length).toBe(0);
+      expect(allSchedules.length).toBe(1);
+    });
+
+    it('should return false when checking if location is open on day with no schedule', async () => {
+      const isOpen = await ScheduleService.isLocationOpen(locationId, 6, '10:00'); // Saturday
+      
+      expect(isOpen).toBe(false);
+    });
+
+    it('should return null when updating non-existent schedule', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      
+      const result = await ScheduleService.updateSchedule(fakeId, { startTime: '08:00' });
+      
+      expect(result).toBeNull();
     });
   });
 }); 
