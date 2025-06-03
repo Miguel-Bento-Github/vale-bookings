@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import UserService from './UserService';
-import { IRegisterRequest, ILoginRequest, IAuthTokens, IJWTPayload, IUserDocument } from '../types';
+import { IRegisterRequest, ILoginRequest, IAuthTokens, IJWTPayload, IUserDocument, UserRole } from '../types';
 import { AppError } from '../types';
 
 class AuthService {
@@ -9,10 +9,10 @@ class AuthService {
   private readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
   private readonly JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
-  async register(registerData: IRegisterRequest): Promise<{ user: IUserDocument; tokens: IAuthTokens }> {
+  async register(registerData: IRegisterRequest & { role?: UserRole }): Promise<{ user: IUserDocument; tokens: IAuthTokens }> {
     const userData = {
       ...registerData,
-      role: 'CUSTOMER' as const
+      role: registerData.role || 'CUSTOMER' as UserRole
     };
     const user = await UserService.createUser(userData);
     const tokens = this.generateTokens(user);
@@ -72,7 +72,7 @@ class AuthService {
     try {
       return jwt.verify(token, this.JWT_REFRESH_SECRET) as IJWTPayload;
     } catch (error) {
-      throw new AppError('Invalid or expired refresh token', 401);
+      throw new AppError('Invalid refresh token', 401);
     }
   }
 

@@ -20,13 +20,15 @@ class BookingService {
   }
 
   async findById(bookingId: string): Promise<IBookingDocument | null> {
-    return await Booking.findById(bookingId)
-      .populate('userId', 'profile.name email')
-      .populate('locationId', 'name address');
+    return await Booking.findById(bookingId);
   }
 
   async getUserBookings(userId: string, page: number = 1, limit: number = 10): Promise<IBookingDocument[]> {
-    return await (Booking as any).findByUserId(userId, page, limit);
+    const skip = (page - 1) * limit;
+    return await Booking.find({ userId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
   }
 
   async getLocationBookings(locationId: string, startDate?: Date, endDate?: Date): Promise<IBookingDocument[]> {

@@ -13,7 +13,7 @@ export const authenticate = async (
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({
         success: false,
-        message: 'Access token required'
+        message: 'Authentication required'
       });
       return;
     }
@@ -23,7 +23,7 @@ export const authenticate = async (
     if (!token) {
       res.status(401).json({
         success: false,
-        message: 'Access token required'
+        message: 'Authentication required'
       });
       return;
     }

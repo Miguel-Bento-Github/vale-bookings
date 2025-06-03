@@ -24,7 +24,7 @@ export class BookingController {
 
       res.status(200).json({
         success: true,
-        data: { bookings }
+        data: bookings
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -68,14 +68,14 @@ export class BookingController {
       if (booking.userId.toString() !== userId && req.user?.role !== 'ADMIN') {
         res.status(403).json({
           success: false,
-          message: 'Forbidden: Access denied'
+          message: 'Forbidden: access denied'
         });
         return;
       }
 
       res.status(200).json({
         success: true,
-        data: { booking }
+        data: booking
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -104,22 +104,48 @@ export class BookingController {
         return;
       }
 
-      const { locationId, startTime, endTime, price, notes } = req.body;
+      const { locationId, startTime, endTime, notes } = req.body;
 
-      if (!locationId || !startTime || !endTime || !price) {
+      if (!locationId || !startTime || !endTime) {
         res.status(400).json({
           success: false,
-          message: 'Location ID, start time, end time, and price are required'
+          message: 'Location ID, start time, and end time are required'
         });
         return;
       }
 
+      // Calculate price based on duration (example: $10 per hour)
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      
+      // Validate time range
+      if (end <= start) {
+        res.status(400).json({
+          success: false,
+          message: 'End time must be after start time'
+        });
+        return;
+      }
+
+      // Validate not in the past
+      const now = new Date();
+      if (start < now) {
+        res.status(400).json({
+          success: false,
+          message: 'Cannot create booking in the past'
+        });
+        return;
+      }
+
+      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      const calculatedPrice = Math.max(hours * 10, 10); // Minimum $10
+
       const booking = await this.bookingService.createBooking({
         userId,
         locationId,
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
-        price,
+        startTime: start,
+        endTime: end,
+        price: calculatedPrice,
         notes: notes || '',
         status: 'PENDING'
       });
@@ -127,7 +153,7 @@ export class BookingController {
       res.status(201).json({
         success: true,
         message: 'Booking created successfully',
-        data: { booking }
+        data: booking
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -167,6 +193,25 @@ export class BookingController {
         return;
       }
 
+      // Validate status value
+      const validStatuses = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+      if (!validStatuses.includes(status)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid status value'
+        });
+        return;
+      }
+
+      // Only admins and valets can update booking status, not regular customers
+      if (userRole !== 'ADMIN' && userRole !== 'VALET') {
+        res.status(403).json({
+          success: false,
+          message: 'Forbidden: access denied'
+        });
+        return;
+      }
+
       const booking = await this.bookingService.findById(id!);
 
       if (!booking) {
@@ -177,21 +222,12 @@ export class BookingController {
         return;
       }
 
-      // Check permissions: only booking owner or admin can update status
-      if (booking.userId.toString() !== userId && userRole !== 'ADMIN') {
-        res.status(403).json({
-          success: false,
-          message: 'Forbidden: Access denied'
-        });
-        return;
-      }
-
       const updatedBooking = await this.bookingService.updateBookingStatus(id!, status as BookingStatus);
 
       res.status(200).json({
         success: true,
         message: 'Booking status updated successfully',
-        data: { booking: updatedBooking }
+        data: updatedBooking
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -211,6 +247,7 @@ export class BookingController {
   async cancelBooking(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.userId;
+      const userRole = req.user?.role;
       const { id } = req.params;
 
       if (!userId) {
@@ -231,11 +268,20 @@ export class BookingController {
         return;
       }
 
-      // Check if user owns the booking
-      if (booking.userId.toString() !== userId) {
+      // Check if user owns the booking or is admin
+      if (booking.userId.toString() !== userId && userRole !== 'ADMIN') {
         res.status(403).json({
           success: false,
-          message: 'Forbidden: You can only cancel your own bookings'
+          message: 'Forbidden: access denied'
+        });
+        return;
+      }
+
+      // Check if booking is already completed and cannot be cancelled
+      if (booking.status === 'COMPLETED') {
+        res.status(400).json({
+          success: false,
+          message: 'Booking has been completed and cannot be cancelled'
         });
         return;
       }
@@ -244,8 +290,7 @@ export class BookingController {
 
       res.status(200).json({
         success: true,
-        message: 'Booking cancelled successfully',
-        data: { booking: cancelledBooking }
+        message: 'Booking cancelled successfully'
       });
     } catch (error) {
       if (error instanceof AppError) {

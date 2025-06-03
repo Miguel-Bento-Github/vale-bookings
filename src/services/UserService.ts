@@ -9,7 +9,7 @@ class UserService {
       return await user.save();
     } catch (error: unknown) {
       if (error instanceof Error && 'code' in error && error.code === 11000) {
-        throw new AppError('Email already exists', 400);
+        throw new AppError('User with this email already exists', 409);
       }
       throw error;
     }

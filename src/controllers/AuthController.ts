@@ -8,7 +8,7 @@ export class AuthController {
 
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, profile } = req.body;
+      const { email, password, profile, role } = req.body;
 
       // Validation
       if (!email || !password || !profile) {
@@ -30,7 +30,7 @@ export class AuthController {
       if (!validatePassword(password)) {
         res.status(400).json({
           success: false,
-          message: 'Password must be at least 6 characters long'
+          message: 'password must be at least 6 characters long'
         });
         return;
       }
@@ -43,12 +43,16 @@ export class AuthController {
         return;
       }
 
-      const result = await this.authService.register({ email, password, profile });
+      const result = await this.authService.register({ email, password, profile, role });
 
       res.status(201).json({
         success: true,
         message: 'User registered successfully',
-        data: result
+        data: {
+          user: result.user,
+          token: result.tokens.accessToken,
+          refreshToken: result.tokens.refreshToken
+        }
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -77,12 +81,25 @@ export class AuthController {
         return;
       }
 
+      // Validate email format before attempting authentication
+      if (!validateEmail(email)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid email format'
+        });
+        return;
+      }
+
       const result = await this.authService.login({ email, password });
 
       res.status(200).json({
         success: true,
         message: 'Login successful',
-        data: result
+        data: {
+          user: result.user,
+          token: result.tokens.accessToken,
+          refreshToken: result.tokens.refreshToken
+        }
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -115,8 +132,11 @@ export class AuthController {
 
       res.status(200).json({
         success: true,
-        message: 'Tokens refreshed successfully',
-        data: { tokens }
+        message: 'Token refreshed successfully',
+        data: {
+          token: tokens.accessToken,
+          refreshToken: tokens.refreshToken
+        }
       });
     } catch (error) {
       if (error instanceof AppError) {
