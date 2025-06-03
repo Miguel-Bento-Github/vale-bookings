@@ -176,4 +176,12 @@ export class AppError extends Error {
 // Express types
 export interface ICustomRequest extends Request {
   user?: IUser;
+}
+
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    userId: string;
+    email: string;
+    role: UserRole;
+  };
 } 
