@@ -1,12 +1,4 @@
-// Re-export from the main fixtures file
-export {
-  validUser as testUsers,
-  validLocation as testLocations,
-  validBooking as testBookings,
-  validSchedule as testSchedules
-} from './index';
-
-// Also provide direct access with proper structure
+// Test data fixtures for integration tests
 export const testUsers = {
   validUser: {
     email: 'test@example.com',
