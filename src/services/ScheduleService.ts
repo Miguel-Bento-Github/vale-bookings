@@ -9,11 +9,17 @@ class ScheduleService {
   }
 
   async findById(scheduleId: string): Promise<IScheduleDocument | null> {
-    return await Schedule.findById(scheduleId).populate('locationId', 'name address');
+    return await Schedule.findById(scheduleId);
   }
 
   async getLocationSchedules(locationId: string, activeOnly: boolean = true): Promise<IScheduleDocument[]> {
-    return await (Schedule as any).findByLocationId(locationId, activeOnly);
+    const query: Record<string, unknown> = { locationId };
+    
+    if (activeOnly) {
+      query.isActive = true;
+    }
+
+    return await Schedule.find(query).sort({ dayOfWeek: 1, startTime: 1 });
   }
 
   async getScheduleByLocationAndDay(locationId: string, dayOfWeek: number): Promise<IScheduleDocument | null> {

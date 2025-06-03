@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import LocationService from '../services/LocationService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validateCoordinates } from '../utils/validation';
+import mongoose from 'mongoose';
 
 export class LocationController {
   private locationService = LocationService;
@@ -12,7 +13,7 @@ export class LocationController {
 
       res.status(200).json({
         success: true,
-        data: { locations }
+        data: locations
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -57,7 +58,7 @@ export class LocationController {
 
       res.status(200).json({
         success: true,
-        data: { locations }
+        data: locations
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -86,6 +87,15 @@ export class LocationController {
         return;
       }
 
+      // Validate MongoDB ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid ID format'
+        });
+        return;
+      }
+
       const location = await this.locationService.findById(id);
 
       if (!location) {
@@ -98,7 +108,7 @@ export class LocationController {
 
       res.status(200).json({
         success: true,
-        data: { location }
+        data: location
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -122,7 +132,7 @@ export class LocationController {
       if (userRole !== 'ADMIN') {
         res.status(403).json({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
         return;
       }
@@ -155,7 +165,7 @@ export class LocationController {
       res.status(201).json({
         success: true,
         message: 'Location created successfully',
-        data: { location }
+        data: location
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -179,7 +189,7 @@ export class LocationController {
       if (userRole !== 'ADMIN') {
         res.status(403).json({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
         return;
       }
@@ -216,7 +226,7 @@ export class LocationController {
       res.status(200).json({
         success: true,
         message: 'Location updated successfully',
-        data: { location }
+        data: location
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -240,7 +250,7 @@ export class LocationController {
       if (userRole !== 'ADMIN') {
         res.status(403).json({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
         return;
       }
@@ -255,7 +265,8 @@ export class LocationController {
         return;
       }
 
-      const location = await this.locationService.deactivateLocation(id);
+      // Check if location exists before deletion
+      const location = await this.locationService.findById(id);
 
       if (!location) {
         res.status(404).json({
@@ -265,9 +276,12 @@ export class LocationController {
         return;
       }
 
+      // Actually delete the location
+      await this.locationService.deleteLocation(id);
+
       res.status(200).json({
         success: true,
-        message: 'Location deactivated successfully'
+        message: 'Location deleted successfully'
       });
     } catch (error) {
       if (error instanceof AppError) {

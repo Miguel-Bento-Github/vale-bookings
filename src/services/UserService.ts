@@ -24,6 +24,19 @@ class UserService {
   }
 
   async updateProfile(userId: string, updateData: Partial<IUser>): Promise<IUserDocument | null> {
+    if (updateData.profile) {
+      const updateQuery: Record<string, unknown> = {};
+      Object.keys(updateData.profile).forEach(key => {
+        updateQuery[`profile.${key}`] = updateData.profile![key as keyof typeof updateData.profile];
+      });
+      
+      return await User.findByIdAndUpdate(
+        userId,
+        { $set: updateQuery },
+        { new: true, runValidators: true }
+      );
+    }
+    
     return await User.findByIdAndUpdate(
       userId,
       { $set: updateData },

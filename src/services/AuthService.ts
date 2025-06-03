@@ -64,7 +64,7 @@ class AuthService {
     try {
       return jwt.verify(token, this.JWT_SECRET) as IJWTPayload;
     } catch (error) {
-      throw new AppError('Invalid or expired token', 401);
+      throw new AppError('Invalid token', 401);
     }
   }
 

@@ -65,7 +65,7 @@ export const authorize = (roles: string[]) => {
     if (!roles.includes(req.user.role)) {
       res.status(403).json({
         success: false,
-        message: 'Insufficient permissions'
+        message: 'Forbidden: access denied'
       });
       return;
     }

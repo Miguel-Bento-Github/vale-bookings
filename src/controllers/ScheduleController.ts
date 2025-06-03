@@ -1,20 +1,42 @@
 import { Request, Response } from 'express';
 import ScheduleService from '../services/ScheduleService';
+import LocationService from '../services/LocationService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validateTimeFormat } from '../utils/validation';
+import mongoose from 'mongoose';
 
 export class ScheduleController {
   private scheduleService = ScheduleService;
+  private locationService = LocationService;
 
   async getLocationSchedules(req: Request, res: Response): Promise<void> {
     try {
       const { locationId } = req.params;
 
+      // Validate MongoDB ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(locationId!)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid ID format'
+        });
+        return;
+      }
+
+      // Check if location exists
+      const location = await this.locationService.findById(locationId!);
+      if (!location) {
+        res.status(404).json({
+          success: false,
+          message: 'Location not found'
+        });
+        return;
+      }
+
       const schedules = await this.scheduleService.getLocationSchedules(locationId!);
 
       res.status(200).json({
         success: true,
-        data: { schedules }
+        data: schedules
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -38,7 +60,7 @@ export class ScheduleController {
       if (userRole !== 'ADMIN') {
         res.status(403).json({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
         return;
       }
@@ -69,6 +91,28 @@ export class ScheduleController {
         return;
       }
 
+      // Validate time range - end time should be after start time
+      const start = new Date(`1970-01-01T${startTime}:00`);
+      const end = new Date(`1970-01-01T${endTime}:00`);
+      
+      if (end <= start) {
+        res.status(400).json({
+          success: false,
+          message: 'End time must be after start time'
+        });
+        return;
+      }
+
+      // Check if location exists
+      const location = await this.locationService.findById(locationId);
+      if (!location) {
+        res.status(404).json({
+          success: false,
+          message: 'Location not found'
+        });
+        return;
+      }
+
       const schedule = await this.scheduleService.createSchedule({
         locationId,
         dayOfWeek,
@@ -80,7 +124,7 @@ export class ScheduleController {
       res.status(201).json({
         success: true,
         message: 'Schedule created successfully',
-        data: { schedule }
+        data: schedule
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -104,7 +148,7 @@ export class ScheduleController {
       if (userRole !== 'ADMIN') {
         res.status(403).json({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
         return;
       }
@@ -149,7 +193,7 @@ export class ScheduleController {
       res.status(200).json({
         success: true,
         message: 'Schedule updated successfully',
-        data: { schedule }
+        data: schedule
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -173,12 +217,23 @@ export class ScheduleController {
       if (userRole !== 'ADMIN') {
         res.status(403).json({
           success: false,
-          message: 'Forbidden: Admin access required'
+          message: 'Forbidden: access denied'
         });
         return;
       }
 
       const { id } = req.params;
+
+      // Check if schedule exists before deletion
+      const schedule = await this.scheduleService.findById(id!);
+
+      if (!schedule) {
+        res.status(404).json({
+          success: false,
+          message: 'Schedule not found'
+        });
+        return;
+      }
 
       await this.scheduleService.deleteSchedule(id!);
 

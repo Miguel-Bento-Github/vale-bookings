@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import UserService from '../services/UserService';
 import { AppError, AuthenticatedRequest } from '../types';
+import { validatePhoneNumber } from '../utils/validation';
 
 export class UserController {
   private userService = UserService;
@@ -20,7 +21,7 @@ export class UserController {
       const user = await this.userService.findById(userId);
       
       if (!user) {
-        res.status(404).json({
+        res.status(401).json({
           success: false,
           message: 'User not found'
         });
@@ -29,7 +30,7 @@ export class UserController {
 
       res.status(200).json({
         success: true,
-        data: { user }
+        data: user
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -49,7 +50,7 @@ export class UserController {
   async updateProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.userId;
-      const { profile } = req.body as { profile: { name: string; phone?: string } };
+      const requestBody = req.body;
       
       if (!userId) {
         res.status(401).json({
@@ -59,7 +60,16 @@ export class UserController {
         return;
       }
 
-      if (!profile) {
+      // Check if user is trying to update restricted fields
+      if (requestBody.email || requestBody.role) {
+        res.status(400).json({
+          success: false,
+          message: 'Email and role updates are not allowed through this endpoint'
+        });
+        return;
+      }
+
+      if (!requestBody.profile) {
         res.status(400).json({
           success: false,
           message: 'Profile data is required'
@@ -67,12 +77,39 @@ export class UserController {
         return;
       }
 
+      const { profile } = requestBody;
+
+      // Validate profile data
+      if (profile.name && typeof profile.name !== 'string') {
+        res.status(400).json({
+          success: false,
+          message: 'Name must be a string'
+        });
+        return;
+      }
+
+      if (profile.phone && !validatePhoneNumber(profile.phone)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid phone number format'
+        });
+        return;
+      }
+
       const updatedUser = await this.userService.updateProfile(userId, { profile });
+
+      if (!updatedUser) {
+        res.status(401).json({
+          success: false,
+          message: 'User not found'
+        });
+        return;
+      }
 
       res.status(200).json({
         success: true,
         message: 'Profile updated successfully',
-        data: { user: updatedUser }
+        data: updatedUser
       });
     } catch (error) {
       if (error instanceof AppError) {
@@ -97,6 +134,16 @@ export class UserController {
         res.status(401).json({
           success: false,
           message: 'Unauthorized'
+        });
+        return;
+      }
+
+      // Check if user exists before deletion
+      const user = await this.userService.findById(userId);
+      if (!user) {
+        res.status(401).json({
+          success: false,
+          message: 'User not found'
         });
         return;
       }
