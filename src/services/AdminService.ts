@@ -347,13 +347,27 @@ class AdminService {
     if (filters.startDate || filters.endDate) {
       query.startTime = {};
       if (filters.startDate) {
-        (query.startTime as any).$gte = new Date(filters.startDate);
+        // Parse date string as local time to avoid timezone issues
+        const dateParts = filters.startDate.split('-').map(Number);
+        if (dateParts.length === 3) {
+          const year = dateParts[0]!;
+          const month = dateParts[1]!;
+          const day = dateParts[2]!;
+          const startDate = new Date(year, month - 1, day); // month is 0-indexed
+          (query.startTime as any).$gte = startDate;
+        }
       }
       if (filters.endDate) {
-        // Include the entire end date by setting to end of day
-        const endDate = new Date(filters.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        (query.startTime as any).$lte = endDate;
+        // Parse date string as local time and set to end of day
+        const dateParts = filters.endDate.split('-').map(Number);
+        if (dateParts.length === 3) {
+          const year = dateParts[0]!;
+          const month = dateParts[1]!;
+          const day = dateParts[2]!;
+          const endDate = new Date(year, month - 1, day); // month is 0-indexed
+          endDate.setHours(23, 59, 59, 999);
+          (query.startTime as any).$lte = endDate;
+        }
       }
     }
 
@@ -431,13 +445,27 @@ class AdminService {
     if (filters.startDate || filters.endDate) {
       matchStage.startTime = {};
       if (filters.startDate) {
-        (matchStage.startTime as any).$gte = new Date(filters.startDate);
+        // Parse date string as local time to avoid timezone issues
+        const dateParts = filters.startDate.split('-').map(Number);
+        if (dateParts.length === 3) {
+          const year = dateParts[0]!;
+          const month = dateParts[1]!;
+          const day = dateParts[2]!;
+          const startDate = new Date(year, month - 1, day); // month is 0-indexed
+          (matchStage.startTime as any).$gte = startDate;
+        }
       }
       if (filters.endDate) {
-        // Include the entire end date by setting to end of day
-        const endDate = new Date(filters.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        (matchStage.startTime as any).$lte = endDate;
+        // Parse date string as local time and set to end of day
+        const dateParts = filters.endDate.split('-').map(Number);
+        if (dateParts.length === 3) {
+          const year = dateParts[0]!;
+          const month = dateParts[1]!;
+          const day = dateParts[2]!;
+          const endDate = new Date(year, month - 1, day); // month is 0-indexed
+          endDate.setHours(23, 59, 59, 999);
+          (matchStage.startTime as any).$lte = endDate;
+        }
       }
     }
 

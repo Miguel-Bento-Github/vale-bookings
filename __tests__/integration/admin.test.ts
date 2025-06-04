@@ -515,6 +515,9 @@ describe('Admin API Integration Tests', () => {
 
   describe('Admin Booking Oversight', () => {
     beforeEach(async () => {
+      // Clear any existing bookings to ensure test isolation
+      await Booking.deleteMany({});
+      
       // Create test bookings
       await Booking.create({
         userId: customerUserId,
@@ -551,14 +554,15 @@ describe('Admin API Integration Tests', () => {
       });
 
       it('should support date range filtering', async () => {
-        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        // Use a specific future date that won't conflict with other tests
+        const dayAfterTomorrow = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const response = await request(app)
-          .get(`/api/admin/bookings?startDate=${tomorrow}&endDate=${tomorrow}`)
+          .get(`/api/admin/bookings?startDate=${dayAfterTomorrow}&endDate=${dayAfterTomorrow}`)
           .set('Authorization', `Bearer ${adminToken}`)
           .expect(200);
 
         expect(response.body.success).toBe(true);
-        expect(response.body.data).toHaveLength(0); // No bookings tomorrow
+        expect(response.body.data).toHaveLength(0); // No bookings the day after tomorrow
       });
     });
 
@@ -596,27 +600,31 @@ describe('Admin API Integration Tests', () => {
 
   describe('Admin Analytics', () => {
     beforeEach(async () => {
-      // Create sample data for analytics with today's date but future time
+      // Clear any existing bookings to ensure test isolation
+      await Booking.deleteMany({});
+      
+      // Create sample data for analytics with future times to avoid past validation
       const now = new Date();
-      const todayStartTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1);
-      const todayEndTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 3);
-      const todayStartTime2 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 2);
-      const todayEndTime2 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 4);
+      // Use future times to satisfy booking validation
+      const futureStartTime = new Date(now.getTime() + 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000); // Tomorrow + 2 hours
+      const futureEndTime = new Date(futureStartTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours later
+      const futureStartTime2 = new Date(now.getTime() + 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000); // Tomorrow + 4 hours
+      const futureEndTime2 = new Date(futureStartTime2.getTime() + 2 * 60 * 60 * 1000); // 2 hours later
 
       await Booking.create([
         {
           userId: customerUserId,
           locationId,
-          startTime: todayStartTime,
-          endTime: todayEndTime,
+          startTime: futureStartTime,
+          endTime: futureEndTime,
           status: 'COMPLETED',
           price: 25.00
         },
         {
           userId: customerUserId,
           locationId,
-          startTime: todayStartTime2,
-          endTime: todayEndTime2,
+          startTime: futureStartTime2,
+          endTime: futureEndTime2,
           status: 'COMPLETED',
           price: 30.00
         }
@@ -655,9 +663,12 @@ describe('Admin API Integration Tests', () => {
       });
 
       it('should support date range filtering', async () => {
-        const today = new Date().toISOString().split('T')[0];
+        // Get tomorrow's date in YYYY-MM-DD format since our test bookings are tomorrow
+        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const dateStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+        
         const response = await request(app)
-          .get(`/api/admin/analytics/revenue?startDate=${today}&endDate=${today}`)
+          .get(`/api/admin/analytics/revenue?startDate=${dateStr}&endDate=${dateStr}`)
           .set('Authorization', `Bearer ${adminToken}`)
           .expect(200);
 
