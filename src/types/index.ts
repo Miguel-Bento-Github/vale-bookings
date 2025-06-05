@@ -184,4 +184,43 @@ export interface AuthenticatedRequest extends Request {
     email: string;
     role: UserRole;
   };
+}
+
+// MongoDB Query types
+export interface IMongoQuery {
+  [key: string]: unknown;
+}
+
+export interface IDateRangeQuery {
+  $gte?: Date;
+  $lte?: Date;
+}
+
+export interface IBookingQuery extends IMongoQuery {
+  status?: BookingStatus;
+  startTime?: IDateRangeQuery;
+  userId?: string;
+  locationId?: string;
+}
+
+export interface IRevenueMatchStage extends IMongoQuery {
+  status: BookingStatus;
+  startTime?: IDateRangeQuery;
+}
+
+// Model method types
+export interface IBookingModel {
+  findByLocationId(locationId: string, startDate?: Date, endDate?: Date): Promise<IBookingDocument[]>;
+  findOverlapping(locationId: string, startTime: Date, endTime: Date, excludeBookingId?: string): Promise<IBookingDocument[]>;
+}
+
+export interface ILocationModel {
+  findNearby(latitude: number, longitude: number, radiusInKm: number): Promise<ILocationDocument[]>;
+  search(query: string): Promise<ILocationDocument[]>;
+}
+
+export interface IScheduleModel {
+  findByLocationAndDay(locationId: string, dayOfWeek: number): Promise<IScheduleDocument | null>;
+  getWeeklySchedule(locationId: string): Promise<IScheduleDocument[]>;
+  getDayName(dayOfWeek: number): string;
 } 

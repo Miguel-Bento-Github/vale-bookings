@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import UserService from '../services/UserService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validatePhoneNumber } from '../utils/validation';

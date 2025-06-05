@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import BookingService from '../services/BookingService';
 import { AppError, AuthenticatedRequest, BookingStatus } from '../types';
 
@@ -286,7 +286,7 @@ export class BookingController {
         return;
       }
 
-      const cancelledBooking = await this.bookingService.cancelBooking(id!);
+      await this.bookingService.cancelBooking(id!);
 
       res.status(200).json({
         success: true,

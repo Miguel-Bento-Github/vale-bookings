@@ -1,6 +1,5 @@
 import Schedule from '../models/Schedule';
-import { ISchedule, IScheduleDocument, IUpdateScheduleRequest } from '../types';
-import { AppError } from '../types';
+import { ISchedule, IScheduleDocument, IUpdateScheduleRequest, IScheduleModel } from '../types';
 
 class ScheduleService {
   async createSchedule(scheduleData: ISchedule): Promise<IScheduleDocument> {
@@ -23,11 +22,11 @@ class ScheduleService {
   }
 
   async getScheduleByLocationAndDay(locationId: string, dayOfWeek: number): Promise<IScheduleDocument | null> {
-    return await (Schedule as any).findByLocationAndDay(locationId, dayOfWeek);
+    return await (Schedule as unknown as IScheduleModel).findByLocationAndDay(locationId, dayOfWeek);
   }
 
   async getWeeklySchedule(locationId: string): Promise<IScheduleDocument[]> {
-    return await (Schedule as any).getWeeklySchedule(locationId);
+    return await (Schedule as unknown as IScheduleModel).getWeeklySchedule(locationId);
   }
 
   async updateSchedule(scheduleId: string, updateData: IUpdateScheduleRequest): Promise<IScheduleDocument | null> {
@@ -108,7 +107,7 @@ class ScheduleService {
   }
 
   getDayName(dayOfWeek: number): string {
-    return (Schedule as any).getDayName(dayOfWeek);
+    return (Schedule as unknown as IScheduleModel).getDayName(dayOfWeek);
   }
 }
 

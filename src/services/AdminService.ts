@@ -14,7 +14,10 @@ import {
   ICreateScheduleRequest,
   IUpdateScheduleRequest,
   IPaginationOptions,
-  AppError
+  AppError,
+  IBookingQuery,
+  IRevenueMatchStage,
+  IDateRangeQuery
 } from '../types';
 
 interface IUserWithStatistics extends IUserDocument {
@@ -338,14 +341,14 @@ class AdminService {
 
   // Booking Oversight
   async getAllBookings(filters: IBookingFilters): Promise<IBookingDocument[]> {
-    const query: Record<string, any> = {};
+    const query: IBookingQuery = {};
 
     if (filters.status) {
       query.status = filters.status;
     }
 
     if (filters.startDate || filters.endDate) {
-      query.startTime = {};
+      const dateRange: IDateRangeQuery = {};
       if (filters.startDate) {
         // Parse date string as local time to avoid timezone issues
         const dateParts = filters.startDate.split('-').map(Number);
@@ -354,7 +357,7 @@ class AdminService {
           const month = dateParts[1]!;
           const day = dateParts[2]!;
           const startDate = new Date(year, month - 1, day); // month is 0-indexed
-          (query.startTime as any).$gte = startDate;
+          dateRange.$gte = startDate;
         }
       }
       if (filters.endDate) {
@@ -366,9 +369,10 @@ class AdminService {
           const day = dateParts[2]!;
           const endDate = new Date(year, month - 1, day); // month is 0-indexed
           endDate.setHours(23, 59, 59, 999);
-          (query.startTime as any).$lte = endDate;
+          dateRange.$lte = endDate;
         }
       }
+      query.startTime = dateRange;
     }
 
     const bookings = await Booking.find(query)
@@ -440,10 +444,10 @@ class AdminService {
     monthlyRevenue: Array<{ month: string; revenue: number }>;
     averageBookingValue: number;
   }> {
-    const matchStage: Record<string, any> = { status: 'COMPLETED' };
+    const matchStage: IRevenueMatchStage = { status: 'COMPLETED' };
 
     if (filters.startDate || filters.endDate) {
-      matchStage.startTime = {};
+      const dateRange: IDateRangeQuery = {};
       if (filters.startDate) {
         // Parse date string as local time to avoid timezone issues
         const dateParts = filters.startDate.split('-').map(Number);
@@ -452,7 +456,7 @@ class AdminService {
           const month = dateParts[1]!;
           const day = dateParts[2]!;
           const startDate = new Date(year, month - 1, day); // month is 0-indexed
-          (matchStage.startTime as any).$gte = startDate;
+          dateRange.$gte = startDate;
         }
       }
       if (filters.endDate) {
@@ -464,9 +468,10 @@ class AdminService {
           const day = dateParts[2]!;
           const endDate = new Date(year, month - 1, day); // month is 0-indexed
           endDate.setHours(23, 59, 59, 999);
-          (matchStage.startTime as any).$lte = endDate;
+          dateRange.$lte = endDate;
         }
       }
+      matchStage.startTime = dateRange;
     }
 
     const [revenueData, monthlyData] = await Promise.all([

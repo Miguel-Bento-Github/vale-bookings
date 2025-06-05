@@ -1,6 +1,5 @@
 import Location from '../models/Location';
-import { ILocation, ILocationDocument, IUpdateLocationRequest } from '../types';
-import { AppError } from '../types';
+import { ILocation, ILocationDocument, IUpdateLocationRequest, ILocationModel } from '../types';
 
 class LocationService {
   async createLocation(locationData: ILocation): Promise<ILocationDocument> {
@@ -38,11 +37,11 @@ class LocationService {
   }
 
   async findNearby(latitude: number, longitude: number, radiusInKm: number = 10): Promise<ILocationDocument[]> {
-    return await (Location as any).findNearby(latitude, longitude, radiusInKm);
+    return await (Location as unknown as ILocationModel).findNearby(latitude, longitude, radiusInKm);
   }
 
   async searchLocations(query: string): Promise<ILocationDocument[]> {
-    return await (Location as any).search(query);
+    return await (Location as unknown as ILocationModel).search(query);
   }
 
   async getLocationsByCoordinates(

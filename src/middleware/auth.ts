@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import AuthService from '../services/AuthService';
 import { AppError, AuthenticatedRequest } from '../types';
 

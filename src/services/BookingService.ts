@@ -1,5 +1,5 @@
 import Booking from '../models/Booking';
-import { IBooking, IBookingDocument, IUpdateBookingRequest, BookingStatus } from '../types';
+import { IBooking, IBookingDocument, IUpdateBookingRequest, BookingStatus, IBookingModel } from '../types';
 import { AppError } from '../types';
 
 class BookingService {
@@ -32,7 +32,7 @@ class BookingService {
   }
 
   async getLocationBookings(locationId: string, startDate?: Date, endDate?: Date): Promise<IBookingDocument[]> {
-    return await (Booking as any).findByLocationId(locationId, startDate, endDate);
+    return await (Booking as unknown as IBookingModel).findByLocationId(locationId, startDate, endDate);
   }
 
   async updateBooking(bookingId: string, updateData: IUpdateBookingRequest): Promise<IBookingDocument | null> {
@@ -88,7 +88,7 @@ class BookingService {
     endTime: Date,
     excludeBookingId?: string
   ): Promise<boolean> {
-    const overlappingBookings = await (Booking as any).findOverlapping(
+    const overlappingBookings = await (Booking as unknown as IBookingModel).findOverlapping(
       locationId,
       startTime,
       endTime,

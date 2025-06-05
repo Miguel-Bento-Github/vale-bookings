@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthenticatedRequest, UserRole, BookingStatus } from '../types';
 import AdminService from '../services/AdminService';
 import { AppError } from '../types';
