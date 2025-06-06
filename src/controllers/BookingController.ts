@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import BookingService from '../services/BookingService';
+import { getUserBookings as getBookingsForUser, findById as findBookingById, createBooking as createNewBooking, updateBookingStatus as updateStatus, cancelBooking as cancelExistingBooking } from '../services/BookingService';
 import { AppError, AuthenticatedRequest, BookingStatus } from '../types';
 
 export async function getUserBookings(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -17,7 +17,7 @@ export async function getUserBookings(req: AuthenticatedRequest, res: Response):
     const page = parseInt(req.query?.page as string) || 1;
     const limit = parseInt(req.query?.limit as string) || 10;
 
-    const bookings = await BookingService.getUserBookings(userId, page, limit);
+    const bookings = await getBookingsForUser(userId, page, limit);
 
     res.status(200).json({
       success: true,
@@ -59,7 +59,7 @@ export async function getBookingById(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const booking = await BookingService.findById(id);
+    const booking = await findBookingById(id);
 
     if (!booking) {
       res.status(404).json({
@@ -145,7 +145,7 @@ export async function createBooking(req: AuthenticatedRequest, res: Response): P
     const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
     const calculatedPrice = Math.max(hours * 10, 10); // Minimum $10
 
-    const booking = await BookingService.createBooking({
+    const booking = await createNewBooking({
       userId,
       locationId,
       startTime: start,
@@ -225,7 +225,7 @@ export async function updateBookingStatus(req: AuthenticatedRequest, res: Respon
       return;
     }
 
-    const booking = await BookingService.findById(id);
+    const booking = await findBookingById(id);
 
     if (!booking) {
       res.status(404).json({
@@ -235,7 +235,7 @@ export async function updateBookingStatus(req: AuthenticatedRequest, res: Respon
       return;
     }
 
-    const updatedBooking = await BookingService.updateBookingStatus(id, status as BookingStatus);
+    const updatedBooking = await updateStatus(id, status as BookingStatus);
 
     res.status(200).json({
       success: true,
@@ -279,7 +279,7 @@ export async function cancelBooking(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    const booking = await BookingService.findById(id);
+    const booking = await findBookingById(id);
 
     if (!booking) {
       res.status(404).json({
@@ -307,7 +307,7 @@ export async function cancelBooking(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    await BookingService.cancelBooking(id);
+    await cancelExistingBooking(id);
 
     res.status(200).json({
       success: true,

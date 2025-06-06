@@ -13,7 +13,7 @@ import {
 import * as UserService from '../../src/services/UserService';
 import AuthService from '../../src/services/AuthService';
 import * as LocationService from '../../src/services/LocationService';
-import BookingService from '../../src/services/BookingService';
+import * as BookingService from '../../src/services/BookingService';
 import ScheduleService from '../../src/services/ScheduleService';
 
 // Import models
