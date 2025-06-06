@@ -3000,5 +3000,183 @@ describe('Controllers', () => {
         });
       });
     });
+
+    describe('updateAdminSchedule', () => {
+      it('should update schedule successfully', async () => {
+        const mockUpdatedSchedule = { _id: '1', locationId: 'loc1', dayOfWeek: 1, startTime: '08:00', endTime: '19:00' };
+        (AdminService.updateSchedule as jest.Mock).mockResolvedValue(mockUpdatedSchedule);
+
+        adminRequest.params = { id: '1' };
+        adminRequest.body = { startTime: '08:00', endTime: '19:00' };
+
+        await updateAdminSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockUpdatedSchedule
+        });
+      });
+
+      it('should return 400 for missing schedule ID', async () => {
+        adminRequest.params = {};
+        adminRequest.body = { startTime: '08:00' };
+
+        await updateAdminSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Schedule ID is required'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AdminService.updateSchedule as jest.Mock).mockRejectedValue(new AppError('Schedule not found', 404));
+
+        adminRequest.params = { id: '1' };
+        adminRequest.body = { startTime: '08:00' };
+
+        await updateAdminSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Schedule not found'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.updateSchedule as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.params = { id: '1' };
+        adminRequest.body = { startTime: '08:00' };
+
+        await updateAdminSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
+    });
+
+    describe('deleteAdminSchedule', () => {
+      it('should delete schedule successfully', async () => {
+        (AdminService.deleteSchedule as jest.Mock).mockResolvedValue(true);
+
+        adminRequest.params = { id: '1' };
+
+        await deleteAdminSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          message: 'Schedule deleted successfully'
+        });
+      });
+
+      it('should return 400 for missing schedule ID', async () => {
+        adminRequest.params = {};
+
+        await deleteAdminSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Schedule ID is required'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AdminService.deleteSchedule as jest.Mock).mockRejectedValue(new AppError('Schedule not found', 404));
+
+        adminRequest.params = { id: '1' };
+
+        await deleteAdminSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Schedule not found'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.deleteSchedule as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.params = { id: '1' };
+
+        await deleteAdminSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
+    });
+
+    describe('updateAdminBookingStatus', () => {
+      it('should update booking status successfully', async () => {
+        const mockUpdatedBooking = { _id: '1', userId: 'user1', status: 'CONFIRMED' };
+        (AdminService.updateBookingStatus as jest.Mock).mockResolvedValue(mockUpdatedBooking);
+
+        adminRequest.params = { id: '1' };
+        adminRequest.body = { status: 'CONFIRMED' };
+
+        await updateAdminBookingStatus(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockUpdatedBooking
+        });
+      });
+
+      it('should return 400 for missing booking ID', async () => {
+        adminRequest.params = {};
+        adminRequest.body = { status: 'CONFIRMED' };
+
+        await updateAdminBookingStatus(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Booking ID is required'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AdminService.updateBookingStatus as jest.Mock).mockRejectedValue(new AppError('Booking not found', 404));
+
+        adminRequest.params = { id: '1' };
+        adminRequest.body = { status: 'CONFIRMED' };
+
+        await updateAdminBookingStatus(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Booking not found'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.updateBookingStatus as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.params = { id: '1' };
+        adminRequest.body = { status: 'CONFIRMED' };
+
+        await updateAdminBookingStatus(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
+    });
   });
 }); 
