@@ -1,6 +1,27 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
-import AdminController from '../controllers/AdminController';
+import {
+    getAllUsers,
+    updateUserRole,
+    deleteUser,
+    getAllValets,
+    createValet,
+    updateValet,
+    deleteValet,
+    createLocation,
+    updateLocation,
+    deleteLocation,
+    getAllSchedules,
+    createSchedule,
+    updateSchedule,
+    deleteSchedule,
+    createBulkSchedules,
+    getAllBookings,
+    updateBookingStatus,
+    getAnalyticsOverview,
+    getRevenueAnalytics,
+    getBookingAnalytics
+} from '../controllers/AdminController';
 
 const router = Router();
 
@@ -9,35 +30,35 @@ router.use(authenticate);
 router.use(authorize(['ADMIN']));
 
 // Admin user management
-router.get('/users', AdminController.getAllUsers);
-router.put('/users/:id/role', AdminController.updateUserRole);
-router.delete('/users/:id', AdminController.deleteUser);
+router.get('/users', getAllUsers);
+router.put('/users/:id/role', updateUserRole);
+router.delete('/users/:id', deleteUser);
 
 // Admin valet management
-router.get('/valets', AdminController.getAllValets);
-router.post('/valets', AdminController.createValet);
-router.put('/valets/:id', AdminController.updateValet);
-router.delete('/valets/:id', AdminController.deleteValet);
+router.get('/valets', getAllValets);
+router.post('/valets', createValet);
+router.put('/valets/:id', updateValet);
+router.delete('/valets/:id', deleteValet);
 
 // Admin location management
-router.post('/locations', AdminController.createLocation);
-router.put('/locations/:id', AdminController.updateLocation);
-router.delete('/locations/:id', AdminController.deleteLocation);
+router.post('/locations', createLocation);
+router.put('/locations/:id', updateLocation);
+router.delete('/locations/:id', deleteLocation);
 
 // Admin schedule management
-router.get('/schedules', AdminController.getAllSchedules);
-router.post('/schedules', AdminController.createSchedule);
-router.put('/schedules/:id', AdminController.updateSchedule);
-router.delete('/schedules/:id', AdminController.deleteSchedule);
-router.post('/schedules/bulk', AdminController.createBulkSchedules);
+router.get('/schedules', getAllSchedules);
+router.post('/schedules', createSchedule);
+router.put('/schedules/:id', updateSchedule);
+router.delete('/schedules/:id', deleteSchedule);
+router.post('/schedules/bulk', createBulkSchedules);
 
 // Admin booking oversight
-router.get('/bookings', AdminController.getAllBookings);
-router.put('/bookings/:id/status', AdminController.updateBookingStatus);
+router.get('/bookings', getAllBookings);
+router.put('/bookings/:id/status', updateBookingStatus);
 
 // Admin analytics
-router.get('/analytics/overview', AdminController.getAnalyticsOverview);
-router.get('/analytics/revenue', AdminController.getRevenueAnalytics);
-router.get('/analytics/bookings', AdminController.getBookingAnalytics);
+router.get('/analytics/overview', getAnalyticsOverview);
+router.get('/analytics/revenue', getRevenueAnalytics);
+router.get('/analytics/bookings', getBookingAnalytics);
 
 export default router; 
