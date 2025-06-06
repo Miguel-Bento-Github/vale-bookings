@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { register, login, refreshToken } from '../../src/controllers/AuthController';
 import { getProfile, updateProfile, deleteAccount } from '../../src/controllers/UserController';
-import { LocationController } from '../../src/controllers/LocationController';
+import { getLocations, getNearbyLocations, getLocationById, createLocation, updateLocation, deleteLocation } from '../../src/controllers/LocationController';
 import { BookingController } from '../../src/controllers/BookingController';
 import { ScheduleController } from '../../src/controllers/ScheduleController';
 import AuthService from '../../src/services/AuthService';
@@ -290,11 +290,6 @@ describe('Controllers', () => {
   });
 
   describe('LocationController', () => {
-    let locationController: LocationController;
-
-    beforeEach(() => {
-      locationController = new LocationController();
-    });
 
     describe('getLocations', () => {
       it('should get all locations successfully', async () => {
@@ -304,7 +299,7 @@ describe('Controllers', () => {
         ];
         (LocationService.getAllLocations as jest.Mock).mockResolvedValue(mockLocations);
 
-        await locationController.getLocations(mockRequest as Request, mockResponse as Response);
+        await getLocations(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -325,7 +320,7 @@ describe('Controllers', () => {
           radius: '5000'
         };
 
-        await locationController.getNearbyLocations(mockRequest as Request, mockResponse as Response);
+        await getNearbyLocations(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -337,7 +332,7 @@ describe('Controllers', () => {
       it('should return 400 for missing coordinates', async () => {
         mockRequest.query = { latitude: '40.7128' }; // missing longitude
 
-        await locationController.getNearbyLocations(mockRequest as Request, mockResponse as Response);
+        await getNearbyLocations(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -352,7 +347,7 @@ describe('Controllers', () => {
           longitude: '-74.0060'
         };
 
-        await locationController.getNearbyLocations(mockRequest as Request, mockResponse as Response);
+        await getNearbyLocations(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -369,7 +364,7 @@ describe('Controllers', () => {
 
         mockRequest.params = { id: '507f1f77bcf86cd799439011' };
 
-        await locationController.getLocationById(mockRequest as Request, mockResponse as Response);
+        await getLocationById(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -383,7 +378,7 @@ describe('Controllers', () => {
 
         mockRequest.params = { id: '507f1f77bcf86cd799439016' };
 
-        await locationController.getLocationById(mockRequest as Request, mockResponse as Response);
+        await getLocationById(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -408,7 +403,7 @@ describe('Controllers', () => {
           }
         };
 
-        await locationController.createLocation(adminRequest, mockResponse as Response);
+        await createLocation(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -425,7 +420,7 @@ describe('Controllers', () => {
           coordinates: { latitude: 40.7128, longitude: -74.0060 }
         };
 
-        await locationController.createLocation(mockAuthenticatedRequest, mockResponse as Response);
+        await createLocation(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -441,7 +436,7 @@ describe('Controllers', () => {
           body: { name: 'New Location' } // missing address and coordinates
         };
 
-        await locationController.createLocation(adminRequest, mockResponse as Response);
+        await createLocation(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -465,7 +460,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await locationController.updateLocation(adminRequest, mockResponse as Response);
+        await updateLocation(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -479,7 +474,7 @@ describe('Controllers', () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439011' };
         mockAuthenticatedRequest.body = { name: 'Updated Location' };
 
-        await locationController.updateLocation(mockAuthenticatedRequest, mockResponse as Response);
+        await updateLocation(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -498,7 +493,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await locationController.updateLocation(adminRequest, mockResponse as Response);
+        await updateLocation(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -521,7 +516,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439011' }
         };
 
-        await locationController.deleteLocation(adminRequest, mockResponse as Response);
+        await deleteLocation(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -533,7 +528,7 @@ describe('Controllers', () => {
       it('should return 403 for non-admin user', async () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439011' };
 
-        await locationController.deleteLocation(mockAuthenticatedRequest, mockResponse as Response);
+        await deleteLocation(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -551,7 +546,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439016' }
         };
 
-        await locationController.deleteLocation(adminRequest, mockResponse as Response);
+        await deleteLocation(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({

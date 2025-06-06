@@ -1,15 +1,14 @@
 import { Router } from 'express';
-import { LocationController } from '../controllers/LocationController';
+import { getLocations, getNearbyLocations, getLocationById, createLocation, updateLocation, deleteLocation } from '../controllers/LocationController';
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
-const locationController = new LocationController();
 
-router.get('/', locationController.getLocations.bind(locationController));
-router.get('/nearby', locationController.getNearbyLocations.bind(locationController));
-router.get('/:id', locationController.getLocationById.bind(locationController));
-router.post('/', authenticate, authorize(['ADMIN']), locationController.createLocation.bind(locationController));
-router.put('/:id', authenticate, authorize(['ADMIN']), locationController.updateLocation.bind(locationController));
-router.delete('/:id', authenticate, authorize(['ADMIN']), locationController.deleteLocation.bind(locationController));
+router.get('/', getLocations);
+router.get('/nearby', getNearbyLocations);
+router.get('/:id', getLocationById);
+router.post('/', authenticate, authorize(['ADMIN']), createLocation);
+router.put('/:id', authenticate, authorize(['ADMIN']), updateLocation);
+router.delete('/:id', authenticate, authorize(['ADMIN']), deleteLocation);
 
 export default router; 
