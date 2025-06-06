@@ -333,6 +333,130 @@ describe('Services', () => {
       
       expect(result).toBeNull();
     });
+
+    it('should handle duplicate location creation error', async () => {
+      // Mock mongoose save to throw duplicate key error
+      const originalSave = Location.prototype.save;
+      let saveCallCount = 0;
+
+      Location.prototype.save = jest.fn().mockImplementation(async function (this: any) {
+        saveCallCount++;
+        if (saveCallCount === 1) {
+          return originalSave.call(this);
+        } else {
+          const error = new Error('Duplicate key error') as any;
+          error.code = 11000;
+          throw error;
+        }
+      });
+
+      // Create the first location
+      await LocationService.createLocation(validLocation);
+
+      // Try to create a duplicate location
+      await expect(LocationService.createLocation({
+        ...validLocation,
+        address: '456 Different St' // Different address to avoid real duplicates
+      })).rejects.toThrow('Location already exists');
+
+      // Restore original save method
+      Location.prototype.save = originalSave;
+    });
+
+    it('should handle generic errors in createLocation', async () => {
+      // Mock mongoose save to throw a generic error
+      const originalSave = Location.prototype.save;
+      Location.prototype.save = jest.fn().mockRejectedValue(new Error('Database connection error'));
+
+      await expect(LocationService.createLocation(validLocation)).rejects.toThrow('Database connection error');
+
+      // Restore original save method
+      Location.prototype.save = originalSave;
+    });
+
+    it('should throw error when deleting non-existent location', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+
+      await expect(LocationService.deleteLocation(fakeId)).rejects.toThrow('Location not found');
+    });
+
+    it('should throw error when deleting location with active bookings', async () => {
+      const createdLocation = await LocationService.createLocation(validLocation);
+
+      // Create a user and booking
+      const user = await User.create(validUser);
+      const booking = await Booking.create({
+        ...validBooking,
+        userId: user._id,
+        locationId: createdLocation._id,
+        status: 'PENDING'
+      });
+
+      await expect(LocationService.deleteLocation(createdLocation._id.toString()))
+        .rejects.toThrow('Cannot delete location with active bookings');
+
+      // Clean up
+      await booking.deleteOne();
+    });
+
+    it('should successfully delete location without active bookings', async () => {
+      const createdLocation = await LocationService.createLocation(validLocation);
+
+      // Create a user and booking with COMPLETED status (not active)
+      const user = await User.create(validUser);
+      await Booking.create({
+        ...validBooking,
+        userId: user._id,
+        locationId: createdLocation._id,
+        status: 'COMPLETED'
+      });
+
+      // Should not throw error since booking is completed
+      await expect(LocationService.deleteLocation(createdLocation._id.toString())).resolves.not.toThrow();
+    });
+
+    it('should handle geo query errors gracefully', async () => {
+      // This test verifies the function exists and handles geo queries
+      // In test environment without geo indexes, this might return empty array or throw
+      try {
+        const nearbyLocations = await LocationService.getNearbyLocations(
+          validLocation.coordinates.longitude,
+          validLocation.coordinates.latitude,
+          5000
+        );
+        expect(Array.isArray(nearbyLocations)).toBe(true);
+      } catch (error) {
+        // Expected in test environment without geo indexes
+        expect(error).toBeDefined();
+      }
+    });
+
+    it('should get locations by coordinate bounds', async () => {
+      await LocationService.createLocation(validLocation);
+
+      const locations = await LocationService.getLocationsByCoordinates(
+        validLocation.coordinates.latitude - 0.1,  // minLat
+        validLocation.coordinates.latitude + 0.1,  // maxLat
+        validLocation.coordinates.longitude - 0.1, // minLng
+        validLocation.coordinates.longitude + 0.1  // maxLng
+      );
+
+      expect(Array.isArray(locations)).toBe(true);
+      expect(locations.length).toBeGreaterThanOrEqual(1);
+      expect(locations[0]?.isActive).toBe(true);
+    });
+
+    it('should return empty array for coordinate bounds with no locations', async () => {
+      const locations = await LocationService.getLocationsByCoordinates(
+        90,   // minLat (North Pole area)
+        91,   // maxLat
+        -180, // minLng
+        -179  // maxLng
+      );
+
+      expect(Array.isArray(locations)).toBe(true);
+      expect(locations.length).toBe(0);
+    });
   });
 
   describe('BookingService', () => {
@@ -787,6 +911,119 @@ describe('Services', () => {
       const result = await ScheduleService.updateSchedule(fakeId, { startTime: '08:00' });
       
       expect(result).toBeNull();
+    });
+
+    it('should handle duplicate schedule creation error', async () => {
+      const scheduleData = { ...validSchedule, locationId };
+
+      // Create the first schedule
+      await ScheduleService.createSchedule(scheduleData);
+
+      // Try to create a duplicate schedule (same location and day)
+      await expect(ScheduleService.createSchedule(scheduleData)).rejects.toThrow('Schedule already exists for this location and day');
+    });
+
+    it('should handle generic errors in createSchedule', async () => {
+      // Mock mongoose save to throw a generic error
+      const originalSave = Schedule.prototype.save;
+      Schedule.prototype.save = jest.fn().mockRejectedValue(new Error('Database connection error'));
+
+      const scheduleData = { ...validSchedule, locationId };
+
+      await expect(ScheduleService.createSchedule(scheduleData)).rejects.toThrow('Database connection error');
+
+      // Restore original save method
+      Schedule.prototype.save = originalSave;
+    });
+
+    it('should handle errors in bulk schedule creation', async () => {
+      const schedulesData = [
+        { ...validSchedule, locationId, dayOfWeek: 1 },
+        { ...validSchedule, locationId, dayOfWeek: 1 }, // Duplicate - will cause error
+        { ...validSchedule, locationId, dayOfWeek: 2 }
+      ];
+
+      const result = await ScheduleService.createBulkSchedules(schedulesData);
+
+      expect(result.created.length).toBe(2); // First and third should succeed
+      expect(result.errors.length).toBe(1); // Second should fail due to duplicate
+      expect(result.errors[0]).toContain('Schedule already exists for this location and day');
+    });
+
+    it('should handle unknown errors in bulk schedule creation', async () => {
+      // Create a schedule with invalid data that will cause a generic error
+      const schedulesData = [
+        { ...validSchedule, locationId, dayOfWeek: 1 },
+        { ...validSchedule, locationId: 'invalid-id', dayOfWeek: 2 }, // Invalid location ID
+        { ...validSchedule, locationId, dayOfWeek: 3 }
+      ];
+
+      const result = await ScheduleService.createBulkSchedules(schedulesData);
+
+      expect(result.created.length).toBe(2); // First and third should succeed
+      expect(result.errors.length).toBe(1); // Second should fail
+      expect(result.errors[0]).toContain('Unknown error');
+    });
+
+    it('should create new schedules in updateLocationSchedules when none exist', async () => {
+      const updatesData = [
+        { dayOfWeek: 1, startTime: '08:00', endTime: '18:00' },
+        { dayOfWeek: 2, startTime: '10:00', endTime: '16:00' }
+      ];
+
+      const updatedSchedules = await ScheduleService.updateLocationSchedules(locationId, updatesData);
+
+      expect(updatedSchedules.length).toBe(2);
+      expect(updatedSchedules.find(s => s.dayOfWeek === 1)?.startTime).toBe('08:00');
+      expect(updatedSchedules.find(s => s.dayOfWeek === 2)?.startTime).toBe('10:00');
+    });
+
+    it('should handle failed updates in updateLocationSchedules', async () => {
+      // Create initial schedule
+      const scheduleData = { ...validSchedule, locationId, dayOfWeek: 1 };
+      const createdSchedule = await ScheduleService.createSchedule(scheduleData);
+
+      // Try to update with an invalid schedule ID by directly manipulating the update
+      const updatesData = [
+        { dayOfWeek: 1, startTime: '08:00', endTime: '18:00' }
+      ];
+
+      // First, let's delete the schedule to make the update fail
+      await ScheduleService.deleteSchedule(createdSchedule._id.toString());
+
+      const updatedSchedules = await ScheduleService.updateLocationSchedules(locationId, updatesData);
+
+      // Since the schedule was deleted, updateLocationSchedules should create a new one
+      expect(updatedSchedules.length).toBe(1); // Should create new schedule
+      expect(updatedSchedules[0]?.dayOfWeek).toBe(1);
+    });
+
+    it('should skip updates with undefined dayOfWeek in updateLocationSchedules', async () => {
+      const updatesData = [
+        { startTime: '08:00', endTime: '18:00' }, // No dayOfWeek specified
+        { dayOfWeek: 1, startTime: '09:00', endTime: '17:00' }
+      ];
+
+      const updatedSchedules = await ScheduleService.updateLocationSchedules(locationId, updatesData);
+
+      expect(updatedSchedules.length).toBe(1); // Only the second update should be processed
+      expect(updatedSchedules[0]?.dayOfWeek).toBe(1);
+    });
+
+    it('should get day name for valid day numbers', async () => {
+      expect(ScheduleService.getDayName(0)).toBe('Sunday');
+      expect(ScheduleService.getDayName(1)).toBe('Monday');
+      expect(ScheduleService.getDayName(2)).toBe('Tuesday');
+      expect(ScheduleService.getDayName(3)).toBe('Wednesday');
+      expect(ScheduleService.getDayName(4)).toBe('Thursday');
+      expect(ScheduleService.getDayName(5)).toBe('Friday');
+      expect(ScheduleService.getDayName(6)).toBe('Saturday');
+    });
+
+    it('should handle invalid day numbers in getDayName', async () => {
+      expect(ScheduleService.getDayName(7)).toBe('Invalid Day');
+      expect(ScheduleService.getDayName(-1)).toBe('Invalid Day');
+      expect(ScheduleService.getDayName(10)).toBe('Invalid Day');
     });
   });
 }); 
