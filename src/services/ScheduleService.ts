@@ -19,7 +19,7 @@ export async function getScheduleById(scheduleId: string): Promise<IScheduleDocu
 }
 
 export async function getLocationSchedules(locationId: string): Promise<IScheduleDocument[]> {
-  return await Schedule.find({ locationId }).sort({ dayOfWeek: 1 });
+  return await Schedule.find({ locationId, isActive: true }).sort({ dayOfWeek: 1 });
 }
 
 export async function updateSchedule(scheduleId: string, updateData: Partial<ISchedule>): Promise<IScheduleDocument | null> {
