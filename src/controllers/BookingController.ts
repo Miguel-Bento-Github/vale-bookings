@@ -51,7 +51,15 @@ export async function getBookingById(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const booking = await BookingService.findById(id!);
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: 'Booking ID is required'
+      });
+      return;
+    }
+
+    const booking = await BookingService.findById(id);
 
     if (!booking) {
       res.status(404).json({
@@ -209,7 +217,15 @@ export async function updateBookingStatus(req: AuthenticatedRequest, res: Respon
       return;
     }
 
-    const booking = await BookingService.findById(id!);
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: 'Booking ID is required'
+      });
+      return;
+    }
+
+    const booking = await BookingService.findById(id);
 
     if (!booking) {
       res.status(404).json({
@@ -219,7 +235,7 @@ export async function updateBookingStatus(req: AuthenticatedRequest, res: Respon
       return;
     }
 
-    const updatedBooking = await BookingService.updateBookingStatus(id!, status as BookingStatus);
+    const updatedBooking = await BookingService.updateBookingStatus(id, status as BookingStatus);
 
     res.status(200).json({
       success: true,
@@ -255,7 +271,15 @@ export async function cancelBooking(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    const booking = await BookingService.findById(id!);
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: 'Booking ID is required'
+      });
+      return;
+    }
+
+    const booking = await BookingService.findById(id);
 
     if (!booking) {
       res.status(404).json({
@@ -283,7 +307,7 @@ export async function cancelBooking(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    await BookingService.cancelBooking(id!);
+    await BookingService.cancelBooking(id);
 
     res.status(200).json({
       success: true,

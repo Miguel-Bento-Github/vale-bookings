@@ -9,8 +9,16 @@ export async function getLocationSchedules(req: Request, res: Response): Promise
   try {
     const { locationId } = req.params;
 
+    if (!locationId) {
+      res.status(400).json({
+        success: false,
+        message: 'Location ID is required'
+      });
+      return;
+    }
+
     // Validate MongoDB ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(locationId!)) {
+    if (!mongoose.Types.ObjectId.isValid(locationId)) {
       res.status(400).json({
         success: false,
         message: 'Invalid ID format'
@@ -19,7 +27,7 @@ export async function getLocationSchedules(req: Request, res: Response): Promise
     }
 
     // Check if location exists
-    const location = await LocationService.findById(locationId!);
+    const location = await LocationService.findById(locationId);
     if (!location) {
       res.status(404).json({
         success: false,
@@ -28,7 +36,7 @@ export async function getLocationSchedules(req: Request, res: Response): Promise
       return;
     }
 
-    const schedules = await ScheduleService.getLocationSchedules(locationId!);
+    const schedules = await ScheduleService.getLocationSchedules(locationId);
 
     res.status(200).json({
       success: true,
@@ -152,6 +160,14 @@ export async function updateSchedule(req: AuthenticatedRequest, res: Response): 
     const { id } = req.params;
     const updateData = req.body;
 
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: 'Schedule ID is required'
+      });
+      return;
+    }
+
     if (updateData.dayOfWeek !== undefined && (updateData.dayOfWeek < 0 || updateData.dayOfWeek > 6)) {
       res.status(400).json({
         success: false,
@@ -176,7 +192,7 @@ export async function updateSchedule(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const schedule = await ScheduleService.updateSchedule(id!, updateData);
+    const schedule = await ScheduleService.updateSchedule(id, updateData);
 
     if (!schedule) {
       res.status(404).json({
@@ -220,8 +236,16 @@ export async function deleteSchedule(req: AuthenticatedRequest, res: Response): 
 
     const { id } = req.params;
 
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: 'Schedule ID is required'
+      });
+      return;
+    }
+
     // Check if schedule exists before deletion
-    const schedule = await ScheduleService.findById(id!);
+    const schedule = await ScheduleService.findById(id);
 
     if (!schedule) {
       res.status(404).json({
@@ -231,7 +255,7 @@ export async function deleteSchedule(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    await ScheduleService.deleteSchedule(id!);
+    await ScheduleService.deleteSchedule(id);
 
     res.status(200).json({
       success: true,

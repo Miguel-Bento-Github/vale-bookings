@@ -352,10 +352,10 @@ class AdminService {
       if (filters.startDate) {
         // Parse date string as local time to avoid timezone issues
         const dateParts = filters.startDate.split('-').map(Number);
-        if (dateParts.length === 3) {
-          const year = dateParts[0]!;
-          const month = dateParts[1]!;
-          const day = dateParts[2]!;
+        if (dateParts.length === 3 && dateParts[0] && dateParts[1] && dateParts[2]) {
+          const year = dateParts[0];
+          const month = dateParts[1];
+          const day = dateParts[2];
           const startDate = new Date(year, month - 1, day); // month is 0-indexed
           dateRange.$gte = startDate;
         }
@@ -363,10 +363,10 @@ class AdminService {
       if (filters.endDate) {
         // Parse date string as local time and set to end of day
         const dateParts = filters.endDate.split('-').map(Number);
-        if (dateParts.length === 3) {
-          const year = dateParts[0]!;
-          const month = dateParts[1]!;
-          const day = dateParts[2]!;
+        if (dateParts.length === 3 && dateParts[0] && dateParts[1] && dateParts[2]) {
+          const year = dateParts[0];
+          const month = dateParts[1];
+          const day = dateParts[2];
           const endDate = new Date(year, month - 1, day); // month is 0-indexed
           endDate.setHours(23, 59, 59, 999);
           dateRange.$lte = endDate;
@@ -409,7 +409,11 @@ class AdminService {
       { new: true, runValidators: true }
     );
 
-    return updatedBooking!;
+    if (!updatedBooking) {
+      throw new AppError('Failed to update booking', 500);
+    }
+
+    return updatedBooking;
   }
 
   // Analytics
@@ -451,10 +455,10 @@ class AdminService {
       if (filters.startDate) {
         // Parse date string as local time to avoid timezone issues
         const dateParts = filters.startDate.split('-').map(Number);
-        if (dateParts.length === 3) {
-          const year = dateParts[0]!;
-          const month = dateParts[1]!;
-          const day = dateParts[2]!;
+        if (dateParts.length === 3 && dateParts[0] && dateParts[1] && dateParts[2]) {
+          const year = dateParts[0];
+          const month = dateParts[1];
+          const day = dateParts[2];
           const startDate = new Date(year, month - 1, day); // month is 0-indexed
           dateRange.$gte = startDate;
         }
@@ -462,10 +466,10 @@ class AdminService {
       if (filters.endDate) {
         // Parse date string as local time and set to end of day
         const dateParts = filters.endDate.split('-').map(Number);
-        if (dateParts.length === 3) {
-          const year = dateParts[0]!;
-          const month = dateParts[1]!;
-          const day = dateParts[2]!;
+        if (dateParts.length === 3 && dateParts[0] && dateParts[1] && dateParts[2]) {
+          const year = dateParts[0];
+          const month = dateParts[1];
+          const day = dateParts[2];
           const endDate = new Date(year, month - 1, day); // month is 0-indexed
           endDate.setHours(23, 59, 59, 999);
           dateRange.$lte = endDate;

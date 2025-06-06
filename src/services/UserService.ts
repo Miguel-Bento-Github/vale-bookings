@@ -27,7 +27,9 @@ class UserService {
     if (updateData.profile) {
       const updateQuery: Record<string, unknown> = {};
       Object.keys(updateData.profile).forEach(key => {
-        updateQuery[`profile.${key}`] = updateData.profile![key as keyof typeof updateData.profile];
+        if (updateData.profile) {
+          updateQuery[`profile.${key}`] = updateData.profile[key as keyof typeof updateData.profile];
+        }
       });
       
       return await User.findByIdAndUpdate(
