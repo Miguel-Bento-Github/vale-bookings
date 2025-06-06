@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { AuthController } from '../../src/controllers/AuthController';
-import { UserController } from '../../src/controllers/UserController';
+import { register, login, refreshToken } from '../../src/controllers/AuthController';
+import { getProfile, updateProfile, deleteAccount } from '../../src/controllers/UserController';
 import { LocationController } from '../../src/controllers/LocationController';
 import { BookingController } from '../../src/controllers/BookingController';
 import { ScheduleController } from '../../src/controllers/ScheduleController';
@@ -48,12 +48,6 @@ describe('Controllers', () => {
   });
 
   describe('AuthController', () => {
-    let authController: AuthController;
-
-    beforeEach(() => {
-      authController = new AuthController();
-    });
-
     describe('register', () => {
       it('should register a user successfully', async () => {
         const mockUser = { _id: '507f1f77bcf86cd799439012', email: 'test@example.com' };
@@ -70,7 +64,7 @@ describe('Controllers', () => {
           profile: { name: 'Test User' }
         };
 
-        await authController.register(mockRequest as Request, mockResponse as Response);
+        await register(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -87,7 +81,7 @@ describe('Controllers', () => {
       it('should return 400 for missing required fields', async () => {
         mockRequest.body = { email: 'test@example.com' }; // missing password and profile
 
-        await authController.register(mockRequest as Request, mockResponse as Response);
+        await register(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -103,7 +97,7 @@ describe('Controllers', () => {
           profile: { name: 'Test User' }
         };
 
-        await authController.register(mockRequest as Request, mockResponse as Response);
+        await register(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -121,7 +115,7 @@ describe('Controllers', () => {
           profile: { name: 'Test User' }
         };
 
-        await authController.register(mockRequest as Request, mockResponse as Response);
+        await register(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(409);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -145,7 +139,7 @@ describe('Controllers', () => {
           password: 'password123'
         };
 
-        await authController.login(mockRequest as Request, mockResponse as Response);
+        await login(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -162,7 +156,7 @@ describe('Controllers', () => {
       it('should return 400 for missing credentials', async () => {
         mockRequest.body = { email: 'test@example.com' }; // missing password
 
-        await authController.login(mockRequest as Request, mockResponse as Response);
+        await login(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -179,7 +173,7 @@ describe('Controllers', () => {
 
         mockRequest.body = { refreshToken: 'oldRefresh123' };
 
-        await authController.refreshToken(mockRequest as Request, mockResponse as Response);
+        await refreshToken(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -195,7 +189,7 @@ describe('Controllers', () => {
       it('should return 400 for missing refresh token', async () => {
         mockRequest.body = {};
 
-        await authController.refreshToken(mockRequest as Request, mockResponse as Response);
+        await refreshToken(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -207,18 +201,12 @@ describe('Controllers', () => {
   });
 
   describe('UserController', () => {
-    let userController: UserController;
-
-    beforeEach(() => {
-      userController = new UserController();
-    });
-
     describe('getProfile', () => {
       it('should get user profile successfully', async () => {
         const mockUser = { _id: '507f1f77bcf86cd799439012', email: 'test@example.com', profile: { name: 'Test User' } };
         (UserService.findById as jest.Mock).mockResolvedValue(mockUser);
 
-        await userController.getProfile(mockAuthenticatedRequest, mockResponse as Response);
+        await getProfile(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -230,7 +218,7 @@ describe('Controllers', () => {
       it('should return 401 for unauthenticated request', async () => {
         const unauthenticatedRequest = { ...mockRequest };
 
-        await userController.getProfile(unauthenticatedRequest as any, mockResponse as Response);
+        await getProfile(unauthenticatedRequest as any, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -242,7 +230,7 @@ describe('Controllers', () => {
       it('should return 401 for non-existent user', async () => {
         (UserService.findById as jest.Mock).mockResolvedValue(null);
 
-        await userController.getProfile(mockAuthenticatedRequest, mockResponse as Response);
+        await getProfile(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -261,7 +249,7 @@ describe('Controllers', () => {
           profile: { name: 'Updated Name', phone: '+1234567890' }
         };
 
-        await userController.updateProfile(mockAuthenticatedRequest, mockResponse as Response);
+        await updateProfile(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -274,7 +262,7 @@ describe('Controllers', () => {
       it('should return 400 for missing profile data', async () => {
         mockAuthenticatedRequest.body = {};
 
-        await userController.updateProfile(mockAuthenticatedRequest, mockResponse as Response);
+        await updateProfile(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -290,7 +278,7 @@ describe('Controllers', () => {
         (UserService.findById as jest.Mock).mockResolvedValue(mockUser);
         (UserService.deleteUser as jest.Mock).mockResolvedValue(true);
 
-        await userController.deleteAccount(mockAuthenticatedRequest, mockResponse as Response);
+        await deleteAccount(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
