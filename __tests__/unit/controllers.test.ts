@@ -6,7 +6,7 @@ import { getUserBookings, getBookingById, createBooking, updateBookingStatus, ca
 import { getLocationSchedules, createSchedule, updateSchedule, deleteSchedule } from '../../src/controllers/ScheduleController';
 import AuthService from '../../src/services/AuthService';
 import * as UserService from '../../src/services/UserService';
-import LocationService from '../../src/services/LocationService';
+import * as LocationService from '../../src/services/LocationService';
 import BookingService from '../../src/services/BookingService';
 import ScheduleService from '../../src/services/ScheduleService';
 import { AppError } from '../../src/types';
@@ -360,7 +360,7 @@ describe('Controllers', () => {
     describe('getLocationById', () => {
       it('should get location by id successfully', async () => {
         const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location', isActive: true };
-        (LocationService.findById as jest.Mock).mockResolvedValue(mockLocation);
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(mockLocation);
 
         mockRequest.params = { id: '507f1f77bcf86cd799439011' };
 
@@ -374,7 +374,7 @@ describe('Controllers', () => {
       });
 
       it('should return 404 for non-existent location', async () => {
-        (LocationService.findById as jest.Mock).mockResolvedValue(null);
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(null);
 
         mockRequest.params = { id: '507f1f77bcf86cd799439016' };
 
@@ -507,7 +507,7 @@ describe('Controllers', () => {
       it('should delete location successfully for admin', async () => {
         const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
         
-        (LocationService.findById as jest.Mock).mockResolvedValue(mockLocation);
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(mockLocation);
         (LocationService.deleteLocation as jest.Mock).mockResolvedValue(mockLocation);
 
         const adminRequest = {
@@ -538,7 +538,7 @@ describe('Controllers', () => {
       });
 
       it('should return 404 for non-existent location', async () => {
-        (LocationService.findById as jest.Mock).mockResolvedValue(null);
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(null);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -874,7 +874,7 @@ describe('Controllers', () => {
           { _id: '507f1f77bcf86cd799439015', locationId: '507f1f77bcf86cd799439011', dayOfWeek: 1, startTime: '09:00', endTime: '18:00' }
         ];
         
-        (LocationService.findById as jest.Mock).mockResolvedValue(mockLocation);
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(mockLocation);
         (ScheduleService.getLocationSchedules as jest.Mock).mockResolvedValue(mockSchedules);
 
         mockRequest.params = { locationId: '507f1f77bcf86cd799439011' };
@@ -894,7 +894,7 @@ describe('Controllers', () => {
         const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
         const mockSchedule = { _id: '507f1f77bcf86cd799439015', locationId: '507f1f77bcf86cd799439011', dayOfWeek: 1 };
         
-        (LocationService.findById as jest.Mock).mockResolvedValue(mockLocation);
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(mockLocation);
         (ScheduleService.createSchedule as jest.Mock).mockResolvedValue(mockSchedule);
 
         const adminRequest = {

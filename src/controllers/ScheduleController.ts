@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import ScheduleService from '../services/ScheduleService';
-import LocationService from '../services/LocationService';
+import { getLocationById } from '../services/LocationService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validateTimeFormat } from '../utils/validation';
 import mongoose from 'mongoose';
@@ -27,7 +27,7 @@ export async function getLocationSchedules(req: Request, res: Response): Promise
     }
 
     // Check if location exists
-    const location = await LocationService.findById(locationId);
+    const location = await getLocationById(locationId);
     if (!location) {
       res.status(404).json({
         success: false,
@@ -108,7 +108,7 @@ export async function createSchedule(req: AuthenticatedRequest, res: Response): 
     }
 
     // Check if location exists
-    const location = await LocationService.findById(locationId);
+    const location = await getLocationById(locationId);
     if (!location) {
       res.status(404).json({
         success: false,

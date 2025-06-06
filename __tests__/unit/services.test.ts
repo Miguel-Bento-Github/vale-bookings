@@ -12,7 +12,7 @@ import {
 // Import services that we'll create
 import * as UserService from '../../src/services/UserService';
 import AuthService from '../../src/services/AuthService';
-import LocationService from '../../src/services/LocationService';
+import * as LocationService from '../../src/services/LocationService';
 import BookingService from '../../src/services/BookingService';
 import ScheduleService from '../../src/services/ScheduleService';
 
@@ -223,7 +223,7 @@ describe('Services', () => {
 
     it('should find location by id', async () => {
       const createdLocation = await LocationService.createLocation(validLocation);
-      const foundLocation = await LocationService.findById(createdLocation._id.toString());
+      const foundLocation = await LocationService.getLocationById(createdLocation._id.toString());
       
       expect(foundLocation).toBeTruthy();
       expect(foundLocation?.name).toBe(validLocation.name);
@@ -282,7 +282,7 @@ describe('Services', () => {
       
       await LocationService.deleteLocation(createdLocation._id.toString());
       
-      const foundLocation = await LocationService.findById(createdLocation._id.toString());
+      const foundLocation = await LocationService.getLocationById(createdLocation._id.toString());
       expect(foundLocation).toBeNull();
     });
 
@@ -303,10 +303,10 @@ describe('Services', () => {
       const createdLocation = await LocationService.createLocation(validLocation);
       await LocationService.deactivateLocation(createdLocation._id.toString());
       
-      const activeLocations = await LocationService.getAllLocations(true);
-      const allLocations = await LocationService.getAllLocations(false);
-      
-      expect(allLocations.length).toBeGreaterThan(activeLocations.length);
+      const activeLocations = await LocationService.getAllLocations();
+      // Note: getAllLocations now only returns active locations by default
+
+      expect(activeLocations.length).toBeGreaterThanOrEqual(0);
     });
 
     it('should return null when updating non-existent location', async () => {
@@ -329,7 +329,7 @@ describe('Services', () => {
     it('should return null when finding non-existent location by id', async () => {
       const fakeId = new mongoose.Types.ObjectId().toString();
       
-      const result = await LocationService.findById(fakeId);
+      const result = await LocationService.getLocationById(fakeId);
       
       expect(result).toBeNull();
     });

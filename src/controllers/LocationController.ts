@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
-import LocationService from '../services/LocationService';
+import { getAllLocations, findNearby, getLocationById as findLocationById, createLocation as createNewLocation, updateLocation as updateExistingLocation, deleteLocation as deleteExistingLocation } from '../services/LocationService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validateCoordinates } from '../utils/validation';
 import mongoose from 'mongoose';
 
 export async function getLocations(req: Request, res: Response): Promise<void> {
   try {
-    const locations = await LocationService.getAllLocations();
+    const locations = await getAllLocations();
 
     res.status(200).json({
       success: true,
@@ -51,7 +51,7 @@ export async function getNearbyLocations(req: Request, res: Response): Promise<v
       return;
     }
 
-    const locations = await LocationService.findNearby(lat, lng, radiusKm);
+    const locations = await findNearby(lat, lng, radiusKm);
 
     res.status(200).json({
       success: true,
@@ -93,7 +93,7 @@ export async function getLocationById(req: Request, res: Response): Promise<void
       return;
     }
 
-    const location = await LocationService.findById(id);
+    const location = await findLocationById(id);
 
     if (!location) {
       res.status(404).json({
@@ -152,7 +152,7 @@ export async function createLocation(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const location = await LocationService.createLocation({
+    const location = await createNewLocation({
       name,
       address,
       coordinates,
@@ -210,7 +210,7 @@ export async function updateLocation(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const location = await LocationService.updateLocation(id, updateData);
+    const location = await updateExistingLocation(id, updateData);
 
     if (!location) {
       res.status(404).json({
@@ -263,7 +263,7 @@ export async function deleteLocation(req: AuthenticatedRequest, res: Response): 
     }
 
     // Check if location exists before deletion
-    const location = await LocationService.findById(id);
+    const location = await findLocationById(id);
 
     if (!location) {
       res.status(404).json({
@@ -274,7 +274,7 @@ export async function deleteLocation(req: AuthenticatedRequest, res: Response): 
     }
 
     // Actually delete the location
-    await LocationService.deleteLocation(id);
+    await deleteExistingLocation(id);
 
     res.status(200).json({
       success: true,
