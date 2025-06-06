@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import AuthService from '../services/AuthService';
+import { register as registerUser, login as loginUser, refreshTokens as refreshUserTokens } from '../services/AuthService';
 import { AppError } from '../types';
 import { validateEmail, validatePassword } from '../utils/validation';
 
@@ -40,7 +40,7 @@ export async function register(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const result = await AuthService.register({ email, password, profile, role });
+    const result = await registerUser({ email, password, profile, role });
 
     res.status(201).json({
       success: true,
@@ -87,7 +87,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const result = await AuthService.login({ email, password });
+    const result = await loginUser({ email, password });
 
     res.status(200).json({
       success: true,
@@ -125,7 +125,7 @@ export async function refreshToken(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const tokens = await AuthService.refreshTokens(refreshTokenValue);
+    const tokens = await refreshUserTokens(refreshTokenValue);
 
     res.status(200).json({
       success: true,

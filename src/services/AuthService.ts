@@ -3,94 +3,90 @@ import { createUser, findByEmail, findById } from './UserService';
 import { IRegisterRequest, ILoginRequest, IAuthTokens, IJWTPayload, IUserDocument, UserRole } from '../types';
 import { AppError } from '../types';
 
-class AuthService {
-  private readonly JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
-  private readonly JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret';
-  private readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
-  private readonly JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
-  async register(registerData: IRegisterRequest & { role?: UserRole }): Promise<{ user: IUserDocument; tokens: IAuthTokens }> {
-    const userData = {
-      ...registerData,
-      role: registerData.role || 'CUSTOMER' as UserRole
-    };
-    const user = await createUser(userData);
-    const tokens = this.generateTokens(user);
-    
-    return { user, tokens };
+export async function register(registerData: IRegisterRequest & { role?: UserRole }): Promise<{ user: IUserDocument; tokens: IAuthTokens }> {
+  const userData = {
+    ...registerData,
+    role: registerData.role || 'CUSTOMER' as UserRole
+  };
+  const user = await createUser(userData);
+  const tokens = generateTokens(user);
+
+  return { user, tokens };
+}
+
+export async function login(loginData: ILoginRequest): Promise<{ user: IUserDocument; tokens: IAuthTokens }> {
+  const user = await findByEmail(loginData.email);
+
+  if (!user) {
+    throw new AppError('Invalid credentials', 401);
   }
 
-  async login(loginData: ILoginRequest): Promise<{ user: IUserDocument; tokens: IAuthTokens }> {
-    const user = await findByEmail(loginData.email);
-    
-    if (!user) {
-      throw new AppError('Invalid credentials', 401);
-    }
+  const isPasswordValid = await user.comparePassword(loginData.password);
 
-    const isPasswordValid = await user.comparePassword(loginData.password);
-    
-    if (!isPasswordValid) {
-      throw new AppError('Invalid credentials', 401);
-    }
-
-    const tokens = this.generateTokens(user);
-    
-    return { user, tokens };
+  if (!isPasswordValid) {
+    throw new AppError('Invalid credentials', 401);
   }
 
-  generateTokens(user: IUserDocument): IAuthTokens {
-    const payload: IJWTPayload = {
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role
-    };
+  const tokens = generateTokens(user);
 
-    const accessToken = jwt.sign(
-      payload, 
-      this.JWT_SECRET as string, 
-      { expiresIn: this.JWT_EXPIRES_IN } as jwt.SignOptions
-    );
+  return { user, tokens };
+}
 
-    const refreshToken = jwt.sign(
-      payload, 
-      this.JWT_REFRESH_SECRET as string, 
-      { expiresIn: this.JWT_REFRESH_EXPIRES_IN } as jwt.SignOptions
-    );
+export function generateTokens(user: IUserDocument): IAuthTokens {
+  const payload: IJWTPayload = {
+    userId: user._id.toString(),
+    email: user.email,
+    role: user.role
+  };
 
-    return { accessToken, refreshToken };
-  }
+  const accessToken = jwt.sign(
+    payload, 
+    JWT_SECRET as string,
+    { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+  );
 
-  verifyToken(token: string): IJWTPayload {
-    try {
-      return jwt.verify(token, this.JWT_SECRET) as IJWTPayload;
-    } catch (error) {
-      throw new AppError('Invalid token', 401);
-    }
-  }
+  const refreshToken = jwt.sign(
+    payload, 
+    JWT_REFRESH_SECRET as string,
+    { expiresIn: JWT_REFRESH_EXPIRES_IN } as jwt.SignOptions
+  );
 
-  verifyRefreshToken(token: string): IJWTPayload {
-    try {
-      return jwt.verify(token, this.JWT_REFRESH_SECRET) as IJWTPayload;
-    } catch (error) {
-      throw new AppError('Invalid refresh token', 401);
-    }
-  }
+  return { accessToken, refreshToken };
+}
 
-  async refreshTokens(refreshToken: string): Promise<IAuthTokens> {
-    const payload = this.verifyRefreshToken(refreshToken);
-    
-    const user = await findById(payload.userId);
-    
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-
-    return this.generateTokens(user);
-  }
-
-  async getCurrentUser(userId: string): Promise<IUserDocument | null> {
-    return await findById(userId);
+export function verifyToken(token: string): IJWTPayload {
+  try {
+    return jwt.verify(token, JWT_SECRET) as IJWTPayload;
+  } catch (error) {
+    throw new AppError('Invalid token', 401);
   }
 }
 
-export default new AuthService(); 
+export function verifyRefreshToken(token: string): IJWTPayload {
+  try {
+    return jwt.verify(token, JWT_REFRESH_SECRET) as IJWTPayload;
+  } catch (error) {
+    throw new AppError('Invalid refresh token', 401);
+  }
+}
+
+export async function refreshTokens(refreshToken: string): Promise<IAuthTokens> {
+  const payload = verifyRefreshToken(refreshToken);
+
+  const user = await findById(payload.userId);
+
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  return generateTokens(user);
+}
+
+export async function getCurrentUser(userId: string): Promise<IUserDocument | null> {
+  return await findById(userId);
+} 

@@ -11,7 +11,7 @@ import {
 
 // Import services that we'll create
 import * as UserService from '../../src/services/UserService';
-import AuthService from '../../src/services/AuthService';
+import * as AuthService from '../../src/services/AuthService';
 import * as LocationService from '../../src/services/LocationService';
 import * as BookingService from '../../src/services/BookingService';
 import * as ScheduleService from '../../src/services/ScheduleService';

@@ -4,7 +4,7 @@ import { getProfile, updateProfile, deleteAccount } from '../../src/controllers/
 import { getLocations, getNearbyLocations, getLocationById, createLocation, updateLocation, deleteLocation } from '../../src/controllers/LocationController';
 import { getUserBookings, getBookingById, createBooking, updateBookingStatus, cancelBooking } from '../../src/controllers/BookingController';
 import { getLocationSchedules, createSchedule, updateSchedule, deleteSchedule } from '../../src/controllers/ScheduleController';
-import AuthService from '../../src/services/AuthService';
+import * as AuthService from '../../src/services/AuthService';
 import * as UserService from '../../src/services/UserService';
 import * as LocationService from '../../src/services/LocationService';
 import * as BookingService from '../../src/services/BookingService';

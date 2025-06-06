@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { authenticate, authorize } from '../../src/middleware/auth';
-import AuthService from '../../src/services/AuthService';
+import * as AuthService from '../../src/services/AuthService';
 import { AuthenticatedRequest, AppError, UserRole } from '../../src/types';
 
 // Mock AuthService

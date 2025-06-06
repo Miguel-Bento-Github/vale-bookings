@@ -3,7 +3,7 @@ import { Application } from 'express';
 import mongoose from 'mongoose';
 import app from '../../src/index';
 import { IUser, UserRole } from '../../src/types';
-import AuthService from '../../src/services/AuthService';
+import { generateTokens } from '../../src/services/AuthService';
 import User from '../../src/models/User';
 import Location from '../../src/models/Location';
 import Booking from '../../src/models/Booking';
@@ -11,7 +11,7 @@ import Schedule from '../../src/models/Schedule';
 
 // Helper function to generate access token
 const generateAccessToken = (user: { _id: string; email: string; role: UserRole }): string => {
-  const tokens = AuthService.generateTokens({
+  const tokens = generateTokens({
     _id: user._id,
     email: user.email,
     role: user.role

@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import AuthService from '../services/AuthService';
+import { verifyToken } from '../services/AuthService';
 import { AppError, AuthenticatedRequest } from '../types';
 
 export const authenticate = async (
@@ -28,7 +28,7 @@ export const authenticate = async (
       return;
     }
 
-    const payload = AuthService.verifyToken(token);
+    const payload = verifyToken(token);
     
     req.user = {
       userId: payload.userId,
