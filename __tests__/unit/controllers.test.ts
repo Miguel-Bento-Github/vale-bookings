@@ -5,7 +5,7 @@ import { getLocations, getNearbyLocations, getLocationById, createLocation, upda
 import { getUserBookings, getBookingById, createBooking, updateBookingStatus, cancelBooking } from '../../src/controllers/BookingController';
 import { getLocationSchedules, createSchedule, updateSchedule, deleteSchedule } from '../../src/controllers/ScheduleController';
 import AuthService from '../../src/services/AuthService';
-import UserService from '../../src/services/UserService';
+import * as UserService from '../../src/services/UserService';
 import LocationService from '../../src/services/LocationService';
 import BookingService from '../../src/services/BookingService';
 import ScheduleService from '../../src/services/ScheduleService';

@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import UserService from './UserService';
+import { createUser, findByEmail, findById } from './UserService';
 import { IRegisterRequest, ILoginRequest, IAuthTokens, IJWTPayload, IUserDocument, UserRole } from '../types';
 import { AppError } from '../types';
 
@@ -14,14 +14,14 @@ class AuthService {
       ...registerData,
       role: registerData.role || 'CUSTOMER' as UserRole
     };
-    const user = await UserService.createUser(userData);
+    const user = await createUser(userData);
     const tokens = this.generateTokens(user);
     
     return { user, tokens };
   }
 
   async login(loginData: ILoginRequest): Promise<{ user: IUserDocument; tokens: IAuthTokens }> {
-    const user = await UserService.findByEmail(loginData.email);
+    const user = await findByEmail(loginData.email);
     
     if (!user) {
       throw new AppError('Invalid credentials', 401);
@@ -79,7 +79,7 @@ class AuthService {
   async refreshTokens(refreshToken: string): Promise<IAuthTokens> {
     const payload = this.verifyRefreshToken(refreshToken);
     
-    const user = await UserService.findById(payload.userId);
+    const user = await findById(payload.userId);
     
     if (!user) {
       throw new AppError('User not found', 404);
@@ -89,7 +89,7 @@ class AuthService {
   }
 
   async getCurrentUser(userId: string): Promise<IUserDocument | null> {
-    return await UserService.findById(userId);
+    return await findById(userId);
   }
 }
 

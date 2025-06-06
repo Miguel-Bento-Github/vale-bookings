@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import UserService from '../services/UserService';
+import { findById, updateProfile as updateUserProfile, deleteUser } from '../services/UserService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validatePhoneNumber } from '../utils/validation';
 
@@ -15,7 +15,7 @@ export async function getProfile(req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    const user = await UserService.findById(userId);
+    const user = await findById(userId);
 
     if (!user) {
       res.status(401).json({
@@ -93,7 +93,7 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    const updatedUser = await UserService.updateProfile(userId, { profile });
+    const updatedUser = await updateUserProfile(userId, { profile });
 
     if (!updatedUser) {
       res.status(401).json({
@@ -136,7 +136,7 @@ export async function deleteAccount(req: AuthenticatedRequest, res: Response): P
     }
 
     // Check if user exists before deletion
-    const user = await UserService.findById(userId);
+    const user = await findById(userId);
     if (!user) {
       res.status(401).json({
         success: false,
@@ -145,7 +145,7 @@ export async function deleteAccount(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    await UserService.deleteUser(userId);
+    await deleteUser(userId);
 
     res.status(200).json({
       success: true,

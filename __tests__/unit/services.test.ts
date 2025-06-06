@@ -10,7 +10,7 @@ import {
 } from '../fixtures';
 
 // Import services that we'll create
-import UserService from '../../src/services/UserService';
+import * as UserService from '../../src/services/UserService';
 import AuthService from '../../src/services/AuthService';
 import LocationService from '../../src/services/LocationService';
 import BookingService from '../../src/services/BookingService';
