@@ -1501,6 +1501,60 @@ describe('Controllers', () => {
           data: mockSchedules
         });
       });
+
+      it('should return 400 for missing location ID', async () => {
+        mockRequest.params = {};
+
+        await getLocationSchedules(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Location ID is required'
+        });
+      });
+
+      it('should return 404 for non-existent location', async () => {
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(null);
+
+        mockRequest.params = { locationId: '507f1f77bcf86cd799439016' };
+
+        await getLocationSchedules(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Location not found'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (LocationService.getLocationById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        mockRequest.params = { locationId: '507f1f77bcf86cd799439011' };
+
+        await getLocationSchedules(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (LocationService.getLocationById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        mockRequest.params = { locationId: '507f1f77bcf86cd799439011' };
+
+        await getLocationSchedules(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('createSchedule', () => {
@@ -1590,6 +1644,120 @@ describe('Controllers', () => {
           message: 'Time must be in HH:MM format'
         });
       });
+
+      it('should return 400 for missing required fields', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          body: {
+            locationId: '507f1f77bcf86cd799439011'
+            // missing dayOfWeek, startTime, endTime
+          }
+        };
+
+        await createSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Location ID, day of week, start time, and end time are required'
+        });
+      });
+
+      it('should return 400 for end time before start time', async () => {
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(mockLocation);
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          body: {
+            locationId: '507f1f77bcf86cd799439011',
+            dayOfWeek: 1,
+            startTime: '18:00',
+            endTime: '09:00' // end before start
+          }
+        };
+
+        await createSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'End time must be after start time'
+        });
+      });
+
+      it('should return 404 for non-existent location', async () => {
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(null);
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          body: {
+            locationId: '507f1f77bcf86cd799439016',
+            dayOfWeek: 1,
+            startTime: '09:00',
+            endTime: '18:00'
+          }
+        };
+
+        await createSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Location not found'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(mockLocation);
+        (ScheduleService.createSchedule as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          body: {
+            locationId: '507f1f77bcf86cd799439011',
+            dayOfWeek: 1,
+            startTime: '09:00',
+            endTime: '18:00'
+          }
+        };
+
+        await createSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (LocationService.getLocationById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          body: {
+            locationId: '507f1f77bcf86cd799439011',
+            dayOfWeek: 1,
+            startTime: '09:00',
+            endTime: '18:00'
+          }
+        };
+
+        await createSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('updateSchedule', () => {
@@ -1664,6 +1832,95 @@ describe('Controllers', () => {
           message: 'Start time must be in HH:MM format'
         });
       });
+
+      it('should return 400 for missing schedule ID', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: {}, // missing id
+          body: { startTime: '08:00' }
+        };
+
+        await updateSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Schedule ID is required'
+        });
+      });
+
+      it('should return 400 for invalid day of week in update', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439015' },
+          body: { dayOfWeek: 8 } // invalid day of week
+        };
+
+        await updateSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Day of week must be between 0 (Sunday) and 6 (Saturday)'
+        });
+      });
+
+      it('should return 400 for invalid end time format', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439015' },
+          body: { endTime: '25:00' } // invalid time
+        };
+
+        await updateSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'End time must be in HH:MM format'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (ScheduleService.updateSchedule as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439015' },
+          body: { startTime: '08:00' }
+        };
+
+        await updateSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (ScheduleService.updateSchedule as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439015' },
+          body: { startTime: '08:00' }
+        };
+
+        await updateSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('deleteSchedule', () => {
@@ -1713,6 +1970,77 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: 'Schedule not found'
+        });
+      });
+
+      it('should return 400 for missing schedule ID', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: {} // missing id
+        };
+
+        await deleteSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Schedule ID is required'
+        });
+      });
+
+      it('should handle service errors when checking schedule existence', async () => {
+        (ScheduleService.getScheduleById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439015' }
+        };
+
+        await deleteSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle service errors when deleting schedule', async () => {
+        (ScheduleService.getScheduleById as jest.Mock).mockResolvedValue({ _id: '507f1f77bcf86cd799439015' });
+        (ScheduleService.deleteSchedule as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439015' }
+        };
+
+        await deleteSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (ScheduleService.getScheduleById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439015' }
+        };
+
+        await deleteSchedule(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
