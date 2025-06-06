@@ -241,6 +241,30 @@ describe('Controllers', () => {
           message: 'User not found'
         });
       });
+
+      it('should handle service errors', async () => {
+        (UserService.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        await getProfile(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (UserService.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        await getProfile(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('updateProfile', () => {
@@ -273,6 +297,112 @@ describe('Controllers', () => {
           message: 'Profile data is required'
         });
       });
+
+      it('should return 400 for restricted field updates', async () => {
+        mockAuthenticatedRequest.body = {
+          email: 'newemail@example.com',
+          profile: { name: 'Test User' }
+        };
+
+        await updateProfile(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Email and role updates are not allowed through this endpoint'
+        });
+      });
+
+      it('should return 400 for role update attempt', async () => {
+        mockAuthenticatedRequest.body = {
+          role: 'ADMIN',
+          profile: { name: 'Test User' }
+        };
+
+        await updateProfile(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Email and role updates are not allowed through this endpoint'
+        });
+      });
+
+      it('should return 400 for invalid name type', async () => {
+        mockAuthenticatedRequest.body = {
+          profile: { name: 123 } // invalid type
+        };
+
+        await updateProfile(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Name must be a string'
+        });
+      });
+
+      it('should return 400 for invalid phone number', async () => {
+        mockAuthenticatedRequest.body = {
+          profile: { phone: 'invalid-phone' }
+        };
+
+        await updateProfile(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Invalid phone number format'
+        });
+      });
+
+      it('should return 401 when user not found during update', async () => {
+        (UserService.updateProfile as jest.Mock).mockResolvedValue(null);
+
+        mockAuthenticatedRequest.body = {
+          profile: { name: 'Test User' }
+        };
+
+        await updateProfile(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(401);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'User not found'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (UserService.updateProfile as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        mockAuthenticatedRequest.body = {
+          profile: { name: 'Test User' }
+        };
+
+        await updateProfile(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (UserService.updateProfile as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        mockAuthenticatedRequest.body = {
+          profile: { name: 'Test User' }
+        };
+
+        await updateProfile(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('deleteAccount', () => {
@@ -287,6 +417,61 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           message: 'Account deleted successfully'
+        });
+      });
+
+      it('should return 401 for unauthenticated request', async () => {
+        const unauthenticatedRequest = {
+          ...mockRequest,
+          user: undefined
+        };
+
+        await deleteAccount(unauthenticatedRequest as any, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(401);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Unauthorized'
+        });
+      });
+
+      it('should return 401 when user not found', async () => {
+        (UserService.findById as jest.Mock).mockResolvedValue(null);
+
+        await deleteAccount(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(401);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'User not found'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        const mockUser = { _id: '507f1f77bcf86cd799439012', email: 'test@example.com' };
+        (UserService.findById as jest.Mock).mockResolvedValue(mockUser);
+        (UserService.deleteUser as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        await deleteAccount(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        const mockUser = { _id: '507f1f77bcf86cd799439012', email: 'test@example.com' };
+        (UserService.findById as jest.Mock).mockResolvedValue(mockUser);
+        (UserService.deleteUser as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        await deleteAccount(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
@@ -308,6 +493,30 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           data: mockLocations
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (LocationService.getAllLocations as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        await getLocations(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (LocationService.getAllLocations as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        await getLocations(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
@@ -358,6 +567,42 @@ describe('Controllers', () => {
           message: 'Invalid coordinates'
         });
       });
+
+      it('should handle service errors', async () => {
+        (LocationService.findNearby as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        mockRequest.query = {
+          latitude: '40.7128',
+          longitude: '-74.0060',
+          radius: '5000'
+        };
+
+        await getNearbyLocations(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (LocationService.findNearby as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        mockRequest.query = {
+          latitude: '40.7128',
+          longitude: '-74.0060',
+          radius: '5000'
+        };
+
+        await getNearbyLocations(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('getLocationById', () => {
@@ -387,6 +632,34 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: 'Location not found'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (LocationService.getLocationById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        mockRequest.params = { id: '507f1f77bcf86cd799439011' };
+
+        await getLocationById(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (LocationService.getLocationById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        mockRequest.params = { id: '507f1f77bcf86cd799439011' };
+
+        await getLocationById(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
@@ -447,6 +720,70 @@ describe('Controllers', () => {
           message: 'Name, address, and coordinates are required'
         });
       });
+
+      it('should return 400 for invalid coordinates', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          body: {
+            name: 'New Location',
+            address: '123 Main St',
+            coordinates: { latitude: 200, longitude: -74.0060 } // invalid latitude
+          }
+        };
+
+        await createLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Invalid coordinates'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (LocationService.createLocation as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          body: {
+            name: 'New Location',
+            address: '123 Main St',
+            coordinates: { latitude: 40.7128, longitude: -74.0060 }
+          }
+        };
+
+        await createLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (LocationService.createLocation as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          body: {
+            name: 'New Location',
+            address: '123 Main St',
+            coordinates: { latitude: 40.7128, longitude: -74.0060 }
+          }
+        };
+
+        await createLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('updateLocation', () => {
@@ -504,6 +841,81 @@ describe('Controllers', () => {
           message: 'Location not found'
         });
       });
+
+      it('should return 400 for missing location ID', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: {}, // missing id
+          body: { name: 'Updated Location' }
+        };
+
+        await updateLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Location ID is required'
+        });
+      });
+
+      it('should return 400 for invalid coordinates in update', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439011' },
+          body: {
+            name: 'Updated Location',
+            coordinates: { latitude: 200, longitude: -74.0060 } // invalid latitude
+          }
+        };
+
+        await updateLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Invalid coordinates'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (LocationService.updateLocation as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439011' },
+          body: { name: 'Updated Location' }
+        };
+
+        await updateLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (LocationService.updateLocation as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439011' },
+          body: { name: 'Updated Location' }
+        };
+
+        await updateLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('deleteLocation', () => {
@@ -555,6 +967,78 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: 'Location not found'
+        });
+      });
+
+      it('should return 400 for missing location ID', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: {} // missing id
+        };
+
+        await deleteLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Location ID is required'
+        });
+      });
+
+      it('should handle service errors when checking location existence', async () => {
+        (LocationService.getLocationById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439011' }
+        };
+
+        await deleteLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle service errors when deleting location', async () => {
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
+        (LocationService.getLocationById as jest.Mock).mockResolvedValue(mockLocation);
+        (LocationService.deleteLocation as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439011' }
+        };
+
+        await deleteLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (LocationService.getLocationById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439011' }
+        };
+
+        await deleteLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
