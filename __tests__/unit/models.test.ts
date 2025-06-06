@@ -101,6 +101,44 @@ describe('Models', () => {
       expect(await savedUser.comparePassword(validUser.password)).toBe(true);
       expect(await savedUser.comparePassword('wrongpassword')).toBe(false);
     });
+
+    it('should have findByEmail static method', async () => {
+      const user = new User(validUser);
+      await user.save();
+
+      const foundUser = await (User as any).findByEmail(validUser.email);
+      expect(foundUser).toBeTruthy();
+      expect(foundUser?.email).toBe(validUser.email);
+
+      const notFoundUser = await (User as any).findByEmail('nonexistent@test.com');
+      expect(notFoundUser).toBeNull();
+    });
+
+    it('should handle password hashing errors gracefully', async () => {
+      const user = new User(validUser);
+
+      // Mock bcrypt.hash to throw an error
+      const bcrypt = require('bcryptjs');
+      const originalHash = bcrypt.hash;
+      bcrypt.hash = jest.fn().mockRejectedValue(new Error('Hashing failed'));
+
+      await expect(user.save()).rejects.toThrow('Hashing failed');
+
+      // Restore original hash function
+      bcrypt.hash = originalHash;
+    });
+
+    it('should not rehash password if not modified', async () => {
+      const user = new User(validUser);
+      const savedUser = await user.save();
+      const originalPassword = savedUser.password;
+
+      // Update a non-password field
+      savedUser.profile.phone = '+1234567890';
+      await savedUser.save();
+
+      expect(savedUser.password).toBe(originalPassword);
+    });
   });
 
   describe('Location Model', () => {
@@ -158,6 +196,34 @@ describe('Models', () => {
       const location = new Location(locationData);
       
       await expect(location.save()).rejects.toThrow();
+    });
+
+    it('should have findNearby static method', async () => {
+      const location = new Location(validLocation);
+      await location.save();
+
+      const nearbyLocations = await (Location as any).findNearby(
+        validLocation.coordinates.latitude,
+        validLocation.coordinates.longitude,
+        10
+      );
+
+      expect(Array.isArray(nearbyLocations)).toBe(true);
+      expect(nearbyLocations.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should have search static method', async () => {
+      const location = new Location({
+        ...validLocation,
+        name: 'Downtown Parking Garage'
+      });
+      await location.save();
+
+      const searchResults = await (Location as any).search('Downtown');
+
+      expect(Array.isArray(searchResults)).toBe(true);
+      expect(searchResults.length).toBeGreaterThanOrEqual(1);
+      expect(searchResults[0]?.name).toContain('Downtown');
     });
   });
 
@@ -267,6 +333,71 @@ describe('Models', () => {
       
       await expect(booking.save()).rejects.toThrow();
     });
+
+    it('should prevent booking in the past for new bookings', async () => {
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 1);
+
+      const bookingData = {
+        ...validBooking,
+        userId,
+        locationId,
+        startTime: pastDate,
+        endTime: new Date(pastDate.getTime() + 3600000) // 1 hour later
+      };
+      const booking = new Booking(bookingData);
+
+      await expect(booking.save()).rejects.toThrow('Cannot create booking in the past');
+    });
+
+    it('should have getDurationHours instance method', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const booking = new Booking(bookingData);
+      const savedBooking = await booking.save();
+
+      const duration = (savedBooking as any).getDurationHours();
+      expect(typeof duration).toBe('number');
+      expect(duration).toBeGreaterThan(0);
+    });
+
+    it('should have findOverlapping static method', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const booking = new Booking(bookingData);
+      await booking.save();
+
+      const overlappingBookings = await (Booking as any).findOverlapping(
+        locationId,
+        validBooking.startTime,
+        validBooking.endTime
+      );
+
+      expect(Array.isArray(overlappingBookings)).toBe(true);
+      expect(overlappingBookings.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should have findByUserId static method', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const booking = new Booking(bookingData);
+      await booking.save();
+
+      const userBookings = await (Booking as any).findByUserId(userId);
+
+      expect(Array.isArray(userBookings)).toBe(true);
+      expect(userBookings.length).toBeGreaterThanOrEqual(1);
+      expect(userBookings[0]?.userId.toString()).toBe(userId);
+    });
+
+    it('should have findByLocationId static method', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const booking = new Booking(bookingData);
+      await booking.save();
+
+      const locationBookings = await (Booking as any).findByLocationId(locationId);
+
+      expect(Array.isArray(locationBookings)).toBe(true);
+      expect(locationBookings.length).toBeGreaterThanOrEqual(1);
+      expect(locationBookings[0]?.locationId.toString()).toBe(locationId);
+    });
   });
 
   describe('Schedule Model', () => {
@@ -355,6 +486,91 @@ describe('Models', () => {
 
       const schedule2 = new Schedule(scheduleData);
       await expect(schedule2.save()).rejects.toThrow();
+    });
+
+    it('should validate endTime is after startTime', async () => {
+      const scheduleData = {
+        ...validSchedule,
+        locationId,
+        startTime: '18:00',
+        endTime: '09:00'
+      };
+      const schedule = new Schedule(scheduleData);
+
+      await expect(schedule.save()).rejects.toThrow('End time must be after start time');
+    });
+
+    it('should have findByLocationId static method', async () => {
+      const scheduleData = { ...validSchedule, locationId };
+      const schedule = new Schedule(scheduleData);
+      await schedule.save();
+
+      const locationSchedules = await (Schedule as any).findByLocationId(locationId);
+
+      expect(Array.isArray(locationSchedules)).toBe(true);
+      expect(locationSchedules.length).toBeGreaterThanOrEqual(1);
+      expect(locationSchedules[0]?.locationId._id.toString()).toBe(locationId);
+    });
+
+    it('should have findByLocationAndDay static method', async () => {
+      const scheduleData = { ...validSchedule, locationId };
+      const schedule = new Schedule(scheduleData);
+      await schedule.save();
+
+      const daySchedule = await (Schedule as any).findByLocationAndDay(locationId, validSchedule.dayOfWeek);
+
+      expect(daySchedule).toBeTruthy();
+      expect(daySchedule.locationId._id.toString()).toBe(locationId);
+      expect(daySchedule.dayOfWeek).toBe(validSchedule.dayOfWeek);
+    });
+
+    it('should have getWeeklySchedule static method', async () => {
+      const scheduleData = { ...validSchedule, locationId };
+      const schedule = new Schedule(scheduleData);
+      await schedule.save();
+
+      const weeklySchedule = await (Schedule as any).getWeeklySchedule(locationId);
+
+      expect(Array.isArray(weeklySchedule)).toBe(true);
+      expect(weeklySchedule.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should have isOpenAt instance method', async () => {
+      const scheduleData = {
+        ...validSchedule,
+        locationId,
+        startTime: '09:00',
+        endTime: '18:00'
+      };
+      const schedule = new Schedule(scheduleData);
+      const savedSchedule = await schedule.save();
+
+      expect((savedSchedule as any).isOpenAt('10:00')).toBe(true);
+      expect((savedSchedule as any).isOpenAt('08:00')).toBe(false);
+      expect((savedSchedule as any).isOpenAt('19:00')).toBe(false);
+      expect((savedSchedule as any).isOpenAt('invalid')).toBe(false);
+    });
+
+    it('should have getOperatingHours instance method', async () => {
+      const scheduleData = {
+        ...validSchedule,
+        locationId,
+        startTime: '09:00',
+        endTime: '18:00'
+      };
+      const schedule = new Schedule(scheduleData);
+      const savedSchedule = await schedule.save();
+
+      const operatingHours = (savedSchedule as any).getOperatingHours();
+      expect(typeof operatingHours).toBe('number');
+      expect(operatingHours).toBe(9); // 9 hours from 09:00 to 18:00
+    });
+
+    it('should have getDayName static method', async () => {
+      expect((Schedule as any).getDayName(0)).toBe('Sunday');
+      expect((Schedule as any).getDayName(1)).toBe('Monday');
+      expect((Schedule as any).getDayName(6)).toBe('Saturday');
+      expect((Schedule as any).getDayName(7)).toBe('Invalid Day');
     });
   });
 }); 
