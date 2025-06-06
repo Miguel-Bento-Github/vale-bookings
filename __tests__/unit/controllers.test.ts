@@ -1201,6 +1201,30 @@ describe('Controllers', () => {
           message: 'Unauthorized'
         });
       });
+
+      it('should handle service errors', async () => {
+        (BookingService.getUserBookings as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        await getUserBookings(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (BookingService.getUserBookings as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        await getUserBookings(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('getBookingById', () => {
@@ -1278,6 +1302,34 @@ describe('Controllers', () => {
           data: mockBooking
         });
       });
+
+      it('should handle service errors', async () => {
+        (BookingService.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
+
+        await getBookingById(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (BookingService.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
+
+        await getBookingById(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('createBooking', () => {
@@ -1323,6 +1375,44 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: 'Unauthorized'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (BookingService.createBooking as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        mockAuthenticatedRequest.body = {
+          locationId: '507f1f77bcf86cd799439011',
+          startTime: '2025-12-01T09:00:00Z',
+          endTime: '2025-12-01T17:00:00Z',
+          price: 50.00
+        };
+
+        await createBooking(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (BookingService.createBooking as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        mockAuthenticatedRequest.body = {
+          locationId: '507f1f77bcf86cd799439011',
+          startTime: '2025-12-01T09:00:00Z',
+          endTime: '2025-12-01T17:00:00Z',
+          price: 50.00
+        };
+
+        await createBooking(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
@@ -1415,6 +1505,44 @@ describe('Controllers', () => {
           message: 'Forbidden: access denied'
         });
       });
+
+      it('should handle service errors', async () => {
+        (BookingService.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439013' },
+          body: { status: 'CONFIRMED' }
+        };
+
+        await updateBookingStatus(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (BookingService.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '507f1f77bcf86cd799439013' },
+          body: { status: 'CONFIRMED' }
+        };
+
+        await updateBookingStatus(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('cancelBooking', () => {
@@ -1474,6 +1602,34 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: 'Forbidden: access denied'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (BookingService.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
+
+        await cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (BookingService.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
+
+        await cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
