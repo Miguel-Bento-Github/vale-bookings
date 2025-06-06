@@ -2087,6 +2087,18 @@ describe('Controllers', () => {
           message: 'Database error'
         });
       });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.getAllUsers as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        await getAllUsers(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('updateUserRole', () => {
@@ -2131,6 +2143,36 @@ describe('Controllers', () => {
           message: 'Invalid role'
         });
       });
+
+      it('should handle service errors', async () => {
+        (AdminService.updateUserRole as jest.Mock).mockRejectedValue(new AppError('User not found', 404));
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.body = { role: 'VALET' };
+
+        await updateUserRole(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'User not found'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.updateUserRole as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.body = { role: 'VALET' };
+
+        await updateUserRole(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('deleteUser', () => {
@@ -2173,6 +2215,36 @@ describe('Controllers', () => {
           message: 'Cannot delete your own account'
         });
       });
+
+      it('should handle service errors', async () => {
+        (AdminService.deleteUser as jest.Mock).mockRejectedValue(new AppError('User not found', 404));
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.user = { userId: '507f1f77bcf86cd799439013' };
+
+        await deleteUser(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'User not found'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.deleteUser as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.user = { userId: '507f1f77bcf86cd799439013' };
+
+        await deleteUser(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('getAllValets', () => {
@@ -2189,6 +2261,30 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           data: mockValets
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AdminService.getAllValets as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        await getAllValets(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.getAllValets as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        await getAllValets(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
@@ -2210,6 +2306,42 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           data: mockValet
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AdminService.createValet as jest.Mock).mockRejectedValue(new AppError('Email already exists', 409));
+
+        adminRequest.body = {
+          email: 'valet@example.com',
+          password: 'password123',
+          profile: { name: 'Valet User' }
+        };
+
+        await createValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(409);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Email already exists'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.createValet as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.body = {
+          email: 'valet@example.com',
+          password: 'password123',
+          profile: { name: 'Valet User' }
+        };
+
+        await createValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
@@ -2243,6 +2375,36 @@ describe('Controllers', () => {
           message: 'Valet ID is required'
         });
       });
+
+      it('should handle service errors', async () => {
+        (AdminService.updateValet as jest.Mock).mockRejectedValue(new AppError('Valet not found', 404));
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.body = { profile: { name: 'Updated Valet' } };
+
+        await updateValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Valet not found'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.updateValet as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.body = { profile: { name: 'Updated Valet' } };
+
+        await updateValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('deleteValet', () => {
@@ -2271,6 +2433,34 @@ describe('Controllers', () => {
           message: 'Valet ID is required'
         });
       });
+
+      it('should handle service errors', async () => {
+        (AdminService.deleteValet as jest.Mock).mockRejectedValue(new AppError('Valet not found', 404));
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+
+        await deleteValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Valet not found'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.deleteValet as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+
+        await deleteValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('createAdminLocation', () => {
@@ -2296,6 +2486,42 @@ describe('Controllers', () => {
           data: mockLocation
         });
       });
+
+      it('should handle service errors', async () => {
+        (AdminService.createLocation as jest.Mock).mockRejectedValue(new AppError('Invalid coordinates', 400));
+
+        adminRequest.body = {
+          name: 'Test Location',
+          address: '123 Test St',
+          coordinates: { latitude: 40.7128, longitude: -74.0060 }
+        };
+
+        await createAdminLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Invalid coordinates'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.createLocation as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.body = {
+          name: 'Test Location',
+          address: '123 Test St',
+          coordinates: { latitude: 40.7128, longitude: -74.0060 }
+        };
+
+        await createAdminLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('getAllSchedules', () => {
@@ -2312,6 +2538,30 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           data: mockSchedules
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AdminService.getAllSchedules as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        await getAllSchedules(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.getAllSchedules as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        await getAllSchedules(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
@@ -2371,6 +2621,44 @@ describe('Controllers', () => {
           data: mockResult
         });
       });
+
+      it('should handle service errors', async () => {
+        (AdminService.createBulkSchedules as jest.Mock).mockRejectedValue(new AppError('Invalid schedule data', 400));
+
+        adminRequest.body = {
+          locationId: 'loc1',
+          schedules: [
+            { dayOfWeek: 1, startTime: '09:00', endTime: '17:00' }
+          ]
+        };
+
+        await createBulkSchedules(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Invalid schedule data'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.createBulkSchedules as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.body = {
+          locationId: 'loc1',
+          schedules: [
+            { dayOfWeek: 1, startTime: '09:00', endTime: '17:00' }
+          ]
+        };
+
+        await createBulkSchedules(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('getAllBookings', () => {
@@ -2391,6 +2679,34 @@ describe('Controllers', () => {
           data: mockBookings
         });
       });
+
+      it('should handle service errors', async () => {
+        (AdminService.getAllBookings as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        adminRequest.query = { status: 'PENDING' };
+
+        await getAllBookings(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.getAllBookings as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.query = { status: 'PENDING' };
+
+        await getAllBookings(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('getAnalyticsOverview', () => {
@@ -2409,6 +2725,30 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           data: mockAnalytics
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AdminService.getAnalyticsOverview as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        await getAnalyticsOverview(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.getAnalyticsOverview as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        await getAnalyticsOverview(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
@@ -2432,6 +2772,34 @@ describe('Controllers', () => {
           data: mockAnalytics
         });
       });
+
+      it('should handle service errors', async () => {
+        (AdminService.getRevenueAnalytics as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        adminRequest.query = { startDate: '2023-01-01', endDate: '2023-01-31' };
+
+        await getRevenueAnalytics(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.getRevenueAnalytics as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        adminRequest.query = { startDate: '2023-01-01', endDate: '2023-01-31' };
+
+        await getRevenueAnalytics(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('getBookingAnalytics', () => {
@@ -2449,6 +2817,30 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           data: mockAnalytics
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AdminService.getBookingAnalytics as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        await getBookingAnalytics(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AdminService.getBookingAnalytics as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        await getBookingAnalytics(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
