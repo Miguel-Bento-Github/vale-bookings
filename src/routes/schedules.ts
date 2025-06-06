@@ -1,13 +1,12 @@
 import { Router } from 'express';
-import { ScheduleController } from '../controllers/ScheduleController';
+import { getLocationSchedules, createSchedule, updateSchedule, deleteSchedule } from '../controllers/ScheduleController';
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
-const scheduleController = new ScheduleController();
 
-router.get('/location/:locationId', scheduleController.getLocationSchedules.bind(scheduleController));
-router.post('/', authenticate, authorize(['ADMIN']), scheduleController.createSchedule.bind(scheduleController));
-router.put('/:id', authenticate, authorize(['ADMIN']), scheduleController.updateSchedule.bind(scheduleController));
-router.delete('/:id', authenticate, authorize(['ADMIN']), scheduleController.deleteSchedule.bind(scheduleController));
+router.get('/location/:locationId', getLocationSchedules);
+router.post('/', authenticate, authorize(['ADMIN']), createSchedule);
+router.put('/:id', authenticate, authorize(['ADMIN']), updateSchedule);
+router.delete('/:id', authenticate, authorize(['ADMIN']), deleteSchedule);
 
 export default router; 

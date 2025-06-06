@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import { register, login, refreshToken } from '../../src/controllers/AuthController';
 import { getProfile, updateProfile, deleteAccount } from '../../src/controllers/UserController';
 import { getLocations, getNearbyLocations, getLocationById, createLocation, updateLocation, deleteLocation } from '../../src/controllers/LocationController';
-import { BookingController } from '../../src/controllers/BookingController';
-import { ScheduleController } from '../../src/controllers/ScheduleController';
+import { getUserBookings, getBookingById, createBooking, updateBookingStatus, cancelBooking } from '../../src/controllers/BookingController';
+import { getLocationSchedules, createSchedule, updateSchedule, deleteSchedule } from '../../src/controllers/ScheduleController';
 import AuthService from '../../src/services/AuthService';
 import UserService from '../../src/services/UserService';
 import LocationService from '../../src/services/LocationService';
@@ -558,11 +558,6 @@ describe('Controllers', () => {
   });
 
   describe('BookingController', () => {
-    let bookingController: BookingController;
-
-    beforeEach(() => {
-      bookingController = new BookingController();
-    });
 
     describe('getUserBookings', () => {
       it('should get user bookings successfully', async () => {
@@ -572,7 +567,7 @@ describe('Controllers', () => {
         ];
         (BookingService.getUserBookings as jest.Mock).mockResolvedValue(mockBookings);
 
-        await bookingController.getUserBookings(mockAuthenticatedRequest, mockResponse as Response);
+        await getUserBookings(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -584,7 +579,7 @@ describe('Controllers', () => {
       it('should return 401 for unauthenticated request', async () => {
         const unauthenticatedRequest = { ...mockRequest };
 
-        await bookingController.getUserBookings(unauthenticatedRequest as any, mockResponse as Response);
+        await getUserBookings(unauthenticatedRequest as any, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -601,7 +596,7 @@ describe('Controllers', () => {
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
-        await bookingController.getBookingById(mockAuthenticatedRequest, mockResponse as Response);
+        await getBookingById(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -613,7 +608,7 @@ describe('Controllers', () => {
       it('should return 401 for unauthenticated request', async () => {
         const unauthenticatedRequest = { ...mockRequest, params: { id: '507f1f77bcf86cd799439013' } };
 
-        await bookingController.getBookingById(unauthenticatedRequest as any, mockResponse as Response);
+        await getBookingById(unauthenticatedRequest as any, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -627,7 +622,7 @@ describe('Controllers', () => {
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439016' };
 
-        await bookingController.getBookingById(mockAuthenticatedRequest, mockResponse as Response);
+        await getBookingById(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -642,7 +637,7 @@ describe('Controllers', () => {
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
-        await bookingController.getBookingById(mockAuthenticatedRequest, mockResponse as Response);
+        await getBookingById(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -661,7 +656,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439013' }
         };
 
-        await bookingController.getBookingById(adminRequest, mockResponse as Response);
+        await getBookingById(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -683,7 +678,7 @@ describe('Controllers', () => {
           price: 50.00
         };
 
-        await bookingController.createBooking(mockAuthenticatedRequest, mockResponse as Response);
+        await createBooking(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -696,7 +691,7 @@ describe('Controllers', () => {
       it('should return 400 for missing required fields', async () => {
         mockAuthenticatedRequest.body = { locationId: '507f1f77bcf86cd799439011' }; // missing other fields
 
-        await bookingController.createBooking(mockAuthenticatedRequest, mockResponse as Response);
+        await createBooking(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -708,7 +703,7 @@ describe('Controllers', () => {
       it('should return 401 for unauthenticated request', async () => {
         const unauthenticatedRequest = { ...mockRequest, body: {} };
 
-        await bookingController.createBooking(unauthenticatedRequest as any, mockResponse as Response);
+        await createBooking(unauthenticatedRequest as any, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -733,7 +728,7 @@ describe('Controllers', () => {
           body: { status: 'CONFIRMED' }
         };
 
-        await bookingController.updateBookingStatus(adminRequest, mockResponse as Response);
+        await updateBookingStatus(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -750,7 +745,7 @@ describe('Controllers', () => {
           body: { status: 'CONFIRMED' }
         };
 
-        await bookingController.updateBookingStatus(unauthenticatedRequest as any, mockResponse as Response);
+        await updateBookingStatus(unauthenticatedRequest as any, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -763,7 +758,7 @@ describe('Controllers', () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
         mockAuthenticatedRequest.body = {};
 
-        await bookingController.updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
+        await updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -782,7 +777,7 @@ describe('Controllers', () => {
           body: { status: 'CONFIRMED' }
         };
 
-        await bookingController.updateBookingStatus(adminRequest, mockResponse as Response);
+        await updateBookingStatus(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -798,7 +793,7 @@ describe('Controllers', () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
         mockAuthenticatedRequest.body = { status: 'CONFIRMED' };
 
-        await bookingController.updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
+        await updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -818,7 +813,7 @@ describe('Controllers', () => {
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
-        await bookingController.cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
+        await cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -830,7 +825,7 @@ describe('Controllers', () => {
       it('should return 401 for unauthenticated request', async () => {
         const unauthenticatedRequest = { ...mockRequest, params: { id: '507f1f77bcf86cd799439013' } };
 
-        await bookingController.cancelBooking(unauthenticatedRequest as any, mockResponse as Response);
+        await cancelBooking(unauthenticatedRequest as any, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -844,7 +839,7 @@ describe('Controllers', () => {
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439016' };
 
-        await bookingController.cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
+        await cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -859,7 +854,7 @@ describe('Controllers', () => {
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
-        await bookingController.cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
+        await cancelBooking(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -871,11 +866,6 @@ describe('Controllers', () => {
   });
 
   describe('ScheduleController', () => {
-    let scheduleController: ScheduleController;
-
-    beforeEach(() => {
-      scheduleController = new ScheduleController();
-    });
 
     describe('getLocationSchedules', () => {
       it('should get location schedules successfully', async () => {
@@ -889,7 +879,7 @@ describe('Controllers', () => {
 
         mockRequest.params = { locationId: '507f1f77bcf86cd799439011' };
 
-        await scheduleController.getLocationSchedules(mockRequest as Request, mockResponse as Response);
+        await getLocationSchedules(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -918,7 +908,7 @@ describe('Controllers', () => {
           }
         };
 
-        await scheduleController.createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -936,7 +926,7 @@ describe('Controllers', () => {
           endTime: '18:00'
         };
 
-        await scheduleController.createSchedule(mockAuthenticatedRequest, mockResponse as Response);
+        await createSchedule(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -957,7 +947,7 @@ describe('Controllers', () => {
           }
         };
 
-        await scheduleController.createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -978,7 +968,7 @@ describe('Controllers', () => {
           }
         };
 
-        await scheduleController.createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1002,7 +992,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00', endTime: '19:00' }
         };
 
-        await scheduleController.updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1016,7 +1006,7 @@ describe('Controllers', () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439015' };
         mockAuthenticatedRequest.body = { startTime: '08:00' };
 
-        await scheduleController.updateSchedule(mockAuthenticatedRequest, mockResponse as Response);
+        await updateSchedule(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1035,7 +1025,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00' }
         };
 
-        await scheduleController.updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1052,7 +1042,7 @@ describe('Controllers', () => {
           body: { startTime: '25:00' } // invalid time
         };
 
-        await scheduleController.updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1073,7 +1063,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439015' }
         };
 
-        await scheduleController.deleteSchedule(adminRequest, mockResponse as Response);
+        await deleteSchedule(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1085,7 +1075,7 @@ describe('Controllers', () => {
       it('should return 403 for non-admin user', async () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439015' };
 
-        await scheduleController.deleteSchedule(mockAuthenticatedRequest, mockResponse as Response);
+        await deleteSchedule(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1103,7 +1093,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439016' }
         };
 
-        await scheduleController.deleteSchedule(adminRequest, mockResponse as Response);
+        await deleteSchedule(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
