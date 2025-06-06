@@ -126,6 +126,56 @@ describe('Controllers', () => {
           message: 'Email already exists'
         });
       });
+
+      it('should return 400 for invalid password format', async () => {
+        mockRequest.body = {
+          email: 'test@example.com',
+          password: '123', // too short
+          profile: { name: 'Test User' }
+        };
+
+        await register(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'password must be at least 6 characters long'
+        });
+      });
+
+      it('should return 400 for missing profile name', async () => {
+        mockRequest.body = {
+          email: 'test@example.com',
+          password: 'password123',
+          profile: {} // missing name
+        };
+
+        await register(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Profile name is required'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AuthService.register as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        mockRequest.body = {
+          email: 'test@example.com',
+          password: 'password123',
+          profile: { name: 'Test User' }
+        };
+
+        await register(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('login', () => {
@@ -167,6 +217,55 @@ describe('Controllers', () => {
           message: 'Email and password are required'
         });
       });
+
+      it('should return 400 for invalid email format', async () => {
+        mockRequest.body = {
+          email: 'invalid-email',
+          password: 'password123'
+        };
+
+        await login(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Invalid email format'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AuthService.login as jest.Mock).mockRejectedValue(new AppError('Invalid credentials', 401));
+
+        mockRequest.body = {
+          email: 'test@example.com',
+          password: 'wrongpassword'
+        };
+
+        await login(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(401);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AuthService.login as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        mockRequest.body = {
+          email: 'test@example.com',
+          password: 'password123'
+        };
+
+        await login(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
+        });
+      });
     });
 
     describe('refreshToken', () => {
@@ -198,6 +297,34 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: 'Refresh token is required'
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AuthService.refreshTokens as jest.Mock).mockRejectedValue(new AppError('Invalid refresh token', 401));
+
+        mockRequest.body = { refreshToken: 'invalidToken' };
+
+        await refreshToken(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(401);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Invalid refresh token'
+        });
+      });
+
+      it('should handle unexpected errors', async () => {
+        (AuthService.refreshTokens as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+
+        mockRequest.body = { refreshToken: 'validToken123' };
+
+        await refreshToken(mockRequest as Request, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Internal server error'
         });
       });
     });
