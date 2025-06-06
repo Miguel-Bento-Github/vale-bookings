@@ -8,7 +8,7 @@ import AuthService from '../../src/services/AuthService';
 import * as UserService from '../../src/services/UserService';
 import * as LocationService from '../../src/services/LocationService';
 import * as BookingService from '../../src/services/BookingService';
-import ScheduleService from '../../src/services/ScheduleService';
+import * as ScheduleService from '../../src/services/ScheduleService';
 import { AppError } from '../../src/types';
 
 // Mock all services
@@ -1054,7 +1054,7 @@ describe('Controllers', () => {
 
     describe('deleteSchedule', () => {
       it('should delete schedule successfully for admin', async () => {
-        (ScheduleService.findById as jest.Mock).mockResolvedValue({ _id: '507f1f77bcf86cd799439015' });
+        (ScheduleService.getScheduleById as jest.Mock).mockResolvedValue({ _id: '507f1f77bcf86cd799439015' });
         (ScheduleService.deleteSchedule as jest.Mock).mockResolvedValue(true);
 
         const adminRequest = {
@@ -1085,7 +1085,7 @@ describe('Controllers', () => {
       });
 
       it('should return 404 for non-existent schedule', async () => {
-        (ScheduleService.findById as jest.Mock).mockResolvedValue(null);
+        (ScheduleService.getScheduleById as jest.Mock).mockResolvedValue(null);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,

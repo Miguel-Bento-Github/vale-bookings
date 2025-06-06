@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import ScheduleService from '../services/ScheduleService';
+import { getLocationSchedules as getSchedulesForLocation, createSchedule as createNewSchedule, updateSchedule as updateExistingSchedule, getScheduleById as findScheduleById, deleteSchedule as deleteExistingSchedule } from '../services/ScheduleService';
 import { getLocationById } from '../services/LocationService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validateTimeFormat } from '../utils/validation';
@@ -36,7 +36,7 @@ export async function getLocationSchedules(req: Request, res: Response): Promise
       return;
     }
 
-    const schedules = await ScheduleService.getLocationSchedules(locationId);
+    const schedules = await getSchedulesForLocation(locationId);
 
     res.status(200).json({
       success: true,
@@ -117,7 +117,7 @@ export async function createSchedule(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const schedule = await ScheduleService.createSchedule({
+    const schedule = await createNewSchedule({
       locationId,
       dayOfWeek,
       startTime,
@@ -192,7 +192,7 @@ export async function updateSchedule(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const schedule = await ScheduleService.updateSchedule(id, updateData);
+    const schedule = await updateExistingSchedule(id, updateData);
 
     if (!schedule) {
       res.status(404).json({
@@ -245,7 +245,7 @@ export async function deleteSchedule(req: AuthenticatedRequest, res: Response): 
     }
 
     // Check if schedule exists before deletion
-    const schedule = await ScheduleService.findById(id);
+    const schedule = await findScheduleById(id);
 
     if (!schedule) {
       res.status(404).json({
@@ -255,7 +255,7 @@ export async function deleteSchedule(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    await ScheduleService.deleteSchedule(id);
+    await deleteExistingSchedule(id);
 
     res.status(200).json({
       success: true,
