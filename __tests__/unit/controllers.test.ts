@@ -4,11 +4,13 @@ import { getProfile, updateProfile, deleteAccount } from '../../src/controllers/
 import { getLocations, getNearbyLocations, getLocationById, createLocation, updateLocation, deleteLocation } from '../../src/controllers/LocationController';
 import { getUserBookings, getBookingById, createBooking, updateBookingStatus, cancelBooking } from '../../src/controllers/BookingController';
 import { getLocationSchedules, createSchedule, updateSchedule, deleteSchedule } from '../../src/controllers/ScheduleController';
+import { getAllUsers, updateUserRole, deleteUser, getAllValets, createValet, updateValet, deleteValet, createLocation as createAdminLocation, updateLocation as updateAdminLocation, deleteLocation as deleteAdminLocation, getAllSchedules, createSchedule as createAdminSchedule, updateSchedule as updateAdminSchedule, deleteSchedule as deleteAdminSchedule, createBulkSchedules, getAllBookings, updateBookingStatus as updateAdminBookingStatus, getAnalyticsOverview, getRevenueAnalytics, getBookingAnalytics } from '../../src/controllers/AdminController';
 import * as AuthService from '../../src/services/AuthService';
 import * as UserService from '../../src/services/UserService';
 import * as LocationService from '../../src/services/LocationService';
 import * as BookingService from '../../src/services/BookingService';
 import * as ScheduleService from '../../src/services/ScheduleService';
+import AdminService from '../../src/services/AdminService';
 import { AppError } from '../../src/types';
 
 // Mock all services
@@ -17,6 +19,7 @@ jest.mock('../../src/services/UserService');
 jest.mock('../../src/services/LocationService');
 jest.mock('../../src/services/BookingService');
 jest.mock('../../src/services/ScheduleService');
+jest.mock('../../src/services/AdminService');
 
 describe('Controllers', () => {
   let mockRequest: Partial<Request>;
@@ -1099,6 +1102,414 @@ describe('Controllers', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
           message: 'Schedule not found'
+        });
+      });
+    });
+  });
+
+  describe('AdminController', () => {
+    let adminRequest: any;
+
+    beforeEach(() => {
+      adminRequest = {
+        ...mockAuthenticatedRequest,
+        user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' }
+      };
+    });
+
+    describe('getAllUsers', () => {
+      it('should get all users successfully', async () => {
+        const mockResult = {
+          users: [{ _id: '1', email: 'user1@example.com' }, { _id: '2', email: 'user2@example.com' }],
+          pagination: { page: 1, limit: 10, total: 2, pages: 1 }
+        };
+        (AdminService.getAllUsers as jest.Mock).mockResolvedValue(mockResult);
+
+        adminRequest.query = { page: '1', limit: '10' };
+
+        await getAllUsers(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockResult.users,
+          pagination: mockResult.pagination
+        });
+      });
+
+      it('should handle service errors', async () => {
+        (AdminService.getAllUsers as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+
+        await getAllUsers(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Database error'
+        });
+      });
+    });
+
+    describe('updateUserRole', () => {
+      it('should update user role successfully', async () => {
+        const mockUser = { _id: '507f1f77bcf86cd799439012', email: 'test@example.com', role: 'VALET' };
+        (AdminService.updateUserRole as jest.Mock).mockResolvedValue(mockUser);
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.body = { role: 'VALET' };
+
+        await updateUserRole(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockUser
+        });
+      });
+
+      it('should return 400 for missing user ID', async () => {
+        adminRequest.params = {};
+        adminRequest.body = { role: 'VALET' };
+
+        await updateUserRole(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'User ID is required'
+        });
+      });
+
+      it('should return 400 for invalid role', async () => {
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.body = { role: 'INVALID_ROLE' };
+
+        await updateUserRole(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Invalid role'
+        });
+      });
+    });
+
+    describe('deleteUser', () => {
+      it('should delete user successfully', async () => {
+        (AdminService.deleteUser as jest.Mock).mockResolvedValue(true);
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.user = { userId: '507f1f77bcf86cd799439013' }; // Different user
+
+        await deleteUser(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          message: 'User deleted successfully'
+        });
+      });
+
+      it('should return 400 for missing user ID', async () => {
+        adminRequest.params = {};
+
+        await deleteUser(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'User ID is required'
+        });
+      });
+
+      it('should return 400 when trying to delete own account', async () => {
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.user = { userId: '507f1f77bcf86cd799439012' }; // Same user
+
+        await deleteUser(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Cannot delete your own account'
+        });
+      });
+    });
+
+    describe('getAllValets', () => {
+      it('should get all valets successfully', async () => {
+        const mockValets = [
+          { _id: '1', email: 'valet1@example.com', role: 'VALET' },
+          { _id: '2', email: 'valet2@example.com', role: 'VALET' }
+        ];
+        (AdminService.getAllValets as jest.Mock).mockResolvedValue(mockValets);
+
+        await getAllValets(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockValets
+        });
+      });
+    });
+
+    describe('createValet', () => {
+      it('should create valet successfully', async () => {
+        const mockValet = { _id: '507f1f77bcf86cd799439012', email: 'valet@example.com', role: 'VALET' };
+        (AdminService.createValet as jest.Mock).mockResolvedValue(mockValet);
+
+        adminRequest.body = {
+          email: 'valet@example.com',
+          password: 'password123',
+          profile: { name: 'Valet User' }
+        };
+
+        await createValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(201);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockValet
+        });
+      });
+    });
+
+    describe('updateValet', () => {
+      it('should update valet successfully', async () => {
+        const mockValet = { _id: '507f1f77bcf86cd799439012', email: 'valet@example.com', role: 'VALET' };
+        (AdminService.updateValet as jest.Mock).mockResolvedValue(mockValet);
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+        adminRequest.body = { profile: { name: 'Updated Valet' } };
+
+        await updateValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockValet
+        });
+      });
+
+      it('should return 400 for missing valet ID', async () => {
+        adminRequest.params = {};
+        adminRequest.body = { profile: { name: 'Updated Valet' } };
+
+        await updateValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Valet ID is required'
+        });
+      });
+    });
+
+    describe('deleteValet', () => {
+      it('should delete valet successfully', async () => {
+        (AdminService.deleteValet as jest.Mock).mockResolvedValue(true);
+
+        adminRequest.params = { id: '507f1f77bcf86cd799439012' };
+
+        await deleteValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          message: 'Valet deleted successfully'
+        });
+      });
+
+      it('should return 400 for missing valet ID', async () => {
+        adminRequest.params = {};
+
+        await deleteValet(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Valet ID is required'
+        });
+      });
+    });
+
+    describe('createAdminLocation', () => {
+      it('should create location successfully', async () => {
+        const mockLocation = {
+          _id: '507f1f77bcf86cd799439011',
+          name: 'Test Location',
+          address: '123 Test St'
+        };
+        (AdminService.createLocation as jest.Mock).mockResolvedValue(mockLocation);
+
+        adminRequest.body = {
+          name: 'Test Location',
+          address: '123 Test St',
+          coordinates: { latitude: 40.7128, longitude: -74.0060 }
+        };
+
+        await createAdminLocation(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(201);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockLocation
+        });
+      });
+    });
+
+    describe('getAllSchedules', () => {
+      it('should get all schedules successfully', async () => {
+        const mockSchedules = [
+          { _id: '1', locationId: 'loc1', dayOfWeek: 1, startTime: '09:00', endTime: '17:00' },
+          { _id: '2', locationId: 'loc2', dayOfWeek: 2, startTime: '10:00', endTime: '18:00' }
+        ];
+        (AdminService.getAllSchedules as jest.Mock).mockResolvedValue(mockSchedules);
+
+        await getAllSchedules(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockSchedules
+        });
+      });
+    });
+
+    describe('createBulkSchedules', () => {
+      it('should create bulk schedules successfully', async () => {
+        const mockResult = {
+          successful: [
+            { _id: '1', locationId: 'loc1', dayOfWeek: 1 },
+            { _id: '2', locationId: 'loc1', dayOfWeek: 2 }
+          ],
+          failed: []
+        };
+        (AdminService.createBulkSchedules as jest.Mock).mockResolvedValue(mockResult);
+
+        adminRequest.body = {
+          locationId: 'loc1',
+          schedules: [
+            { dayOfWeek: 1, startTime: '09:00', endTime: '17:00' },
+            { dayOfWeek: 2, startTime: '09:00', endTime: '17:00' }
+          ]
+        };
+
+        await createBulkSchedules(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(201);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockResult.successful
+        });
+      });
+
+      it('should return 207 for partial success', async () => {
+        const mockResult = {
+          successful: [
+            { _id: '1', locationId: 'loc1', dayOfWeek: 1 }
+          ],
+          failed: [
+            { dayOfWeek: 2, error: 'Duplicate schedule' }
+          ]
+        };
+        (AdminService.createBulkSchedules as jest.Mock).mockResolvedValue(mockResult);
+
+        adminRequest.body = {
+          locationId: 'loc1',
+          schedules: [
+            { dayOfWeek: 1, startTime: '09:00', endTime: '17:00' },
+            { dayOfWeek: 2, startTime: '09:00', endTime: '17:00' }
+          ]
+        };
+
+        await createBulkSchedules(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(207);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockResult
+        });
+      });
+    });
+
+    describe('getAllBookings', () => {
+      it('should get all bookings successfully', async () => {
+        const mockBookings = [
+          { _id: '1', userId: 'user1', locationId: 'loc1', status: 'PENDING' },
+          { _id: '2', userId: 'user2', locationId: 'loc2', status: 'CONFIRMED' }
+        ];
+        (AdminService.getAllBookings as jest.Mock).mockResolvedValue(mockBookings);
+
+        adminRequest.query = { status: 'PENDING' };
+
+        await getAllBookings(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockBookings
+        });
+      });
+    });
+
+    describe('getAnalyticsOverview', () => {
+      it('should get analytics overview successfully', async () => {
+        const mockAnalytics = {
+          totalUsers: 100,
+          totalBookings: 50,
+          totalRevenue: 1000,
+          averageBookingValue: 20
+        };
+        (AdminService.getAnalyticsOverview as jest.Mock).mockResolvedValue(mockAnalytics);
+
+        await getAnalyticsOverview(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockAnalytics
+        });
+      });
+    });
+
+    describe('getRevenueAnalytics', () => {
+      it('should get revenue analytics successfully', async () => {
+        const mockAnalytics = {
+          totalRevenue: 1000,
+          dailyRevenue: [{ date: '2023-01-01', revenue: 100 }],
+          monthlyRevenue: [{ month: '2023-01', revenue: 3000 }]
+        };
+        (AdminService.getRevenueAnalytics as jest.Mock).mockResolvedValue(mockAnalytics);
+
+        adminRequest.query = { startDate: '2023-01-01', endDate: '2023-01-31' };
+
+        await getRevenueAnalytics(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockAnalytics
+        });
+      });
+    });
+
+    describe('getBookingAnalytics', () => {
+      it('should get booking analytics successfully', async () => {
+        const mockAnalytics = {
+          totalBookings: 50,
+          bookingsByStatus: { PENDING: 10, CONFIRMED: 30, COMPLETED: 10 },
+          bookingsByLocation: [{ locationId: 'loc1', count: 25 }, { locationId: 'loc2', count: 25 }]
+        };
+        (AdminService.getBookingAnalytics as jest.Mock).mockResolvedValue(mockAnalytics);
+
+        await getBookingAnalytics(adminRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: true,
+          data: mockAnalytics
         });
       });
     });
