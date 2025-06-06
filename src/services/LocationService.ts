@@ -1,5 +1,5 @@
 import Location from '../models/Location';
-import { ILocation, ILocationDocument, IUpdateLocationRequest, ILocationModel } from '../types';
+import { ILocation, ILocationDocument, ILocationModel } from '../types';
 import { AppError } from '../types';
 
 export async function getAllLocations(): Promise<ILocationDocument[]> {
@@ -38,7 +38,7 @@ export async function deleteLocation(locationId: string): Promise<void> {
   }
 
   // Check if location has active bookings
-  const Booking = require('../models/Booking').default;
+  const { default: Booking } = await import('../models/Booking');
   const activeBookings = await Booking.countDocuments({
     locationId: locationId,
     status: { $in: ['PENDING', 'IN_PROGRESS'] }
