@@ -11,7 +11,7 @@ import * as LocationService from '../../src/services/LocationService';
 import * as BookingService from '../../src/services/BookingService';
 import * as ScheduleService from '../../src/services/ScheduleService';
 import AdminService from '../../src/services/AdminService';
-import { AppError } from '../../src/types';
+import { AppError, AuthenticatedRequest, UserRole } from '../../src/types';
 
 // Mock all services
 jest.mock('../../src/services/AuthService');
@@ -21,10 +21,26 @@ jest.mock('../../src/services/BookingService');
 jest.mock('../../src/services/ScheduleService');
 jest.mock('../../src/services/AdminService');
 
+interface TestAuthenticatedRequest extends Partial<Request> {
+  user: {
+    userId: string;
+    email: string;
+    role: UserRole;
+  };
+}
+
+interface TestAdminRequest extends TestAuthenticatedRequest {
+  user: {
+    userId: string;
+    email: string;
+    role: 'ADMIN';
+  };
+}
+
 describe('Controllers', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
-  let mockAuthenticatedRequest: any;
+  let mockAuthenticatedRequest: AuthenticatedRequest;
 
   beforeEach(() => {
     mockRequest = {
@@ -2203,7 +2219,7 @@ describe('Controllers', () => {
   });
 
   describe('AdminController', () => {
-    let adminRequest: any;
+    let adminRequest: AdminRequest;
 
     beforeEach(() => {
       adminRequest = {
