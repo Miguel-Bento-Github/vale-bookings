@@ -663,9 +663,10 @@ describe('Admin API Integration Tests', () => {
       });
 
       it('should support date range filtering', async () => {
-        // Get tomorrow's date in YYYY-MM-DD format since our test bookings are tomorrow
-        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
-        const dateStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+        // Use the same base time as the beforeEach to ensure consistency
+        const now = new Date();
+        const futureStartTime = new Date(now.getTime() + 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000); // Tomorrow + 2 hours
+        const dateStr = `${futureStartTime.getFullYear()}-${String(futureStartTime.getMonth() + 1).padStart(2, '0')}-${String(futureStartTime.getDate()).padStart(2, '0')}`;
         
         const response = await request(app)
           .get(`/api/admin/analytics/revenue?startDate=${dateStr}&endDate=${dateStr}`)
