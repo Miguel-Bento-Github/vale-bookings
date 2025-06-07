@@ -19,5 +19,11 @@ module.exports = {
   },
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
   testTimeout: 10000,
-  verbose: true
+  verbose: true,
+  // Optimize parallel execution
+  maxWorkers: '75%', // Use 75% of available CPU cores
+  // Cache to speed up subsequent runs
+  cache: true,
+  // Run tests in parallel within files
+  testRunner: 'jest-circus/runner'
 }; 
