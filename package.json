@@ -18,7 +18,9 @@
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",
-    "prepare": "npm run build"
+    "prepare": "husky",
+    "commitlint": "commitlint --edit",
+    "commitlint:test": "echo 'feat(api): example backend commit message' | commitlint"
   },
   "keywords": [
     "valet",
@@ -42,6 +44,8 @@
     "morgan": "^1.10.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@types/bcryptjs": "^2.4.2",
     "@types/cors": "^2.8.13",
     "@types/express": "^4.17.22",
@@ -53,6 +57,7 @@
     "@typescript-eslint/eslint-plugin": "^6.2.0",
     "@typescript-eslint/parser": "^6.2.0",
     "eslint": "^8.45.0",
+    "husky": "^9.1.7",
     "jest": "^29.6.1",
     "mongodb-memory-server": "^8.14.0",
     "nodemon": "^3.0.1",
