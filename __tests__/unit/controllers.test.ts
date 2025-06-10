@@ -61,7 +61,7 @@ describe('Controllers', () => {
         email: 'test@example.com',
         role: 'CUSTOMER'
       }
-    };
+    } as unknown as AuthenticatedRequest;
 
     jest.clearAllMocks();
   });
@@ -822,7 +822,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createLocation(adminRequest, mockResponse as Response);
+        await createLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -855,7 +855,7 @@ describe('Controllers', () => {
           body: { name: 'New Location' } // missing address and coordinates
         };
 
-        await createLocation(adminRequest, mockResponse as Response);
+        await createLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -875,7 +875,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createLocation(adminRequest, mockResponse as Response);
+        await createLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -897,7 +897,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createLocation(adminRequest, mockResponse as Response);
+        await createLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -919,7 +919,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createLocation(adminRequest, mockResponse as Response);
+        await createLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -943,7 +943,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await updateLocation(adminRequest, mockResponse as Response);
+        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -976,7 +976,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await updateLocation(adminRequest, mockResponse as Response);
+        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -993,7 +993,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await updateLocation(adminRequest, mockResponse as Response);
+        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1013,7 +1013,7 @@ describe('Controllers', () => {
           }
         };
 
-        await updateLocation(adminRequest, mockResponse as Response);
+        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1032,7 +1032,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await updateLocation(adminRequest, mockResponse as Response);
+        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1051,7 +1051,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await updateLocation(adminRequest, mockResponse as Response);
+        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1074,7 +1074,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439011' }
         };
 
-        await deleteLocation(adminRequest, mockResponse as Response);
+        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1104,7 +1104,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439016' }
         };
 
-        await deleteLocation(adminRequest, mockResponse as Response);
+        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1120,7 +1120,7 @@ describe('Controllers', () => {
           params: {} // missing id
         };
 
-        await deleteLocation(adminRequest, mockResponse as Response);
+        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1138,7 +1138,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439011' }
         };
 
-        await deleteLocation(adminRequest, mockResponse as Response);
+        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1158,7 +1158,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439011' }
         };
 
-        await deleteLocation(adminRequest, mockResponse as Response);
+        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1176,7 +1176,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439011' }
         };
 
-        await deleteLocation(adminRequest, mockResponse as Response);
+        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1310,7 +1310,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439013' }
         };
 
-        await getBookingById(adminRequest, mockResponse as Response);
+        await getBookingById(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1448,7 +1448,7 @@ describe('Controllers', () => {
           body: { status: 'CONFIRMED' }
         };
 
-        await updateBookingStatus(adminRequest, mockResponse as Response);
+        await updateBookingStatus(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1497,7 +1497,7 @@ describe('Controllers', () => {
           body: { status: 'CONFIRMED' }
         };
 
-        await updateBookingStatus(adminRequest, mockResponse as Response);
+        await updateBookingStatus(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1532,7 +1532,7 @@ describe('Controllers', () => {
           body: { status: 'CONFIRMED' }
         };
 
-        await updateBookingStatus(adminRequest, mockResponse as Response);
+        await updateBookingStatus(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1551,7 +1551,7 @@ describe('Controllers', () => {
           body: { status: 'CONFIRMED' }
         };
 
-        await updateBookingStatus(adminRequest, mockResponse as Response);
+        await updateBookingStatus(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1748,7 +1748,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1787,7 +1787,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1808,7 +1808,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1827,7 +1827,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1851,7 +1851,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1874,7 +1874,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1899,7 +1899,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1922,7 +1922,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest, mockResponse as Response);
+        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1946,7 +1946,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00', endTime: '19:00' }
         };
 
-        await updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1979,7 +1979,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00' }
         };
 
-        await updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1996,7 +1996,7 @@ describe('Controllers', () => {
           body: { startTime: '25:00' } // invalid time
         };
 
-        await updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2013,7 +2013,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00' }
         };
 
-        await updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2030,7 +2030,7 @@ describe('Controllers', () => {
           body: { dayOfWeek: 8 } // invalid day of week
         };
 
-        await updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2047,7 +2047,7 @@ describe('Controllers', () => {
           body: { endTime: '25:00' } // invalid time
         };
 
-        await updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2066,7 +2066,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00' }
         };
 
-        await updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2085,7 +2085,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00' }
         };
 
-        await updateSchedule(adminRequest, mockResponse as Response);
+        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2106,7 +2106,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439015' }
         };
 
-        await deleteSchedule(adminRequest, mockResponse as Response);
+        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2136,7 +2136,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439016' }
         };
 
-        await deleteSchedule(adminRequest, mockResponse as Response);
+        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2152,7 +2152,7 @@ describe('Controllers', () => {
           params: {} // missing id
         };
 
-        await deleteSchedule(adminRequest, mockResponse as Response);
+        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2170,7 +2170,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439015' }
         };
 
-        await deleteSchedule(adminRequest, mockResponse as Response);
+        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2189,7 +2189,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439015' }
         };
 
-        await deleteSchedule(adminRequest, mockResponse as Response);
+        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2207,7 +2207,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439015' }
         };
 
-        await deleteSchedule(adminRequest, mockResponse as Response);
+        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2219,13 +2219,13 @@ describe('Controllers', () => {
   });
 
   describe('AdminController', () => {
-    let adminRequest: AdminRequest;
+    let adminRequest: TestAdminRequest;
 
     beforeEach(() => {
       adminRequest = {
         ...mockAuthenticatedRequest,
         user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' }
-      };
+      } as TestAdminRequest;
     });
 
     describe('getAllUsers', () => {
@@ -2238,7 +2238,7 @@ describe('Controllers', () => {
 
         adminRequest.query = { page: '1', limit: '10' };
 
-        await getAllUsers(adminRequest, mockResponse as Response);
+        await getAllUsers(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2251,7 +2251,7 @@ describe('Controllers', () => {
       it('should handle service errors', async () => {
         (AdminService.getAllUsers as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
-        await getAllUsers(adminRequest, mockResponse as Response);
+        await getAllUsers(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2263,7 +2263,7 @@ describe('Controllers', () => {
       it('should handle unexpected errors', async () => {
         (AdminService.getAllUsers as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
-        await getAllUsers(adminRequest, mockResponse as Response);
+        await getAllUsers(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2281,7 +2281,7 @@ describe('Controllers', () => {
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { role: 'VALET' };
 
-        await updateUserRole(adminRequest, mockResponse as Response);
+        await updateUserRole(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2294,7 +2294,7 @@ describe('Controllers', () => {
         adminRequest.params = {};
         adminRequest.body = { role: 'VALET' };
 
-        await updateUserRole(adminRequest, mockResponse as Response);
+        await updateUserRole(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2307,7 +2307,7 @@ describe('Controllers', () => {
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { role: 'INVALID_ROLE' };
 
-        await updateUserRole(adminRequest, mockResponse as Response);
+        await updateUserRole(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2322,7 +2322,7 @@ describe('Controllers', () => {
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { role: 'VALET' };
 
-        await updateUserRole(adminRequest, mockResponse as Response);
+        await updateUserRole(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2337,7 +2337,7 @@ describe('Controllers', () => {
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { role: 'VALET' };
 
-        await updateUserRole(adminRequest, mockResponse as Response);
+        await updateUserRole(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2352,9 +2352,9 @@ describe('Controllers', () => {
         (AdminService.deleteUser as jest.Mock).mockResolvedValue(true);
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
-        adminRequest.user = { userId: '507f1f77bcf86cd799439013' }; // Different user
+        adminRequest.user = { ...adminRequest.user, userId: '507f1f77bcf86cd799439013' }; // Different user
 
-        await deleteUser(adminRequest, mockResponse as Response);
+        await deleteUser(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2366,7 +2366,7 @@ describe('Controllers', () => {
       it('should return 400 for missing user ID', async () => {
         adminRequest.params = {};
 
-        await deleteUser(adminRequest, mockResponse as Response);
+        await deleteUser(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2377,9 +2377,9 @@ describe('Controllers', () => {
 
       it('should return 400 when trying to delete own account', async () => {
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
-        adminRequest.user = { userId: '507f1f77bcf86cd799439012' }; // Same user
+        adminRequest.user = { ...adminRequest.user, userId: '507f1f77bcf86cd799439012' }; // Same user
 
-        await deleteUser(adminRequest, mockResponse as Response);
+        await deleteUser(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2394,7 +2394,7 @@ describe('Controllers', () => {
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.user = { userId: '507f1f77bcf86cd799439013' };
 
-        await deleteUser(adminRequest, mockResponse as Response);
+        await deleteUser(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2409,7 +2409,7 @@ describe('Controllers', () => {
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.user = { userId: '507f1f77bcf86cd799439013' };
 
-        await deleteUser(adminRequest, mockResponse as Response);
+        await deleteUser(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2427,7 +2427,7 @@ describe('Controllers', () => {
         ];
         (AdminService.getAllValets as jest.Mock).mockResolvedValue(mockValets);
 
-        await getAllValets(adminRequest, mockResponse as Response);
+        await getAllValets(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2439,7 +2439,7 @@ describe('Controllers', () => {
       it('should handle service errors', async () => {
         (AdminService.getAllValets as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
-        await getAllValets(adminRequest, mockResponse as Response);
+        await getAllValets(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2451,7 +2451,7 @@ describe('Controllers', () => {
       it('should handle unexpected errors', async () => {
         (AdminService.getAllValets as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
-        await getAllValets(adminRequest, mockResponse as Response);
+        await getAllValets(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2472,7 +2472,7 @@ describe('Controllers', () => {
           profile: { name: 'Valet User' }
         };
 
-        await createValet(adminRequest, mockResponse as Response);
+        await createValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2490,7 +2490,7 @@ describe('Controllers', () => {
           profile: { name: 'Valet User' }
         };
 
-        await createValet(adminRequest, mockResponse as Response);
+        await createValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(409);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2508,7 +2508,7 @@ describe('Controllers', () => {
           profile: { name: 'Valet User' }
         };
 
-        await createValet(adminRequest, mockResponse as Response);
+        await createValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2526,7 +2526,7 @@ describe('Controllers', () => {
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { profile: { name: 'Updated Valet' } };
 
-        await updateValet(adminRequest, mockResponse as Response);
+        await updateValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2539,7 +2539,7 @@ describe('Controllers', () => {
         adminRequest.params = {};
         adminRequest.body = { profile: { name: 'Updated Valet' } };
 
-        await updateValet(adminRequest, mockResponse as Response);
+        await updateValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2554,7 +2554,7 @@ describe('Controllers', () => {
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { profile: { name: 'Updated Valet' } };
 
-        await updateValet(adminRequest, mockResponse as Response);
+        await updateValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2569,7 +2569,7 @@ describe('Controllers', () => {
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { profile: { name: 'Updated Valet' } };
 
-        await updateValet(adminRequest, mockResponse as Response);
+        await updateValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2585,7 +2585,7 @@ describe('Controllers', () => {
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
 
-        await deleteValet(adminRequest, mockResponse as Response);
+        await deleteValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2597,7 +2597,7 @@ describe('Controllers', () => {
       it('should return 400 for missing valet ID', async () => {
         adminRequest.params = {};
 
-        await deleteValet(adminRequest, mockResponse as Response);
+        await deleteValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2611,7 +2611,7 @@ describe('Controllers', () => {
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
 
-        await deleteValet(adminRequest, mockResponse as Response);
+        await deleteValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2625,7 +2625,7 @@ describe('Controllers', () => {
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
 
-        await deleteValet(adminRequest, mockResponse as Response);
+        await deleteValet(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2650,7 +2650,7 @@ describe('Controllers', () => {
           coordinates: { latitude: 40.7128, longitude: -74.0060 }
         };
 
-        await createAdminLocation(adminRequest, mockResponse as Response);
+        await createAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2668,7 +2668,7 @@ describe('Controllers', () => {
           coordinates: { latitude: 40.7128, longitude: -74.0060 }
         };
 
-        await createAdminLocation(adminRequest, mockResponse as Response);
+        await createAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2686,7 +2686,7 @@ describe('Controllers', () => {
           coordinates: { latitude: 40.7128, longitude: -74.0060 }
         };
 
-        await createAdminLocation(adminRequest, mockResponse as Response);
+        await createAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2704,7 +2704,7 @@ describe('Controllers', () => {
         ];
         (AdminService.getAllSchedules as jest.Mock).mockResolvedValue(mockSchedules);
 
-        await getAllSchedules(adminRequest, mockResponse as Response);
+        await getAllSchedules(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2716,7 +2716,7 @@ describe('Controllers', () => {
       it('should handle service errors', async () => {
         (AdminService.getAllSchedules as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
-        await getAllSchedules(adminRequest, mockResponse as Response);
+        await getAllSchedules(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2728,7 +2728,7 @@ describe('Controllers', () => {
       it('should handle unexpected errors', async () => {
         (AdminService.getAllSchedules as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
-        await getAllSchedules(adminRequest, mockResponse as Response);
+        await getAllSchedules(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2757,7 +2757,7 @@ describe('Controllers', () => {
           ]
         };
 
-        await createBulkSchedules(adminRequest, mockResponse as Response);
+        await createBulkSchedules(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
