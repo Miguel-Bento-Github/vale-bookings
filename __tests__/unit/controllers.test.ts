@@ -21,7 +21,7 @@ jest.mock('../../src/services/BookingService');
 jest.mock('../../src/services/ScheduleService');
 jest.mock('../../src/services/AdminService');
 
-interface TestAuthenticatedRequest extends Partial<Request> {
+interface TestAuthenticatedRequest extends Request {
   user: {
     userId: string;
     email: string;
@@ -2392,7 +2392,7 @@ describe('Controllers', () => {
         (AdminService.deleteUser as jest.Mock).mockRejectedValue(new AppError('User not found', 404));
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
-        adminRequest.user = { userId: '507f1f77bcf86cd799439013' };
+        adminRequest.user = { ...adminRequest.user, userId: '507f1f77bcf86cd799439013' };
 
         await deleteUser(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
@@ -2407,7 +2407,7 @@ describe('Controllers', () => {
         (AdminService.deleteUser as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
-        adminRequest.user = { userId: '507f1f77bcf86cd799439013' };
+        adminRequest.user = { ...adminRequest.user, userId: '507f1f77bcf86cd799439013' };
 
         await deleteUser(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
