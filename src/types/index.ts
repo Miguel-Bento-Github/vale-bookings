@@ -70,6 +70,32 @@ export interface IScheduleDocument extends ISchedule, Document {
   getOperatingHours(): number;
 }
 
+// Phase 3: Location Discovery Types
+export interface ILocationAvailability {
+  locationId: string;
+  date: Date;
+  availableSpots: number;
+  totalSpots: number;
+  occupancyRate: number;
+}
+
+export interface ILocationWithDistance extends ILocation {
+  distance: number; // Distance in kilometers
+}
+
+export interface ITimeSlot {
+  startTime: Date;
+  endTime: Date;
+  available: boolean;
+  price?: number;
+}
+
+export interface ILocationTimeslots {
+  locationId: string;
+  date: Date;
+  timeslots: ITimeSlot[];
+}
+
 // JWT related types
 export interface IJWTPayload {
   userId: string;

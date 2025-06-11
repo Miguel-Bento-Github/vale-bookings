@@ -65,18 +65,19 @@ LocationSchema.statics.findNearby = function (
   longitude: number,
   radiusInKm: number = 10
 ) {
-  // Convert radius from kilometers to radians
-  const radiusInRadians = radiusInKm / 6371;
+  // Use a more generous bounding box to ensure we capture all nearby locations
+  // Convert radius from kilometers to degrees (rough approximation)
+  const radiusInDegrees = radiusInKm / 111.32; // 1 degree ≈ 111.32 km
 
   return this.find({
     isActive: true,
     'coordinates.latitude': {
-      $gte: latitude - radiusInRadians,
-      $lte: latitude + radiusInRadians
+      $gte: latitude - radiusInDegrees,
+      $lte: latitude + radiusInDegrees
     },
     'coordinates.longitude': {
-      $gte: longitude - radiusInRadians,
-      $lte: longitude + radiusInRadians
+      $gte: longitude - radiusInDegrees,
+      $lte: longitude + radiusInDegrees
     }
   });
 };
