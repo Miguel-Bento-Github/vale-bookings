@@ -99,7 +99,7 @@ module.exports = {
     // General code quality
     'prefer-const': 'error',
     'no-var': 'error',
-    'no-console': 'warn',
+    'no-console': ['warn', { allow: ['error', 'info'] }],
     'no-debugger': 'error',
     'no-alert': 'error',
     'no-eval': 'error',
