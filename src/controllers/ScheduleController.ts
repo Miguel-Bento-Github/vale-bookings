@@ -17,7 +17,7 @@ export async function getLocationSchedules(req: Request, res: Response): Promise
   try {
     const { locationId } = req.params;
 
-    if (!locationId) {
+    if (typeof locationId !== 'string') {
       res.status(400).json({
         success: false,
         message: 'Location ID is required'
@@ -280,7 +280,7 @@ export async function deleteSchedule(req: AuthenticatedRequest, res: Response): 
 
     const { id } = req.params;
 
-    if (!id) {
+    if (typeof id !== 'string') {
       res.status(400).json({
         success: false,
         message: 'Schedule ID is required'

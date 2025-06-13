@@ -364,7 +364,7 @@ export async function searchLocations(req: Request, res: Response): Promise<void
     const { q, lat, lng, radius, minPrice, maxPrice } = req.query;
 
     // Require search query parameter
-    if (!q) {
+    if (typeof q !== 'string') {
       res.status(400).json({
         success: false,
         message: 'Search query parameter (q) is required'
@@ -378,7 +378,7 @@ export async function searchLocations(req: Request, res: Response): Promise<void
     };
 
     // Text search
-    if (q) {
+    if (typeof q === 'string') {
       searchCriteria.$or = [
         { name: { $regex: q, $options: 'i' } },
         { address: { $regex: q, $options: 'i' } }
@@ -386,23 +386,23 @@ export async function searchLocations(req: Request, res: Response): Promise<void
     }
 
     // Price range filter
-    if (minPrice || maxPrice) {
+    if (typeof minPrice === 'string' || typeof maxPrice === 'string') {
       const priceFilter: Record<string, number> = {};
-      if (minPrice) {
-        priceFilter.$gte = parseFloat(minPrice as string);
+      if (typeof minPrice === 'string') {
+        priceFilter.$gte = parseFloat(minPrice);
       }
-      if (maxPrice) {
-        priceFilter.$lte = parseFloat(maxPrice as string);
+      if (typeof maxPrice === 'string') {
+        priceFilter.$lte = parseFloat(maxPrice);
       }
       searchCriteria['pricing.hourlyRate'] = priceFilter;
     }
 
     // Get locations based on criteria
     let locations;
-    if (lat && lng && radius) {
-      const latitude = parseFloat(lat as string);
-      const longitude = parseFloat(lng as string);
-      const radiusKm = parseFloat(radius as string);
+    if (typeof lat === 'string' && typeof lng === 'string' && typeof radius === 'string') {
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+      const radiusKm = parseFloat(radius);
 
       if (!validateCoordinates(latitude, longitude)) {
         res.status(400).json({
