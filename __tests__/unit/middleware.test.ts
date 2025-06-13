@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
 
@@ -32,7 +32,7 @@ describe('Auth Middleware', () => {
   });
 
   describe('authenticate middleware', () => {
-    it('should authenticate with valid Bearer token', async () => {
+    it('should authenticate with valid Bearer token', () => {
       const mockPayload = {
         userId: 'user123',
         email: 'test@example.com',
@@ -45,7 +45,7 @@ describe('Auth Middleware', () => {
 
       mockedAuthService.verifyToken.mockReturnValue(mockPayload);
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockedAuthService.verifyToken).toHaveBeenCalledWith('validtoken123');
       expect(mockRequest.user).toEqual(mockPayload);
@@ -54,10 +54,10 @@ describe('Auth Middleware', () => {
       expect(mockResponse.json).not.toHaveBeenCalled();
     });
 
-    it('should return 401 when authorization header is missing', async () => {
+    it('should return 401 when authorization header is missing', () => {
       mockRequest.headers = {};
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -68,12 +68,12 @@ describe('Auth Middleware', () => {
       expect(mockedAuthService.verifyToken).not.toHaveBeenCalled();
     });
 
-    it('should return 401 when authorization header does not start with Bearer', async () => {
+    it('should return 401 when authorization header does not start with Bearer', () => {
       mockRequest.headers = {
         authorization: 'Basic sometoken'
       };
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -84,12 +84,12 @@ describe('Auth Middleware', () => {
       expect(mockedAuthService.verifyToken).not.toHaveBeenCalled();
     });
 
-    it('should return 401 when authorization header is just "Bearer "', async () => {
+    it('should return 401 when authorization header is just "Bearer "', () => {
       mockRequest.headers = {
         authorization: 'Bearer '
       };
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -100,7 +100,7 @@ describe('Auth Middleware', () => {
       expect(mockedAuthService.verifyToken).not.toHaveBeenCalled();
     });
 
-    it('should return 401 when token verification fails with generic error', async () => {
+    it('should return 401 when token verification fails with generic error', () => {
       mockRequest.headers = {
         authorization: 'Bearer invalidtoken'
       };
@@ -109,7 +109,7 @@ describe('Auth Middleware', () => {
         throw new Error('Invalid token');
       });
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockedAuthService.verifyToken).toHaveBeenCalledWith('invalidtoken');
       expect(mockResponse.status).toHaveBeenCalledWith(401);
@@ -121,7 +121,7 @@ describe('Auth Middleware', () => {
       expect(mockRequest.user).toBeUndefined();
     });
 
-    it('should handle AppError with custom status code and message', async () => {
+    it('should handle AppError with custom status code and message', () => {
       mockRequest.headers = {
         authorization: 'Bearer expiredtoken'
       };
@@ -131,7 +131,7 @@ describe('Auth Middleware', () => {
         throw appError;
       });
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockedAuthService.verifyToken).toHaveBeenCalledWith('expiredtoken');
       expect(mockResponse.status).toHaveBeenCalledWith(403);
@@ -143,7 +143,7 @@ describe('Auth Middleware', () => {
       expect(mockRequest.user).toBeUndefined();
     });
 
-    it('should handle JWT errors specifically', async () => {
+    it('should handle JWT errors specifically', () => {
       mockRequest.headers = {
         authorization: 'Bearer malformedtoken'
       };
@@ -152,7 +152,7 @@ describe('Auth Middleware', () => {
         throw new jwt.JsonWebTokenError('Invalid signature');
       });
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockedAuthService.verifyToken).toHaveBeenCalledWith('malformedtoken');
       expect(mockResponse.status).toHaveBeenCalledWith(401);
@@ -163,7 +163,7 @@ describe('Auth Middleware', () => {
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    it('should extract token correctly from authorization header', async () => {
+    it('should extract token correctly from authorization header', () => {
       const mockPayload = {
         userId: 'user456',
         email: 'admin@example.com',
@@ -176,7 +176,7 @@ describe('Auth Middleware', () => {
 
       mockedAuthService.verifyToken.mockReturnValue(mockPayload);
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockedAuthService.verifyToken).toHaveBeenCalledWith('abc123def456ghi789');
       expect(mockRequest.user).toEqual(mockPayload);
@@ -330,7 +330,7 @@ describe('Auth Middleware', () => {
       mockedAuthService.verifyToken.mockReturnValue(mockPayload);
 
       // First apply authentication
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
       
       expect(mockNext).toHaveBeenCalledTimes(1);
       expect(mockRequest.user).toEqual(mockPayload);
@@ -347,7 +347,7 @@ describe('Auth Middleware', () => {
       expect(mockResponse.json).not.toHaveBeenCalled();
     });
 
-    it('should fail authorization when authentication sets wrong role', async () => {
+    it('should fail authorization when authentication sets wrong role', () => {
       const mockPayload = {
         userId: 'user123',
         email: 'customer@example.com',
@@ -361,7 +361,7 @@ describe('Auth Middleware', () => {
       mockedAuthService.verifyToken.mockReturnValue(mockPayload);
 
       // First apply authentication
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
       
       expect(mockNext).toHaveBeenCalledTimes(1);
       expect(mockRequest.user).toEqual(mockPayload);
@@ -383,12 +383,12 @@ describe('Auth Middleware', () => {
   });
 
   describe('edge cases and error scenarios', () => {
-    it('should handle undefined authorization header', async () => {
+    it('should handle undefined authorization header', () => {
       mockRequest.headers = {
         authorization: undefined
       };
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -398,12 +398,12 @@ describe('Auth Middleware', () => {
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    it('should handle empty string authorization header', async () => {
+    it('should handle empty string authorization header', () => {
       mockRequest.headers = {
         authorization: ''
       };
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -413,12 +413,12 @@ describe('Auth Middleware', () => {
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    it('should handle authorization header with only "Bearer"', async () => {
+    it('should handle authorization header with only "Bearer"', () => {
       mockRequest.headers = {
         authorization: 'Bearer'
       };
 
-      await authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
+      authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({

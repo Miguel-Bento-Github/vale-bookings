@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+
 import mongoose from 'mongoose';
 
 import Location from '../../src/models/Location';
@@ -216,7 +216,7 @@ describe('LocationService', () => {
       // Mock method for calculating availability
       // This would integrate with booking data in real implementation
       const availability = await LocationService.getLocationAvailability(
-        testLocation._id.toString(),
+        String(testLocation._id),
         new Date()
       );
 
@@ -238,7 +238,7 @@ describe('LocationService', () => {
       futureDate.setDate(futureDate.getDate() + 7);
 
       const availability = await LocationService.getLocationAvailability(
-        testLocation._id.toString(),
+        String(testLocation._id),
         futureDate
       );
 
@@ -313,7 +313,7 @@ describe('LocationService', () => {
       const testDate = new Date();
 
       const timeslots = await LocationService.getLocationTimeslots(
-        testLocation._id.toString(),
+        String(testLocation._id),
         testDate
       );
 
@@ -338,7 +338,7 @@ describe('LocationService', () => {
       const testDate = new Date();
 
       const timeslots = await LocationService.getLocationTimeslots(
-        testLocation._id.toString(),
+        String(testLocation._id),
         testDate
       );
 
