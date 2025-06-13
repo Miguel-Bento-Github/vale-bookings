@@ -53,7 +53,7 @@ export async function getNearbyLocations(req: Request, res: Response): Promise<v
 
     const latValue = parseFloat(latParam as string);
     const lngValue = parseFloat(lngParam as string);
-    const radiusKm = radius ? parseFloat(radius as string) / 1000 : 10;
+    const radiusKm = radius !== undefined ? parseFloat(radius as string) / 1000 : 10;
 
     if (!validateCoordinates(latValue, lngValue)) {
       res.status(400).json({
@@ -64,7 +64,7 @@ export async function getNearbyLocations(req: Request, res: Response): Promise<v
     }
 
     // Validate radius parameter
-    if (radius && (isNaN(parseFloat(radius as string)) || parseFloat(radius as string) <= 0)) {
+    if (radius !== undefined && (isNaN(parseFloat(radius as string)) || parseFloat(radius as string) <= 0)) {
       res.status(400).json({
         success: false,
         message: 'Invalid radius parameter'
@@ -97,7 +97,7 @@ export async function getLocationById(req: Request, res: Response): Promise<void
   try {
     const { id } = req.params;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Location ID is required'
@@ -215,7 +215,7 @@ export async function updateLocation(req: AuthenticatedRequest, res: Response): 
     const { id } = req.params;
     const updateData = req.body;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Location ID is required'
@@ -275,7 +275,7 @@ export async function deleteLocation(req: AuthenticatedRequest, res: Response): 
 
     const { id } = req.params;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Location ID is required'
@@ -399,7 +399,7 @@ export async function getLocationAvailability(req: Request, res: Response): Prom
     const { id } = req.params;
     const { date } = req.query;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Location ID is required'
@@ -416,7 +416,7 @@ export async function getLocationAvailability(req: Request, res: Response): Prom
     }
 
     // Validate date parameter if provided
-    if (date && isNaN(Date.parse(date as string))) {
+    if (date === undefined || date === null || typeof date !== 'string' || date.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Invalid date format'
@@ -435,7 +435,7 @@ export async function getLocationAvailability(req: Request, res: Response): Prom
 
     // For now, return mock availability data
     // In a real implementation, this would check actual bookings
-    const targetDate = date ? new Date(date as string) : new Date();
+    const targetDate = date ? new Date(date) : new Date();
     const totalSpots = 20;
     const availableSpots = Math.floor(Math.random() * 20);
     const availability = {
@@ -473,7 +473,7 @@ export async function getLocationTimeSlots(req: Request, res: Response): Promise
     const { id } = req.params;
     const { date } = req.query;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Location ID is required'
@@ -481,7 +481,7 @@ export async function getLocationTimeSlots(req: Request, res: Response): Promise
       return;
     }
 
-    if (!date) {
+    if (date === undefined || date === null || date.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Date parameter is required'
@@ -559,7 +559,7 @@ export async function getRealtimeAvailability(req: Request, res: Response): Prom
   try {
     const { id } = req.params;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Location ID is required'
