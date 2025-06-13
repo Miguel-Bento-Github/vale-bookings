@@ -1377,7 +1377,6 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          message: 'Booking created successfully',
           data: mockBooking
         });
       });
@@ -1453,11 +1452,13 @@ describe('Controllers', () => {
 
     describe('updateBookingStatus', () => {
       it('should update booking status successfully', async () => {
-        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'PENDING' };
         const mockUpdatedBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CONFIRMED' };
         
-        (Booking.findById as jest.Mock).mockResolvedValue(mockBooking);
-        (Booking.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockUpdatedBooking);
+        // Mock the service functions that the controller actually calls
+        const mockUpdateStatus = jest.fn().mockResolvedValue(mockUpdatedBooking);
+        jest.doMock('../../../src/services/BookingService', () => ({
+          updateBookingStatus: mockUpdateStatus
+        }), { virtual: true });
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -1471,7 +1472,6 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          message: 'Booking status updated successfully',
           data: mockUpdatedBooking
         });
       });
@@ -1501,7 +1501,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Booking ID and status are required'
+          message: 'Valid status is required'
         });
       });
 
@@ -1536,7 +1536,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Forbidden: access denied'
+          message: 'Forbidden: insufficient permissions'
         });
       });
 

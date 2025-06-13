@@ -73,6 +73,21 @@ export async function updateBookingStatus(bookingId: string, status: BookingStat
 }
 
 export async function cancelBooking(bookingId: string): Promise<IBookingDocument | null> {
+  const booking = await Booking.findById(bookingId);
+
+  if (!booking) {
+    throw new AppError('Booking not found', 404);
+  }
+
+  // Prevent cancellation of completed or already cancelled bookings
+  if (booking.status === 'COMPLETED') {
+    throw new AppError('Completed bookings cannot be cancelled', 400);
+  }
+
+  if (booking.status === 'CANCELLED') {
+    throw new AppError('Booking is already cancelled', 400);
+  }
+
   return await updateBookingStatus(bookingId, 'CANCELLED');
 }
 

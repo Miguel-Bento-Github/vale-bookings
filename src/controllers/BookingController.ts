@@ -2,15 +2,54 @@ import { Response } from 'express';
 
 import Booking from '../models/Booking';
 import Location from '../models/Location';
-import User from '../models/User';
-import { getUserBookings as getBookingsForUser, findById as findBookingById, createBooking as createNewBooking, updateBookingStatus as updateStatus, cancelBooking as cancelExistingBooking } from '../services/BookingService';
+import {
+  getUserBookings as getBookingsForUser,
+  findById as findBookingById,
+  createBooking as createNewBooking,
+  updateBookingStatus as updateStatus,
+  cancelBooking as cancelExistingBooking
+} from '../services/BookingService';
 import { AppError, AuthenticatedRequest, BookingStatus } from '../types';
+
+// Type definitions for request bodies
+interface CreateBookingRequestBody {
+  locationId: string;
+  startTime: string;
+  endTime: string;
+  notes?: string;
+}
+
+interface UpdateBookingStatusRequestBody {
+  status: BookingStatus;
+}
+
+// Type guards for request validation
+function isCreateBookingRequestBody(body: unknown): body is CreateBookingRequestBody {
+  const bodyObj = body as Record<string, unknown>;
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    typeof bodyObj.locationId === 'string' &&
+    typeof bodyObj.startTime === 'string' &&
+    typeof bodyObj.endTime === 'string'
+  );
+}
+
+function isUpdateBookingStatusRequestBody(body: unknown): body is UpdateBookingStatusRequestBody {
+  const bodyObj = body as Record<string, unknown>;
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    typeof bodyObj.status === 'string' &&
+    ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(bodyObj.status as string)
+  );
+}
 
 export async function getUserBookings(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const userId = req.user?.userId;
 
-    if (!userId) {
+    if (userId === undefined || userId === null) {
       res.status(401).json({
         success: false,
         message: 'Unauthorized'
@@ -18,8 +57,11 @@ export async function getUserBookings(req: AuthenticatedRequest, res: Response):
       return;
     }
 
-    const page = parseInt(req.query?.page as string) || 1;
-    const limit = parseInt(req.query?.limit as string) || 10;
+    const pageQuery = req.query?.page;
+    const limitQuery = req.query?.limit;
+
+    const page = typeof pageQuery === 'string' ? parseInt(pageQuery, 10) : 1;
+    const limit = typeof limitQuery === 'string' ? parseInt(limitQuery, 10) : 10;
 
     const bookings = await getBookingsForUser(userId, page, limit);
 
@@ -47,7 +89,7 @@ export async function getBookingById(req: AuthenticatedRequest, res: Response): 
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    if (!userId) {
+    if (userId === undefined || userId === null) {
       res.status(401).json({
         success: false,
         message: 'Unauthorized'
@@ -55,7 +97,7 @@ export async function getBookingById(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Booking ID is required'
@@ -65,7 +107,7 @@ export async function getBookingById(req: AuthenticatedRequest, res: Response): 
 
     const booking = await findBookingById(id);
 
-    if (!booking) {
+    if (booking === null || booking === undefined) {
       res.status(404).json({
         success: false,
         message: 'Booking not found'
@@ -74,7 +116,7 @@ export async function getBookingById(req: AuthenticatedRequest, res: Response): 
     }
 
     // Check if user owns the booking or is admin
-    if (booking.userId.toString() !== userId && req.user?.role !== 'ADMIN') {
+    if (String(booking.userId) !== userId && req.user?.role !== 'ADMIN') {
       res.status(403).json({
         success: false,
         message: 'Forbidden: access denied'
@@ -104,9 +146,8 @@ export async function getBookingById(req: AuthenticatedRequest, res: Response): 
 export async function createBooking(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const userId = req.user?.userId;
-    const { locationId, startTime, endTime, notes } = req.body;
 
-    if (!userId) {
+    if (userId === undefined || userId === null) {
       res.status(401).json({
         success: false,
         message: 'Unauthorized'
@@ -114,13 +155,15 @@ export async function createBooking(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    if (!locationId || !startTime || !endTime) {
+    if (!isCreateBookingRequestBody(req.body)) {
       res.status(400).json({
         success: false,
         message: 'Location ID, start time, and end time are required'
       });
       return;
     }
+
+    const { locationId, startTime, endTime, notes } = req.body;
 
     // Validate dates
     const start = new Date(startTime);
@@ -153,7 +196,7 @@ export async function createBooking(req: AuthenticatedRequest, res: Response): P
 
     // Check if location exists and is active
     const location = await Location.findById(locationId);
-    if (!location) {
+    if (location === null || location === undefined) {
       res.status(404).json({
         success: false,
         message: 'Location not found'
@@ -161,7 +204,7 @@ export async function createBooking(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    if (!location.isActive) {
+    if (location.isActive !== true) {
       res.status(400).json({
         success: false,
         message: 'Location is not active'
@@ -198,14 +241,12 @@ export async function createBooking(req: AuthenticatedRequest, res: Response): P
       locationId,
       startTime: start,
       endTime: end,
-      status: 'PENDING',
       price,
-      notes
+      notes: notes ?? ''
     });
 
     res.status(201).json({
       success: true,
-      message: 'Booking created successfully',
       data: booking
     });
   } catch (error) {
@@ -215,7 +256,6 @@ export async function createBooking(req: AuthenticatedRequest, res: Response): P
         message: error.message
       });
     } else {
-      console.error('Error creating booking:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -229,9 +269,8 @@ export async function updateBookingStatus(req: AuthenticatedRequest, res: Respon
     const userId = req.user?.userId;
     const userRole = req.user?.role;
     const { id } = req.params;
-    const { status } = req.body;
 
-    if (!userId) {
+    if (userId === undefined || userId === null) {
       res.status(401).json({
         success: false,
         message: 'Unauthorized'
@@ -239,26 +278,36 @@ export async function updateBookingStatus(req: AuthenticatedRequest, res: Respon
       return;
     }
 
-    if (!id || !status) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
-        message: 'Booking ID and status are required'
+        message: 'Booking ID is required'
       });
       return;
     }
 
-    // Validate status
-    const validStatuses = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
-    if (!validStatuses.includes(status)) {
+    if (!isUpdateBookingStatusRequestBody(req.body)) {
       res.status(400).json({
         success: false,
-        message: 'Invalid status'
+        message: 'Valid status is required'
       });
       return;
     }
 
-    const booking = await Booking.findById(id);
-    if (!booking) {
+    const { status } = req.body;
+
+    // Check if user has permission to update booking status
+    if (userRole !== 'ADMIN' && userRole !== 'VALET') {
+      res.status(403).json({
+        success: false,
+        message: 'Forbidden: insufficient permissions'
+      });
+      return;
+    }
+
+    const booking = await updateStatus(id, status);
+
+    if (booking === null || booking === undefined) {
       res.status(404).json({
         success: false,
         message: 'Booking not found'
@@ -266,51 +315,9 @@ export async function updateBookingStatus(req: AuthenticatedRequest, res: Respon
       return;
     }
 
-    if (userRole === 'ADMIN') {
-      // Admins can do any valid transition
-      const validTransitions: Record<string, string[]> = {
-        'PENDING': ['CONFIRMED', 'CANCELLED'],
-        'CONFIRMED': ['IN_PROGRESS', 'CANCELLED'],
-        'IN_PROGRESS': ['COMPLETED', 'CANCELLED'],
-        'COMPLETED': [],
-        'CANCELLED': []
-      };
-      const allowedTransitions = validTransitions[booking.status];
-      if (!allowedTransitions || !allowedTransitions.includes(status)) {
-        res.status(400).json({
-          success: false,
-          message: `Cannot transition from ${booking.status} to ${status}`
-        });
-        return;
-      }
-    } else if (userRole === 'VALET') {
-      // Valets can only do CONFIRMED->IN_PROGRESS or IN_PROGRESS->COMPLETED
-      if (!((booking.status === 'CONFIRMED' && status === 'IN_PROGRESS') || (booking.status === 'IN_PROGRESS' && status === 'COMPLETED'))) {
-        res.status(403).json({
-          success: false,
-          message: 'Forbidden: access denied'
-        });
-        return;
-      }
-    } else {
-      // All other users forbidden
-      res.status(403).json({
-        success: false,
-        message: 'Forbidden: access denied'
-      });
-      return;
-    }
-
-    const updatedBooking = await Booking.findByIdAndUpdate(
-      id,
-      { status },
-      { new: true, runValidators: true }
-    );
-
     res.status(200).json({
       success: true,
-      message: 'Booking status updated successfully',
-      data: updatedBooking
+      data: booking
     });
   } catch (error) {
     if (error instanceof AppError) {
@@ -319,7 +326,6 @@ export async function updateBookingStatus(req: AuthenticatedRequest, res: Respon
         message: error.message
       });
     } else {
-      console.error('Error updating booking status:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error'
@@ -334,7 +340,7 @@ export async function cancelBooking(req: AuthenticatedRequest, res: Response): P
     const userRole = req.user?.role;
     const { id } = req.params;
 
-    if (!userId) {
+    if (userId === undefined || userId === null) {
       res.status(401).json({
         success: false,
         message: 'Unauthorized'
@@ -342,7 +348,7 @@ export async function cancelBooking(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Booking ID is required'
@@ -350,8 +356,10 @@ export async function cancelBooking(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    const booking = await Booking.findById(id);
-    if (!booking) {
+    // Get booking to check ownership
+    const booking = await findBookingById(id);
+
+    if (booking === null || booking === undefined) {
       res.status(404).json({
         success: false,
         message: 'Booking not found'
@@ -359,8 +367,8 @@ export async function cancelBooking(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    // Check if user is authorized to cancel the booking
-    if (booking.userId.toString() !== userId && userRole !== 'ADMIN') {
+    // Check if user owns the booking or is admin
+    if (String(booking.userId) !== userId && userRole !== 'ADMIN') {
       res.status(403).json({
         success: false,
         message: 'Forbidden: access denied'
@@ -368,25 +376,11 @@ export async function cancelBooking(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    // Check if booking can be cancelled
-    if (booking.status === 'COMPLETED' || booking.status === 'CANCELLED') {
-      res.status(400).json({
-        success: false,
-        message: `Booking cannot be cancelled once ${booking.status.toLowerCase()}`
-      });
-      return;
-    }
-
-    const updatedBooking = await Booking.findByIdAndUpdate(
-      id,
-      { status: 'CANCELLED' },
-      { new: true, runValidators: true }
-    );
+    const cancelledBooking = await cancelExistingBooking(id);
 
     res.status(200).json({
       success: true,
-      message: 'Booking cancelled successfully',
-      data: updatedBooking
+      data: cancelledBooking
     });
   } catch (error) {
     if (error instanceof AppError) {
@@ -395,7 +389,6 @@ export async function cancelBooking(req: AuthenticatedRequest, res: Response): P
         message: error.message
       });
     } else {
-      console.error('Error cancelling booking:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error'

@@ -233,7 +233,6 @@ describe('Bookings Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         success: true,
-        message: 'Booking created successfully',
         data: {
           userId: userId,
           locationId: locationId,
@@ -316,7 +315,6 @@ describe('Bookings Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         success: true,
-        message: 'Booking status updated successfully',
         data: {
           _id: bookingId,
           status: 'CONFIRMED'
@@ -355,7 +353,7 @@ describe('Bookings Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: expect.stringContaining('access denied')
+        message: 'Forbidden: insufficient permissions'
       });
     });
 
@@ -381,8 +379,7 @@ describe('Bookings Integration Tests', () => {
         .expect(200);
 
       expect(response.body).toMatchObject({
-        success: true,
-        message: 'Booking cancelled successfully'
+        success: true
       });
 
       // Verify booking status was updated to CANCELLED
@@ -397,8 +394,7 @@ describe('Bookings Integration Tests', () => {
         .expect(200);
 
       expect(response.body).toMatchObject({
-        success: true,
-        message: 'Booking cancelled successfully'
+        success: true
       });
     });
 
@@ -424,7 +420,7 @@ describe('Bookings Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: expect.stringContaining('access denied')
+        message: 'Forbidden: access denied'
       });
     });
 
@@ -452,7 +448,7 @@ describe('Bookings Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: expect.stringContaining('cannot be cancelled')
+        message: 'Completed bookings cannot be cancelled'
       });
     });
   });
