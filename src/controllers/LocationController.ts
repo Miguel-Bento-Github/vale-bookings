@@ -1,7 +1,14 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 
-import { getAllLocations, findNearby, getLocationById as findLocationById, createLocation as createNewLocation, updateLocation as updateExistingLocation, deleteLocation as deleteExistingLocation } from '../services/LocationService';
+import {
+  getAllLocations,
+  findNearby,
+  getLocationById as findLocationById,
+  createLocation as createNewLocation,
+  updateLocation as updateExistingLocation,
+  deleteLocation as deleteExistingLocation
+} from '../services/LocationService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validateCoordinates } from '../utils/validation';
 
@@ -33,10 +40,10 @@ export async function getNearbyLocations(req: Request, res: Response): Promise<v
     const { lat, lng, latitude, longitude, radius } = req.query;
 
     // Accept both lat/lng and latitude/longitude parameter formats
-    const latParam = lat || latitude;
-    const lngParam = lng || longitude;
+    const latParam = lat ?? latitude;
+    const lngParam = lng ?? longitude;
 
-    if (!latParam || !lngParam) {
+    if (latParam === undefined || lngParam === undefined) {
       res.status(400).json({
         success: false,
         message: 'Latitude and longitude are required'

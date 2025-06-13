@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { JsonWebTokenError } from 'jsonwebtoken';
 import request from 'supertest';
 
 import app from '../../src/app';
@@ -149,7 +149,7 @@ describe('Auth Middleware', () => {
       };
 
       mockedAuthService.verifyToken.mockImplementation(() => {
-        throw new jwt.JsonWebTokenError('Invalid signature');
+        throw new JsonWebTokenError('Invalid signature');
       });
 
       authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);

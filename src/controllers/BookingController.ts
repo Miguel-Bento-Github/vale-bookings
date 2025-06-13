@@ -5,7 +5,6 @@ import Location from '../models/Location';
 import {
   getUserBookings as getBookingsForUser,
   findById as findBookingById,
-  createBooking as createNewBooking,
   updateBookingStatus as updateStatus,
   cancelBooking as cancelExistingBooking
 } from '../services/BookingService';

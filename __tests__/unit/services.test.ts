@@ -345,7 +345,7 @@ describe('Services', () => {
       Location.prototype.save = jest.fn().mockImplementation(function (this: typeof Location.prototype) {
         saveCallCount++;
         if (saveCallCount === 1) {
-          return originalSave.call(this);
+          return originalSave.call(this) as Promise<typeof Location.prototype>;
         } else {
           const error = new Error('Duplicate key error') as Error & { code: number };
           error.code = 11000;

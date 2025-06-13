@@ -81,14 +81,6 @@ function isUpdateBookingStatusRequestBody(body: unknown): body is UpdateBookingS
   );
 }
 
-function isValidUserRole(role: string): role is UserRole {
-  return ['CUSTOMER', 'VALET', 'ADMIN'].includes(role);
-}
-
-function isValidBookingStatus(status: string): status is BookingStatus {
-  return ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(status);
-}
-
 function isCreateLocationRequestBody(body: unknown): body is ICreateLocationRequest {
   const bodyObj = body as Record<string, unknown>;
   return (
@@ -642,22 +634,35 @@ export async function createBulkSchedules(req: AuthenticatedRequest, res: Respon
     }
 
     // Validate each schedule in the array
-    const schedules = bodyObj.schedules;
+    const schedules = bodyObj.schedules as unknown[];
+    const validatedScheduleData: ICreateScheduleRequest[] = [];
+
     for (const schedule of schedules) {
-      if (!isCreateScheduleRequestBody({ ...schedule, locationId: bodyObj.locationId })) {
+      if (typeof schedule !== 'object' || schedule === null) {
         res.status(400).json({
           success: false,
           message: 'Invalid schedule data in bulk request'
         });
         return;
       }
+
+      const scheduleWithLocation = {
+        ...(schedule as Record<string, unknown>),
+        locationId: bodyObj.locationId
+      };
+
+      if (!isCreateScheduleRequestBody(scheduleWithLocation)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid schedule data in bulk request'
+        });
+        return;
+      }
+      validatedScheduleData.push(scheduleWithLocation);
     }
 
     const { locationId } = bodyObj;
-    const validatedSchedules = schedules.map(schedule => ({
-      ...schedule,
-      locationId
-    })) as ICreateScheduleRequest[];
+    const validatedSchedules = validatedScheduleData;
 
     const result = await AdminService.createBulkSchedules(locationId, validatedSchedules);
 
