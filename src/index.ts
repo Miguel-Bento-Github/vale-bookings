@@ -103,11 +103,11 @@ const startServer = async (): Promise<void> => {
     const mongoUri = process.env.MONGODB_URI ?? 'mongodb://localhost:27017/vale_db';
     await mongoose.connect(mongoUri);
     // eslint-disable-next-line no-console
-    console.log('Connected to MongoDB');
+    console.info('Connected to MongoDB');
     
     app.listen(PORT, () => {
       // eslint-disable-next-line no-console
-      console.log(`Server running on port ${PORT}`);
+      console.info(`Server running on port ${PORT}`);
     });
   } catch (error) {
     // eslint-disable-next-line no-console
