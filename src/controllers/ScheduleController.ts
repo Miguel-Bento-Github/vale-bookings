@@ -77,9 +77,18 @@ export async function createSchedule(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const { locationId, dayOfWeek, startTime, endTime } = req.body;
+    const requestBody = req.body as Record<string, unknown>;
+    const locationId = requestBody.locationId;
+    const dayOfWeek = requestBody.dayOfWeek;
+    const startTime = requestBody.startTime;
+    const endTime = requestBody.endTime;
 
-    if (!locationId || dayOfWeek === undefined || !startTime || !endTime) {
+    if (
+      typeof locationId !== 'string' ||
+      typeof dayOfWeek !== 'number' ||
+      typeof startTime !== 'string' ||
+      typeof endTime !== 'string'
+    ) {
       res.status(400).json({
         success: false,
         message: 'Location ID, day of week, start time, and end time are required'
@@ -166,9 +175,9 @@ export async function updateSchedule(req: AuthenticatedRequest, res: Response): 
     }
 
     const { id } = req.params;
-    const updateData = req.body;
+    const requestBody = req.body as Record<string, unknown>;
 
-    if (!id) {
+    if (typeof id !== 'string') {
       res.status(400).json({
         success: false,
         message: 'Schedule ID is required'
@@ -176,7 +185,11 @@ export async function updateSchedule(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    if (updateData.dayOfWeek !== undefined && (updateData.dayOfWeek < 0 || updateData.dayOfWeek > 6)) {
+    // Validate dayOfWeek if provided
+    if (
+      typeof requestBody.dayOfWeek === 'number' &&
+      (requestBody.dayOfWeek < 0 || requestBody.dayOfWeek > 6)
+    ) {
       res.status(400).json({
         success: false,
         message: 'Day of week must be between 0 (Sunday) and 6 (Saturday)'
@@ -184,7 +197,11 @@ export async function updateSchedule(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    if (updateData.startTime && !validateTimeFormat(updateData.startTime)) {
+    // Validate startTime if provided
+    if (
+      typeof requestBody.startTime === 'string' &&
+      !validateTimeFormat(requestBody.startTime)
+    ) {
       res.status(400).json({
         success: false,
         message: 'Start time must be in HH:MM format'
@@ -192,12 +209,31 @@ export async function updateSchedule(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    if (updateData.endTime && !validateTimeFormat(updateData.endTime)) {
+    // Validate endTime if provided
+    if (
+      typeof requestBody.endTime === 'string' &&
+      !validateTimeFormat(requestBody.endTime)
+    ) {
       res.status(400).json({
         success: false,
         message: 'End time must be in HH:MM format'
       });
       return;
+    }
+
+    // Build update data with proper typing
+    const updateData: Record<string, unknown> = {};
+    if (typeof requestBody.dayOfWeek === 'number') {
+      updateData.dayOfWeek = requestBody.dayOfWeek;
+    }
+    if (typeof requestBody.startTime === 'string') {
+      updateData.startTime = requestBody.startTime;
+    }
+    if (typeof requestBody.endTime === 'string') {
+      updateData.endTime = requestBody.endTime;
+    }
+    if (typeof requestBody.isActive === 'boolean') {
+      updateData.isActive = requestBody.isActive;
     }
 
     const schedule = await updateExistingSchedule(id, updateData);

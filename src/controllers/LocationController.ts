@@ -233,7 +233,7 @@ export async function updateLocation(req: AuthenticatedRequest, res: Response): 
     }
 
     const { id } = req.params;
-    const updateData = req.body;
+    const requestBody = req.body as Record<string, unknown>;
 
     if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
@@ -243,15 +243,35 @@ export async function updateLocation(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    if (
-      updateData.coordinates &&
-      !validateCoordinates(updateData.coordinates.latitude, updateData.coordinates.longitude)
-    ) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid coordinates'
-      });
-      return;
+    // Validate coordinates if provided
+    if (typeof requestBody.coordinates === 'object' && requestBody.coordinates !== null) {
+      const coordinates = requestBody.coordinates as Record<string, unknown>;
+      if (
+        typeof coordinates.latitude === 'number' &&
+        typeof coordinates.longitude === 'number' &&
+        !validateCoordinates(coordinates.latitude, coordinates.longitude)
+      ) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid coordinates'
+        });
+        return;
+      }
+    }
+
+    // Build update data with proper typing
+    const updateData: Record<string, unknown> = {};
+    if (typeof requestBody.name === 'string') {
+      updateData.name = requestBody.name;
+    }
+    if (typeof requestBody.address === 'string') {
+      updateData.address = requestBody.address;
+    }
+    if (typeof requestBody.coordinates === 'object' && requestBody.coordinates !== null) {
+      updateData.coordinates = requestBody.coordinates;
+    }
+    if (typeof requestBody.isActive === 'boolean') {
+      updateData.isActive = requestBody.isActive;
     }
 
     const location = await updateExistingLocation(id, updateData);
