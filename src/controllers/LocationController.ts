@@ -155,9 +155,12 @@ export async function createLocation(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const { name, address, coordinates } = req.body;
+    const requestBody = req.body as Record<string, unknown>;
+    const name = requestBody.name;
+    const address = requestBody.address;
+    const coordinates = requestBody.coordinates;
 
-    if (!name || !address || !coordinates) {
+    if (typeof name !== 'string' || typeof address !== 'string' || typeof coordinates !== 'object' || coordinates === null) {
       res.status(400).json({
         success: false,
         message: 'Name, address, and coordinates are required'
@@ -165,7 +168,16 @@ export async function createLocation(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    if (!validateCoordinates(coordinates.latitude, coordinates.longitude)) {
+    const coordsObj = coordinates as Record<string, unknown>;
+    if (typeof coordsObj.latitude !== 'number' || typeof coordsObj.longitude !== 'number') {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid coordinates format'
+      });
+      return;
+    }
+
+    if (!validateCoordinates(coordsObj.latitude, coordsObj.longitude)) {
       res.status(400).json({
         success: false,
         message: 'Invalid coordinates'
@@ -176,7 +188,10 @@ export async function createLocation(req: AuthenticatedRequest, res: Response): 
     const location = await createNewLocation({
       name,
       address,
-      coordinates,
+      coordinates: {
+        latitude: coordsObj.latitude,
+        longitude: coordsObj.longitude
+      },
       isActive: true
     });
 
@@ -481,7 +496,7 @@ export async function getLocationTimeSlots(req: Request, res: Response): Promise
       return;
     }
 
-    if (date === undefined || date === null || date.trim().length === 0) {
+    if (typeof date !== 'string' || date.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Date parameter is required'

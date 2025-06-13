@@ -36,10 +36,15 @@ const ScheduleSchema: Schema = new Schema(
 );
 
 // Custom validation to ensure end time is after start time
-ScheduleSchema.pre('validate', function (next) {
-  if (this.startTime && this.endTime) {
-    const [startHour, startMinute] = this.startTime.split(':').map(Number);
-    const [endHour, endMinute] = this.endTime.split(':').map(Number);
+ScheduleSchema.pre('validate', function (next): void {
+  if (typeof this.startTime === 'string' && typeof this.endTime === 'string') {
+    const startTimeParts = String(this.startTime).split(':');
+    const endTimeParts = String(this.endTime).split(':');
+
+    const startHour = parseInt(startTimeParts[0] ?? '0', 10);
+    const startMinute = parseInt(startTimeParts[1] ?? '0', 10);
+    const endHour = parseInt(endTimeParts[0] ?? '0', 10);
+    const endMinute = parseInt(endTimeParts[1] ?? '0', 10);
     
     const startMinutes = startHour * 60 + startMinute;
     const endMinutes = endHour * 60 + endMinute;
@@ -64,7 +69,10 @@ ScheduleSchema.index(
 ScheduleSchema.index({ locationId: 1, isActive: 1 });
 
 // Static method to find schedules by location
-ScheduleSchema.statics.findByLocationId = function (locationId: string, activeOnly: boolean = true) {
+ScheduleSchema.statics.findByLocationId = function (
+  locationId: string,
+  activeOnly: boolean = true
+): Promise<IScheduleDocument[]> {
   const query: mongoose.FilterQuery<IScheduleDocument> = { locationId };
   
   if (activeOnly) {
@@ -81,7 +89,7 @@ ScheduleSchema.statics.findByLocationAndDay = function (
   locationId: string,
   dayOfWeek: number,
   activeOnly: boolean = true
-) {
+): Promise<IScheduleDocument | null> {
   const query: mongoose.FilterQuery<IScheduleDocument> = { locationId, dayOfWeek };
   
   if (activeOnly) {
@@ -92,7 +100,7 @@ ScheduleSchema.statics.findByLocationAndDay = function (
 };
 
 // Static method to get all schedules for the week
-ScheduleSchema.statics.getWeeklySchedule = function (locationId: string) {
+ScheduleSchema.statics.getWeeklySchedule = function (locationId: string): Promise<IScheduleDocument[]> {
   return this.find({
     locationId,
     isActive: true
@@ -108,15 +116,25 @@ ScheduleSchema.methods.isOpenAt = function (timeString: string): boolean {
   const timeParts = timeString.split(':');
   if (timeParts.length !== 2) return false;
   
-  const hour = parseInt(timeParts[0] as string, 10);
-  const minute = parseInt(timeParts[1] as string, 10);
+  const hourStr = timeParts[0];
+  const minuteStr = timeParts[1];
+
+  if (typeof hourStr !== 'string' || typeof minuteStr !== 'string') return false;
+
+  const hour = parseInt(hourStr, 10);
+  const minute = parseInt(minuteStr, 10);
   
   if (isNaN(hour) || isNaN(minute)) return false;
   
   const checkMinutes = hour * 60 + minute;
 
-  const [startHour, startMinute] = this.startTime.split(':').map(Number);
-  const [endHour, endMinute] = this.endTime.split(':').map(Number);
+  const startTimeParts = String(this.startTime).split(':');
+  const endTimeParts = String(this.endTime).split(':');
+
+  const startHour = parseInt(startTimeParts[0] ?? '0', 10);
+  const startMinute = parseInt(startTimeParts[1] ?? '0', 10);
+  const endHour = parseInt(endTimeParts[0] ?? '0', 10);
+  const endMinute = parseInt(endTimeParts[1] ?? '0', 10);
 
   const startMinutes = startHour * 60 + startMinute;
   const endMinutes = endHour * 60 + endMinute;
@@ -126,8 +144,13 @@ ScheduleSchema.methods.isOpenAt = function (timeString: string): boolean {
 
 // Instance method to get operating hours duration
 ScheduleSchema.methods.getOperatingHours = function (): number {
-  const [startHour, startMinute] = this.startTime.split(':').map(Number);
-  const [endHour, endMinute] = this.endTime.split(':').map(Number);
+  const startTimeParts = String(this.startTime).split(':');
+  const endTimeParts = String(this.endTime).split(':');
+
+  const startHour = parseInt(startTimeParts[0] ?? '0', 10);
+  const startMinute = parseInt(startTimeParts[1] ?? '0', 10);
+  const endHour = parseInt(endTimeParts[0] ?? '0', 10);
+  const endMinute = parseInt(endTimeParts[1] ?? '0', 10);
 
   const startMinutes = startHour * 60 + startMinute;
   const endMinutes = endHour * 60 + endMinute;
@@ -138,7 +161,7 @@ ScheduleSchema.methods.getOperatingHours = function (): number {
 // Static method to get day name from day of week number
 ScheduleSchema.statics.getDayName = function (dayOfWeek: number): string {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[dayOfWeek] || 'Invalid Day';
+  return days[dayOfWeek] ?? 'Invalid Day';
 };
 
 export default mongoose.model<IScheduleDocument>('Schedule', ScheduleSchema); 

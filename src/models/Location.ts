@@ -65,7 +65,7 @@ LocationSchema.statics.findNearby = function (
   latitude: number,
   longitude: number,
   radiusInKm: number = 10
-) {
+): Promise<ILocationDocument[]> {
   // Use a more generous bounding box to ensure we capture all nearby locations
   // Convert radius from kilometers to degrees (rough approximation)
   const radiusInDegrees = radiusInKm / 111.32; // 1 degree ≈ 111.32 km
@@ -84,7 +84,7 @@ LocationSchema.statics.findNearby = function (
 };
 
 // Static method to search by name or address
-LocationSchema.statics.search = function (query: string) {
+LocationSchema.statics.search = function (query: string): Promise<ILocationDocument[]> {
   return this.find({
     isActive: true,
     $text: { $search: query }

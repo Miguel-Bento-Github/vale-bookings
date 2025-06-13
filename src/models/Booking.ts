@@ -44,8 +44,8 @@ const BookingSchema: Schema = new Schema(
 );
 
 // Custom validation to ensure end time is after start time
-BookingSchema.pre('validate', function (next) {
-  if (this.startTime && this.endTime && this.endTime <= this.startTime) {
+BookingSchema.pre('validate', function (next): void {
+  if (this.startTime instanceof Date && this.endTime instanceof Date && this.endTime <= this.startTime) {
     next(new Error('End time must be after start time'));
   } else {
     next();
@@ -53,9 +53,9 @@ BookingSchema.pre('validate', function (next) {
 });
 
 // Custom validation to ensure booking is not in the past
-BookingSchema.pre('validate', function (next) {
+BookingSchema.pre('validate', function (next): void {
   const now = new Date();
-  if (this.startTime && this.startTime < now) {
+  if (this.startTime instanceof Date && this.startTime < now) {
     // Allow if it's an update and the booking was already in the past
     if (this.isNew) {
       next(new Error('Cannot create booking in the past'));
@@ -90,7 +90,7 @@ BookingSchema.statics.findOverlapping = function (
   startTime: Date,
   endTime: Date,
   excludeBookingId?: string
-) {
+): Promise<IBookingDocument[]> {
   const query: mongoose.FilterQuery<IBookingDocument> = {
     locationId,
     status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
@@ -104,7 +104,7 @@ BookingSchema.statics.findOverlapping = function (
     ]
   };
 
-  if (excludeBookingId) {
+  if (typeof excludeBookingId === 'string') {
     query._id = { $ne: excludeBookingId };
   }
 
@@ -116,7 +116,7 @@ BookingSchema.statics.findByUserId = function (
   userId: string,
   page: number = 1,
   limit: number = 10
-) {
+): Promise<IBookingDocument[]> {
   const skip = (page - 1) * limit;
   return this.find({ userId })
     .populate('locationId', 'name address')
@@ -130,13 +130,13 @@ BookingSchema.statics.findByLocationId = function (
   locationId: string,
   startDate?: Date,
   endDate?: Date
-) {
+): Promise<IBookingDocument[]> {
   const query: mongoose.FilterQuery<IBookingDocument> = { locationId };
 
-  if (startDate || endDate) {
+  if (startDate instanceof Date || endDate instanceof Date) {
     query.startTime = {};
-    if (startDate) query.startTime.$gte = startDate;
-    if (endDate) query.startTime.$lte = endDate;
+    if (startDate instanceof Date) query.startTime.$gte = startDate;
+    if (endDate instanceof Date) query.startTime.$lte = endDate;
   }
 
   return this.find(query)
@@ -146,6 +146,9 @@ BookingSchema.statics.findByLocationId = function (
 
 // Instance method to calculate duration in hours
 BookingSchema.methods.getDurationHours = function (): number {
+  if (!(this.endTime instanceof Date) || !(this.startTime instanceof Date)) {
+    return 0;
+  }
   const diffMs = this.endTime.getTime() - this.startTime.getTime();
   return diffMs / (1000 * 60 * 60);
 };
