@@ -512,16 +512,15 @@ describe('Models', () => {
       const schedule = new Schedule(scheduleData);
       await schedule.save();
 
-      const ScheduleWithMethods = Schedule as typeof Schedule & {
-        findByLocationId: (id: string) => Promise<Array<{
-          locationId: string;
-        }>>;
-      };
-      const locationSchedules = await ScheduleWithMethods.findByLocationId(locationId);
+      const locationSchedules = await (Schedule as typeof Schedule & {
+        findByLocationId: (id: string) => Promise<unknown[]>
+      }).findByLocationId(locationId);
 
       expect(Array.isArray(locationSchedules)).toBe(true);
       expect(locationSchedules.length).toBeGreaterThanOrEqual(1);
-      expect(locationSchedules[0]?.locationId.toString()).toBe(locationId);
+      // locationId is populated, so we need to access the _id field
+      const firstSchedule = locationSchedules[0] as unknown as { locationId: { _id: unknown } };
+      expect(String(firstSchedule.locationId._id)).toBe(locationId);
     });
 
     it('should have findByLocationAndDay static method', async () => {
@@ -533,13 +532,15 @@ describe('Models', () => {
         findByLocationAndDay: (
           id: string,
           day: number
-        ) => Promise<{ locationId: string; dayOfWeek: number } | null>
+        ) => Promise<unknown | null>
       }).findByLocationAndDay(locationId, validSchedule.dayOfWeek);
 
       expect(daySchedule).toBeTruthy();
       if (daySchedule) {
-        expect(daySchedule.locationId.toString()).toBe(locationId);
-        expect(daySchedule.dayOfWeek).toBe(validSchedule.dayOfWeek);
+        // locationId is populated, so we need to access the _id field
+        const typedSchedule = daySchedule as unknown as { locationId: { _id: unknown }; dayOfWeek: number };
+        expect(String(typedSchedule.locationId._id)).toBe(locationId);
+        expect(typedSchedule.dayOfWeek).toBe(validSchedule.dayOfWeek);
       }
     });
 

@@ -467,6 +467,15 @@ export async function getLocationAvailability(req: Request, res: Response): Prom
       return;
     }
 
+    // Validate date format
+    if (isNaN(Date.parse(date))) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid date format'
+      });
+      return;
+    }
+
     const location = await findLocationById(id);
     if (!location) {
       res.status(404).json({
