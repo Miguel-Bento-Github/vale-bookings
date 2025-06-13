@@ -335,7 +335,9 @@ describe('Users Integration Tests', () => {
     it('should handle expired token gracefully', async () => {
       // This would require mocking JWT expiration or using a pre-expired token
       // For now, we'll test with an obviously invalid token
-      const expiredToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+      const expiredToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+        'eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.' +
+        'SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
       
       const response = await request(app)
         .get('/api/users/profile')

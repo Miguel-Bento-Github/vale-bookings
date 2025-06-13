@@ -1,10 +1,49 @@
 import { Request, Response } from 'express';
 
-import { getAllUsers, updateUserRole, deleteUser, getAllValets, createValet, updateValet, deleteValet, createLocation as createAdminLocation, updateLocation as updateAdminLocation, deleteLocation as deleteAdminLocation, getAllSchedules, createSchedule as createAdminSchedule, updateSchedule as updateAdminSchedule, deleteSchedule as deleteAdminSchedule, createBulkSchedules, getAllBookings, updateBookingStatus as updateAdminBookingStatus, getAnalyticsOverview, getRevenueAnalytics, getBookingAnalytics } from '../../src/controllers/AdminController';
+import {
+  getAllUsers,
+  updateUserRole,
+  deleteUser,
+  getAllValets,
+  createValet,
+  updateValet,
+  deleteValet,
+  createLocation as createAdminLocation,
+  updateLocation as updateAdminLocation,
+  deleteLocation as deleteAdminLocation,
+  getAllSchedules,
+  createSchedule as createAdminSchedule,
+  updateSchedule as updateAdminSchedule,
+  deleteSchedule as deleteAdminSchedule,
+  createBulkSchedules,
+  getAllBookings,
+  updateBookingStatus as updateAdminBookingStatus,
+  getAnalyticsOverview,
+  getRevenueAnalytics,
+  getBookingAnalytics
+} from '../../src/controllers/AdminController';
 import { register, login, refreshToken } from '../../src/controllers/AuthController';
-import { getUserBookings, getBookingById, createBooking, updateBookingStatus, cancelBooking } from '../../src/controllers/BookingController';
-import { getLocations, getNearbyLocations, getLocationById, createLocation, updateLocation, deleteLocation } from '../../src/controllers/LocationController';
-import { getLocationSchedules, createSchedule, updateSchedule, deleteSchedule } from '../../src/controllers/ScheduleController';
+import {
+  getUserBookings,
+  getBookingById,
+  createBooking,
+  updateBookingStatus,
+  cancelBooking
+} from '../../src/controllers/BookingController';
+import {
+  getLocations,
+  getNearbyLocations,
+  getLocationById,
+  createLocation,
+  updateLocation,
+  deleteLocation
+} from '../../src/controllers/LocationController';
+import {
+  getLocationSchedules,
+  createSchedule,
+  updateSchedule,
+  deleteSchedule
+} from '../../src/controllers/ScheduleController';
 import { getProfile, updateProfile, deleteAccount } from '../../src/controllers/UserController';
 import Booking from '../../src/models/Booking';
 import Location from '../../src/models/Location';

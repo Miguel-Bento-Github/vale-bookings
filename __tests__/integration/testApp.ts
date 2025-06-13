@@ -20,7 +20,7 @@ const createTestApp = (): express.Application => {
       const contentType = req.get('Content-Type');
 
       // If content-type is explicitly set to something other than JSON, reject it
-      if (contentType && contentType.includes('text/plain')) {
+      if (contentType !== null && contentType !== undefined && contentType.includes('text/plain')) {
         res.status(400).json({
           success: false,
           message: 'Invalid JSON payload'
@@ -34,7 +34,7 @@ const createTestApp = (): express.Application => {
   // JSON parsing with error handling
   app.use(express.json({
     limit: '10kb', // Limit payload size
-    verify: (req: express.Request, res: express.Response, buf: Buffer, encoding: string) => {
+    verify: (req: express.Request, res: express.Response, buf: Buffer, _encoding: string) => {
       try {
         JSON.parse(buf.toString());
       } catch (e) {
@@ -57,8 +57,9 @@ const createTestApp = (): express.Application => {
   app.use('/api', routes);
 
   // Error handling middleware
-  app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('Error:', err);
+  app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    // Log error for debugging in test environment
+    process.stderr.write(`Error: ${err.message}\n`);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
