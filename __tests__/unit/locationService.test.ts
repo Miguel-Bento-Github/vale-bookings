@@ -6,16 +6,7 @@ import * as LocationService from '../../src/services/LocationService';
 import { ILocation } from '../../src/types';
 
 
-interface TestLocation {
-    _id?: string
-    name: string
-    address?: string
-    coordinates: { latitude: number; longitude: number }
-    isActive: boolean
-    pricing?: { hourlyRate: number }
-    totalSpots?: number
-    operatingHours?: { open: string; close: string }
-}
+
 
 interface TestBooking {
     startTime: Date

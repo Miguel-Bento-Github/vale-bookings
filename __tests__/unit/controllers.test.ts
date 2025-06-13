@@ -9,10 +9,7 @@ import {
   updateValet,
   deleteValet,
   createLocation as createAdminLocation,
-  updateLocation as updateAdminLocation,
-  deleteLocation as deleteAdminLocation,
   getAllSchedules,
-  createSchedule as createAdminSchedule,
   updateSchedule as updateAdminSchedule,
   deleteSchedule as deleteAdminSchedule,
   createBulkSchedules,
@@ -410,9 +407,9 @@ describe('Controllers', () => {
       });
 
       it('should return 401 for unauthenticated request', async () => {
-        const unauthenticatedRequest = { ...mockRequest };
+        const unauthenticatedRequest = { ...mockRequest } as Request;
 
-        await getProfile(unauthenticatedRequest as any, mockResponse as Response);
+        await getProfile(unauthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -617,7 +614,7 @@ describe('Controllers', () => {
           user: undefined
         };
 
-        await deleteAccount(unauthenticatedRequest as any, mockResponse as Response);
+        await deleteAccount(unauthenticatedRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1257,7 +1254,7 @@ describe('Controllers', () => {
       it('should return 401 for unauthenticated request', async () => {
         const unauthenticatedRequest = { ...mockRequest };
 
-        await getUserBookings(unauthenticatedRequest as any, mockResponse as Response);
+        await getUserBookings(unauthenticatedRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1308,9 +1305,12 @@ describe('Controllers', () => {
       });
 
       it('should return 401 for unauthenticated request', async () => {
-        const unauthenticatedRequest = { ...mockRequest, params: { id: '507f1f77bcf86cd799439013' } };
+        const unauthenticatedRequest = {
+          ...mockRequest,
+          params: { id: '507f1f77bcf86cd799439013' }
+        };
 
-        await getBookingById(unauthenticatedRequest as any, mockResponse as Response);
+        await getBookingById(unauthenticatedRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1334,7 +1334,11 @@ describe('Controllers', () => {
       });
 
       it('should return 403 for booking not owned by user', async () => {
-        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439017', status: 'CONFIRMED' };
+        const mockBooking = {
+          _id: '507f1f77bcf86cd799439013',
+          userId: '507f1f77bcf86cd799439017',
+          status: 'CONFIRMED'
+        };
         (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
@@ -1349,7 +1353,11 @@ describe('Controllers', () => {
       });
 
       it('should allow admin to access any booking', async () => {
-        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439017', status: 'CONFIRMED' };
+        const mockBooking = {
+          _id: '507f1f77bcf86cd799439013',
+          userId: '507f1f77bcf86cd799439017',
+          status: 'CONFIRMED'
+        };
         (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
 
         const adminRequest = {
@@ -1435,7 +1443,7 @@ describe('Controllers', () => {
       it('should return 401 for unauthenticated request', async () => {
         const unauthenticatedRequest = { ...mockRequest, body: {} };
 
-        await createBooking(unauthenticatedRequest as any, mockResponse as Response);
+        await createBooking(unauthenticatedRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1491,7 +1499,11 @@ describe('Controllers', () => {
 
     describe('updateBookingStatus', () => {
       it('should update booking status successfully', async () => {
-        const mockUpdatedBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CONFIRMED' };
+        const mockUpdatedBooking = {
+          _id: '507f1f77bcf86cd799439013',
+          userId: '507f1f77bcf86cd799439012',
+          status: 'CONFIRMED'
+        };
         
         // Mock the service functions that the controller actually calls
         const mockUpdateStatus = jest.fn().mockResolvedValue(mockUpdatedBooking);
@@ -1522,7 +1534,7 @@ describe('Controllers', () => {
           body: { status: 'CONFIRMED' }
         };
 
-        await updateBookingStatus(unauthenticatedRequest as any, mockResponse as Response);
+        await updateBookingStatus(unauthenticatedRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1639,9 +1651,12 @@ describe('Controllers', () => {
       });
 
       it('should return 401 for unauthenticated request', async () => {
-        const unauthenticatedRequest = { ...mockRequest, params: { id: '507f1f77bcf86cd799439013' } };
+        const unauthenticatedRequest = {
+          ...mockRequest,
+          params: { id: '507f1f77bcf86cd799439013' }
+        };
 
-        await cancelBooking(unauthenticatedRequest as any, mockResponse as Response);
+        await cancelBooking(unauthenticatedRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1665,7 +1680,11 @@ describe('Controllers', () => {
       });
 
       it('should return 403 for booking not owned by user', async () => {
-        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439017', status: 'CONFIRMED' };
+        const mockBooking = {
+          _id: '507f1f77bcf86cd799439013',
+          userId: '507f1f77bcf86cd799439017',
+          status: 'CONFIRMED'
+        };
         (Booking.findById as jest.Mock).mockResolvedValue(mockBooking);
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
@@ -1715,7 +1734,13 @@ describe('Controllers', () => {
       it('should get location schedules successfully', async () => {
         const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
         const mockSchedules = [
-          { _id: '507f1f77bcf86cd799439015', locationId: '507f1f77bcf86cd799439011', dayOfWeek: 1, startTime: '09:00', endTime: '18:00' }
+          {
+            _id: '507f1f77bcf86cd799439015',
+            locationId: '507f1f77bcf86cd799439011',
+            dayOfWeek: 1,
+            startTime: '09:00',
+            endTime: '18:00'
+          }
         ];
         
         (LocationService.getLocationById as jest.Mock).mockResolvedValue(mockLocation);
@@ -1992,8 +2017,14 @@ describe('Controllers', () => {
 
     describe('updateSchedule', () => {
       it('should update schedule successfully for admin', async () => {
-        const mockSchedule = { _id: '507f1f77bcf86cd799439015', locationId: '507f1f77bcf86cd799439011', dayOfWeek: 1, startTime: '09:00', endTime: '18:00' };
-        const mockUpdatedSchedule = { _id: '507f1f77bcf86cd799439015', locationId: '507f1f77bcf86cd799439011', dayOfWeek: 1, startTime: '08:00', endTime: '19:00' };
+
+        const mockUpdatedSchedule = {
+          _id: '507f1f77bcf86cd799439015',
+          locationId: '507f1f77bcf86cd799439011',
+          dayOfWeek: 1,
+          startTime: '08:00',
+          endTime: '19:00'
+        };
         
         (ScheduleService.updateSchedule as jest.Mock).mockResolvedValue(mockUpdatedSchedule);
 
