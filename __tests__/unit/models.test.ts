@@ -114,7 +114,7 @@ describe('Models', () => {
       const user = new User(validUser);
 
       // Mock bcrypt.hash to throw an error
-      const bcrypt = require('bcryptjs');
+      const bcrypt = jest.requireActual('bcryptjs');
       const originalHash = bcrypt.hash;
       bcrypt.hash = jest.fn().mockRejectedValue(new Error('Hashing failed'));
 
@@ -198,7 +198,9 @@ describe('Models', () => {
       const location = new Location(validLocation);
       await location.save();
 
-      const nearbyLocations = await (Location as any).findNearby(
+      const nearbyLocations = await (Location as unknown as {
+        findNearby: (lat: number, lng: number, radius: number) => Promise<unknown[]>;
+      }).findNearby(
         validLocation.coordinates.latitude,
         validLocation.coordinates.longitude,
         10
@@ -215,7 +217,9 @@ describe('Models', () => {
       });
       await location.save();
 
-      const searchResults = await (Location as any).search('Downtown');
+      const searchResults = await (Location as unknown as {
+        search: (query: string) => Promise<Array<{ name: string }>>;
+      }).search('Downtown');
 
       expect(Array.isArray(searchResults)).toBe(true);
       expect(searchResults.length).toBeGreaterThanOrEqual(1);
@@ -304,7 +308,7 @@ describe('Models', () => {
     });
 
     it('should validate status enum', async () => {
-      const bookingData = { ...validBooking, userId, locationId, status: 'INVALID_STATUS' as any };
+      const bookingData = { ...validBooking, userId, locationId, status: 'INVALID_STATUS' as unknown as 'PENDING' };
       const booking = new Booking(bookingData);
       
       await expect(booking.save()).rejects.toThrow();
@@ -351,7 +355,7 @@ describe('Models', () => {
       const booking = new Booking(bookingData);
       const savedBooking = await booking.save();
 
-      const duration = (savedBooking as any).getDurationHours();
+      const duration = (savedBooking as unknown as { getDurationHours: () => number }).getDurationHours();
       expect(typeof duration).toBe('number');
       expect(duration).toBeGreaterThan(0);
     });
@@ -361,7 +365,9 @@ describe('Models', () => {
       const booking = new Booking(bookingData);
       await booking.save();
 
-      const overlappingBookings = await (Booking as any).findOverlapping(
+      const overlappingBookings = await (Booking as unknown as {
+        findOverlapping: (locationId: string, startTime: Date, endTime: Date) => Promise<unknown[]>;
+      }).findOverlapping(
         locationId,
         validBooking.startTime,
         validBooking.endTime
@@ -376,7 +382,9 @@ describe('Models', () => {
       const booking = new Booking(bookingData);
       await booking.save();
 
-      const userBookings = await (Booking as any).findByUserId(userId);
+      const userBookings = await (Booking as unknown as {
+        findByUserId: (userId: string) => Promise<Array<{ userId: { toString: () => string } }>>;
+      }).findByUserId(userId);
 
       expect(Array.isArray(userBookings)).toBe(true);
       expect(userBookings.length).toBeGreaterThanOrEqual(1);
@@ -388,7 +396,10 @@ describe('Models', () => {
       const booking = new Booking(bookingData);
       await booking.save();
 
-      const locationBookings = await (Booking as any).findByLocationId(locationId);
+      const BookingWithMethods = Booking as typeof Booking & {
+        findByLocationId: (id: string) => Promise<Array<{ locationId: { toString: () => string } }>>
+      };
+      const locationBookings = await BookingWithMethods.findByLocationId(locationId);
 
       expect(Array.isArray(locationBookings)).toBe(true);
       expect(locationBookings.length).toBeGreaterThanOrEqual(1);
@@ -501,7 +512,9 @@ describe('Models', () => {
       const schedule = new Schedule(scheduleData);
       await schedule.save();
 
-      const locationSchedules = await (Schedule as any).findByLocationId(locationId);
+      const locationSchedules = await (Schedule as typeof Schedule & {
+        findByLocationId: (id: string) => Promise<Array<{ locationId: { _id: { toString: () => string } } }>>
+      }).findByLocationId(locationId);
 
       expect(Array.isArray(locationSchedules)).toBe(true);
       expect(locationSchedules.length).toBeGreaterThanOrEqual(1);
@@ -513,7 +526,9 @@ describe('Models', () => {
       const schedule = new Schedule(scheduleData);
       await schedule.save();
 
-      const daySchedule = await (Schedule as any).findByLocationAndDay(locationId, validSchedule.dayOfWeek);
+      const daySchedule = await (Schedule as typeof Schedule & {
+        findByLocationAndDay: (id: string, day: number) => Promise<{ locationId: { _id: { toString: () => string } }; dayOfWeek: number }>
+      }).findByLocationAndDay(locationId, validSchedule.dayOfWeek);
 
       expect(daySchedule).toBeTruthy();
       expect(daySchedule.locationId._id.toString()).toBe(locationId);
@@ -525,7 +540,9 @@ describe('Models', () => {
       const schedule = new Schedule(scheduleData);
       await schedule.save();
 
-      const weeklySchedule = await (Schedule as any).getWeeklySchedule(locationId);
+      const weeklySchedule = await (Schedule as typeof Schedule & {
+        getWeeklySchedule: (id: string) => Promise<unknown[]>
+      }).getWeeklySchedule(locationId);
 
       expect(Array.isArray(weeklySchedule)).toBe(true);
       expect(weeklySchedule.length).toBeGreaterThanOrEqual(1);
@@ -541,10 +558,13 @@ describe('Models', () => {
       const schedule = new Schedule(scheduleData);
       const savedSchedule = await schedule.save();
 
-      expect((savedSchedule as any).isOpenAt('10:00')).toBe(true);
-      expect((savedSchedule as any).isOpenAt('08:00')).toBe(false);
-      expect((savedSchedule as any).isOpenAt('19:00')).toBe(false);
-      expect((savedSchedule as any).isOpenAt('invalid')).toBe(false);
+      const scheduleWithMethods = savedSchedule as typeof savedSchedule & {
+        isOpenAt: (time: string) => boolean
+      };
+      expect(scheduleWithMethods.isOpenAt('10:00')).toBe(true);
+      expect(scheduleWithMethods.isOpenAt('08:00')).toBe(false);
+      expect(scheduleWithMethods.isOpenAt('19:00')).toBe(false);
+      expect(scheduleWithMethods.isOpenAt('invalid')).toBe(false);
     });
 
     it('should have getOperatingHours instance method', async () => {
@@ -557,16 +577,19 @@ describe('Models', () => {
       const schedule = new Schedule(scheduleData);
       const savedSchedule = await schedule.save();
 
-      const operatingHours = (savedSchedule as any).getOperatingHours();
+      const scheduleWithHours = savedSchedule as typeof savedSchedule & {
+        getOperatingHours: () => number
+      };
+      const operatingHours = scheduleWithHours.getOperatingHours();
       expect(typeof operatingHours).toBe('number');
       expect(operatingHours).toBe(9); // 9 hours from 09:00 to 18:00
     });
 
-    it('should have getDayName static method', async () => {
-      expect((Schedule as any).getDayName(0)).toBe('Sunday');
-      expect((Schedule as any).getDayName(1)).toBe('Monday');
-      expect((Schedule as any).getDayName(6)).toBe('Saturday');
-      expect((Schedule as any).getDayName(7)).toBe('Invalid Day');
+    it('should have getDayName static method', () => {
+      expect((Schedule as typeof Schedule & { getDayName: (day: number) => string }).getDayName(0)).toBe('Sunday');
+      expect((Schedule as typeof Schedule & { getDayName: (day: number) => string }).getDayName(1)).toBe('Monday');
+      expect((Schedule as typeof Schedule & { getDayName: (day: number) => string }).getDayName(6)).toBe('Saturday');
+      expect((Schedule as typeof Schedule & { getDayName: (day: number) => string }).getDayName(7)).toBe('Invalid Day');
     });
   });
 }); 

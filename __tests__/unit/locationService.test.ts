@@ -353,7 +353,7 @@ describe('LocationService', () => {
   });
 
   describe('error handling', () => {
-    it('should handle database connection errors gracefully', async () => {
+    it('should handle database connection errors gracefully', () => {
       // This test will be handled at integration level
       // For now, just test that the service handles errors properly
       expect(true).toBe(true);

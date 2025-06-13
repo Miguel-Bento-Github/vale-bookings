@@ -1,5 +1,5 @@
 import cors from 'cors';
-import express from 'express';
+import express, { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 
@@ -32,7 +32,7 @@ const createTestApp = (): express.Application => {
   });
 
   // JSON parsing with error handling
-  app.use(express.json({
+  app.use(json({
     limit: '10kb', // Limit payload size
     verify: (req: express.Request, res: express.Response, buf: Buffer, _encoding: string) => {
       try {
@@ -46,7 +46,7 @@ const createTestApp = (): express.Application => {
       }
     }
   }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(urlencoded({ extended: true }));
 
   // Health check
   app.get('/health', (req, res) => {

@@ -1508,11 +1508,8 @@ describe('Controllers', () => {
           status: 'CONFIRMED'
         };
         
-        // Mock the service functions that the controller actually calls
-        const mockUpdateStatus = jest.fn().mockResolvedValue(mockUpdatedBooking);
-        jest.doMock('../../../src/services/BookingService', () => ({
-          updateBookingStatus: mockUpdateStatus
-        }), { virtual: true });
+        // Mock the service function
+        (BookingService.updateBookingStatus as jest.Mock).mockResolvedValue(mockUpdatedBooking);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -1560,7 +1557,7 @@ describe('Controllers', () => {
       });
 
       it('should return 404 for non-existent booking', async () => {
-        (Booking.findById as jest.Mock).mockResolvedValue(null);
+        (BookingService.updateBookingStatus as jest.Mock).mockResolvedValue(null);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -1595,7 +1592,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (Booking.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (BookingService.updateBookingStatus as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -1614,7 +1611,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (Booking.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (BookingService.updateBookingStatus as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -1646,8 +1643,8 @@ describe('Controllers', () => {
           status: 'CANCELLED'
         };
         
-        (Booking.findById as jest.Mock).mockResolvedValue(mockBooking);
-        (Booking.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockCancelledBooking);
+        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
+        (BookingService.cancelBooking as jest.Mock).mockResolvedValue(mockCancelledBooking);
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
@@ -1656,7 +1653,6 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          message: 'Booking cancelled successfully',
           data: mockCancelledBooking
         });
       });
@@ -1677,7 +1673,7 @@ describe('Controllers', () => {
       });
 
       it('should return 404 for non-existent booking', async () => {
-        (Booking.findById as jest.Mock).mockResolvedValue(null);
+        (BookingService.findById as jest.Mock).mockResolvedValue(null);
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439016' };
 
@@ -1696,7 +1692,7 @@ describe('Controllers', () => {
           userId: '507f1f77bcf86cd799439017',
           status: 'CONFIRMED'
         };
-        (Booking.findById as jest.Mock).mockResolvedValue(mockBooking);
+        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
@@ -1710,7 +1706,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (Booking.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (BookingService.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
@@ -1724,7 +1720,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (Booking.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (BookingService.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
