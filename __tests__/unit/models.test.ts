@@ -530,7 +530,10 @@ describe('Models', () => {
       await schedule.save();
 
       const daySchedule = await (Schedule as typeof Schedule & {
-        findByLocationAndDay: (id: string, day: number) => Promise<{ locationId: { _id: { toString: () => string } }; dayOfWeek: number }>
+        findByLocationAndDay: (
+          id: string,
+          day: number
+        ) => Promise<{ locationId: { _id: { toString: () => string } }; dayOfWeek: number }>
       }).findByLocationAndDay(locationId, validSchedule.dayOfWeek);
 
       expect(daySchedule).toBeTruthy();

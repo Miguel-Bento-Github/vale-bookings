@@ -10,8 +10,6 @@ import * as BookingService from '../../src/services/BookingService';
 import * as LocationService from '../../src/services/LocationService';
 import * as ScheduleService from '../../src/services/ScheduleService';
 import * as UserService from '../../src/services/UserService';
-
-// Import types
 import { UserRole } from '../../src/types';
 import {
   validUser,
@@ -34,7 +32,8 @@ describe('Services', () => {
 
     it('should find user by id', async () => {
       const createdUser = await UserService.createUser(validUser);
-      const foundUser = await UserService.findById(createdUser._id.toString());
+      const userId = String(createdUser._id);
+      const foundUser = await UserService.findById(userId);
       
       expect(foundUser).toBeTruthy();
       expect(foundUser?.email).toBe(validUser.email);
@@ -51,8 +50,9 @@ describe('Services', () => {
     it('should update user profile', async () => {
       const createdUser = await UserService.createUser(validUser);
       const updateData = { profile: { name: 'Updated Name', phone: '+9999999999' } };
+      const userId = String(createdUser._id);
       
-      const updatedUser = await UserService.updateProfile(createdUser._id.toString(), updateData);
+      const updatedUser = await UserService.updateProfile(userId, updateData);
       
       expect(updatedUser?.profile.name).toBe('Updated Name');
       expect(updatedUser?.profile.phone).toBe('+9999999999');
@@ -60,9 +60,10 @@ describe('Services', () => {
 
     it('should delete user', async () => {
       const createdUser = await UserService.createUser(validUser);
-      await UserService.deleteUser(createdUser._id.toString());
+      const userId = String(createdUser._id);
+      await UserService.deleteUser(userId);
       
-      const foundUser = await UserService.findById(createdUser._id.toString());
+      const foundUser = await UserService.findById(userId);
       expect(foundUser).toBeNull();
     });
 
@@ -108,8 +109,9 @@ describe('Services', () => {
 
     it('should update user role', async () => {
       const createdUser = await UserService.createUser(validUser);
+      const userId = String(createdUser._id);
       
-      const updatedUser = await UserService.updateUserRole(createdUser._id.toString(), 'ADMIN');
+      const updatedUser = await UserService.updateUserRole(userId, 'ADMIN');
       
       expect(updatedUser?.role).toBe('ADMIN');
     });
@@ -219,7 +221,8 @@ describe('Services', () => {
 
     it('should find location by id', async () => {
       const createdLocation = await LocationService.createLocation(validLocation);
-      const foundLocation = await LocationService.getLocationById(createdLocation._id.toString());
+      const locationId = String(createdLocation._id);
+      const foundLocation = await LocationService.getLocationById(locationId);
       
       expect(foundLocation).toBeTruthy();
       expect(foundLocation?.name).toBe(validLocation.name);
@@ -242,9 +245,10 @@ describe('Services', () => {
     it('should update location', async () => {
       const createdLocation = await LocationService.createLocation(validLocation);
       const updateData = { name: 'Updated Location Name' };
+      const locationId = String(createdLocation._id);
       
       const updatedLocation = await LocationService.updateLocation(
-        createdLocation._id.toString(),
+        locationId,
         updateData
       );
       
@@ -253,9 +257,10 @@ describe('Services', () => {
 
     it('should deactivate location', async () => {
       const createdLocation = await LocationService.createLocation(validLocation);
+      const locationId = String(createdLocation._id);
       
       const deactivatedLocation = await LocationService.deactivateLocation(
-        createdLocation._id.toString()
+        locationId
       );
       
       expect(deactivatedLocation?.isActive).toBe(false);
@@ -275,10 +280,11 @@ describe('Services', () => {
 
     it('should delete location', async () => {
       const createdLocation = await LocationService.createLocation(validLocation);
+      const locationId = String(createdLocation._id);
       
-      await LocationService.deleteLocation(createdLocation._id.toString());
+      await LocationService.deleteLocation(locationId);
       
-      const foundLocation = await LocationService.getLocationById(createdLocation._id.toString());
+      const foundLocation = await LocationService.getLocationById(locationId);
       expect(foundLocation).toBeNull();
     });
 
@@ -297,7 +303,8 @@ describe('Services', () => {
 
     it('should get all locations including inactive', async () => {
       const createdLocation = await LocationService.createLocation(validLocation);
-      await LocationService.deactivateLocation(createdLocation._id.toString());
+      const locationId = String(createdLocation._id);
+      await LocationService.deactivateLocation(locationId);
       
       const activeLocations = await LocationService.getAllLocations();
       // Note: getAllLocations now only returns active locations by default
@@ -335,12 +342,12 @@ describe('Services', () => {
       const originalSave = Location.prototype.save;
       let saveCallCount = 0;
 
-      Location.prototype.save = jest.fn().mockImplementation(async function (this: any) {
+      Location.prototype.save = jest.fn().mockImplementation(function (this: typeof Location.prototype) {
         saveCallCount++;
         if (saveCallCount === 1) {
           return originalSave.call(this);
         } else {
-          const error = new Error('Duplicate key error') as any;
+          const error = new Error('Duplicate key error') as Error & { code: number };
           error.code = 11000;
           throw error;
         }
@@ -388,7 +395,8 @@ describe('Services', () => {
         status: 'PENDING'
       });
 
-      await expect(LocationService.deleteLocation(createdLocation._id.toString()))
+      const locationId = String(createdLocation._id);
+      await expect(LocationService.deleteLocation(locationId))
         .rejects.toThrow('Cannot delete location with active bookings');
 
       // Clean up
@@ -408,7 +416,8 @@ describe('Services', () => {
       });
 
       // Should not throw error since booking is completed
-      await expect(LocationService.deleteLocation(createdLocation._id.toString())).resolves.not.toThrow();
+      const locationId = String(createdLocation._id);
+      await expect(LocationService.deleteLocation(locationId)).resolves.not.toThrow();
     });
 
     it('should handle geo query errors gracefully', async () => {
@@ -479,11 +488,15 @@ describe('Services', () => {
     it('should find booking by id', async () => {
       const bookingData = { ...validBooking, userId, locationId };
       const createdBooking = await BookingService.createBooking(bookingData);
+      const bookingId = String(createdBooking._id);
       
-      const foundBooking = await BookingService.findById(createdBooking._id.toString());
+      const foundBooking = await BookingService.findById(bookingId);
       
       expect(foundBooking).toBeTruthy();
-      expect((foundBooking?.userId as any)._id.toString()).toBe(userId);
+      if (foundBooking) {
+        const userIdFromBooking = foundBooking.userId as unknown as { _id: unknown };
+        expect(String(userIdFromBooking._id)).toBe(userId);
+      }
     });
 
     it('should get user bookings', async () => {
@@ -499,9 +512,10 @@ describe('Services', () => {
     it('should update booking status', async () => {
       const bookingData = { ...validBooking, userId, locationId };
       const createdBooking = await BookingService.createBooking(bookingData);
+      const bookingId = String(createdBooking._id);
       
       const updatedBooking = await BookingService.updateBookingStatus(
-        createdBooking._id.toString(),
+        bookingId,
         'CONFIRMED'
       );
       
@@ -511,9 +525,10 @@ describe('Services', () => {
     it('should cancel booking', async () => {
       const bookingData = { ...validBooking, userId, locationId };
       const createdBooking = await BookingService.createBooking(bookingData);
+      const bookingId = String(createdBooking._id);
       
       const cancelledBooking = await BookingService.cancelBooking(
-        createdBooking._id.toString()
+        bookingId
       );
       
       expect(cancelledBooking?.status).toBe('CANCELLED');
@@ -562,8 +577,9 @@ describe('Services', () => {
         notes: 'Updated booking'
       };
       
+      const bookingId = String(createdBooking._id);
       const updatedBooking = await BookingService.updateBooking(
-        createdBooking._id.toString(),
+        bookingId,
         updateData
       );
       
@@ -580,10 +596,11 @@ describe('Services', () => {
     it('should delete booking', async () => {
       const bookingData = { ...validBooking, userId, locationId };
       const createdBooking = await BookingService.createBooking(bookingData);
+      const bookingId = String(createdBooking._id);
       
-      await BookingService.deleteBooking(createdBooking._id.toString());
+      await BookingService.deleteBooking(bookingId);
       
-      const foundBooking = await BookingService.findById(createdBooking._id.toString());
+      const foundBooking = await BookingService.findById(bookingId);
       expect(foundBooking).toBeNull();
     });
 
@@ -599,7 +616,8 @@ describe('Services', () => {
       
       await BookingService.createBooking(bookingData1);
       const booking2 = await BookingService.createBooking(bookingData2);
-      await BookingService.updateBookingStatus(booking2._id.toString(), 'CONFIRMED');
+      const booking2Id = String(booking2._id);
+      await BookingService.updateBookingStatus(booking2Id, 'CONFIRMED');
       
       const pendingBookings = await BookingService.getBookingsByStatus('PENDING');
       const confirmedBookings = await BookingService.getBookingsByStatus('CONFIRMED');
@@ -627,7 +645,7 @@ describe('Services', () => {
       // Handle populated user object
       const userIdFromBooking = typeof upcomingBookings[0]?.userId === 'string' 
         ? upcomingBookings[0]?.userId 
-        : (upcomingBookings[0]?.userId as any)?._id?.toString();
+        : String((upcomingBookings[0]?.userId as unknown as { _id: unknown })?._id);
       expect(userIdFromBooking).toBe(userId);
     });
 
@@ -709,15 +727,17 @@ describe('Services', () => {
       const schedules = await ScheduleService.getLocationSchedules(locationId);
       
       expect(schedules.length).toBeGreaterThanOrEqual(1);
-      expect((schedules[0]?.locationId as any)._id.toString()).toBe(locationId);
+      const locationIdFromSchedule = schedules[0]?.locationId as unknown as { _id: unknown };
+      expect(String(locationIdFromSchedule._id)).toBe(locationId);
     });
 
     it('should update schedule', async () => {
       const scheduleData = { ...validSchedule, locationId };
       const createdSchedule = await ScheduleService.createSchedule(scheduleData);
       
+      const scheduleId = String(createdSchedule._id);
       const updatedSchedule = await ScheduleService.updateSchedule(
-        createdSchedule._id.toString(),
+        scheduleId,
         { startTime: '08:00' }
       );
       
@@ -727,10 +747,11 @@ describe('Services', () => {
     it('should delete schedule', async () => {
       const scheduleData = { ...validSchedule, locationId };
       const createdSchedule = await ScheduleService.createSchedule(scheduleData);
+      const scheduleId = String(createdSchedule._id);
       
-      await ScheduleService.deleteSchedule(createdSchedule._id.toString());
+      await ScheduleService.deleteSchedule(scheduleId);
       
-      const foundSchedule = await ScheduleService.getScheduleById(createdSchedule._id.toString());
+      const foundSchedule = await ScheduleService.getScheduleById(scheduleId);
       expect(foundSchedule).toBeNull();
     });
 
@@ -755,11 +776,12 @@ describe('Services', () => {
     it('should find schedule by id', async () => {
       const scheduleData = { ...validSchedule, locationId };
       const createdSchedule = await ScheduleService.createSchedule(scheduleData);
+      const scheduleId = String(createdSchedule._id);
       
-      const foundSchedule = await ScheduleService.getScheduleById(createdSchedule._id.toString());
+      const foundSchedule = await ScheduleService.getScheduleById(scheduleId);
       
       expect(foundSchedule).toBeTruthy();
-      expect(foundSchedule?._id.toString()).toBe(createdSchedule._id.toString());
+      expect(String(foundSchedule?._id)).toBe(scheduleId);
     });
 
     it('should get schedule by location and day', async () => {
@@ -801,8 +823,9 @@ describe('Services', () => {
     it('should deactivate schedule', async () => {
       const scheduleData = { ...validSchedule, locationId };
       const createdSchedule = await ScheduleService.createSchedule(scheduleData);
+      const scheduleId = String(createdSchedule._id);
       
-      const deactivatedSchedule = await ScheduleService.deactivateSchedule(createdSchedule._id.toString());
+      const deactivatedSchedule = await ScheduleService.deactivateSchedule(scheduleId);
       
       expect(deactivatedSchedule?.isActive).toBe(false);
     });
@@ -887,7 +910,8 @@ describe('Services', () => {
       const createdSchedule = await ScheduleService.createSchedule(scheduleData);
       
       // Deactivate the schedule
-      await ScheduleService.deactivateSchedule(createdSchedule._id.toString());
+      const scheduleId = String(createdSchedule._id);
+      await ScheduleService.deactivateSchedule(scheduleId);
       
       const schedules = await ScheduleService.getLocationSchedules(locationId);
       // Note: getLocationSchedules now returns all schedules for the location
@@ -986,7 +1010,8 @@ describe('Services', () => {
       ];
 
       // First, let's delete the schedule to make the update fail
-      await ScheduleService.deleteSchedule(createdSchedule._id.toString());
+      const scheduleId = String(createdSchedule._id);
+      await ScheduleService.deleteSchedule(scheduleId);
 
       const updatedSchedules = await ScheduleService.updateLocationSchedules(locationId, updatesData);
 
