@@ -160,7 +160,12 @@ export async function createLocation(req: AuthenticatedRequest, res: Response): 
     const address = requestBody.address;
     const coordinates = requestBody.coordinates;
 
-    if (typeof name !== 'string' || typeof address !== 'string' || typeof coordinates !== 'object' || coordinates === null) {
+    if (
+      typeof name !== 'string' ||
+      typeof address !== 'string' ||
+      typeof coordinates !== 'object' ||
+      coordinates === null
+    ) {
       res.status(400).json({
         success: false,
         message: 'Name, address, and coordinates are required'
@@ -238,7 +243,10 @@ export async function updateLocation(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    if (updateData.coordinates && !validateCoordinates(updateData.coordinates.latitude, updateData.coordinates.longitude)) {
+    if (
+      updateData.coordinates &&
+      !validateCoordinates(updateData.coordinates.latitude, updateData.coordinates.longitude)
+    ) {
       res.status(400).json({
         success: false,
         message: 'Invalid coordinates'

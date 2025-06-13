@@ -1,5 +1,11 @@
 import Schedule from '../models/Schedule';
-import { ISchedule, IScheduleDocument, IUpdateScheduleRequest, IScheduleModel , AppError } from '../types';
+import {
+  ISchedule,
+  IScheduleDocument,
+  IUpdateScheduleRequest,
+  IScheduleModel,
+  AppError
+} from '../types';
 
 export async function createSchedule(scheduleData: ISchedule): Promise<IScheduleDocument> {
   try {
@@ -21,7 +27,10 @@ export async function getLocationSchedules(locationId: string): Promise<ISchedul
   return await Schedule.find({ locationId, isActive: true }).sort({ dayOfWeek: 1 });
 }
 
-export async function updateSchedule(scheduleId: string, updateData: Partial<ISchedule>): Promise<IScheduleDocument | null> {
+export async function updateSchedule(
+  scheduleId: string,
+  updateData: Partial<ISchedule>
+): Promise<IScheduleDocument | null> {
   return await Schedule.findByIdAndUpdate(
     scheduleId,
     { $set: updateData },
@@ -39,7 +48,9 @@ export async function getAllSchedules(): Promise<IScheduleDocument[]> {
     .sort({ locationId: 1, dayOfWeek: 1 });
 }
 
-export async function createBulkSchedules(schedulesData: ISchedule[]): Promise<{ created: IScheduleDocument[]; errors: string[] }> {
+export async function createBulkSchedules(
+  schedulesData: ISchedule[]
+): Promise<{ created: IScheduleDocument[]; errors: string[] }> {
   const created: IScheduleDocument[] = [];
   const errors: string[] = [];
 
@@ -59,8 +70,14 @@ export async function createBulkSchedules(schedulesData: ISchedule[]): Promise<{
   return { created, errors };
 }
 
-export async function getScheduleByLocationAndDay(locationId: string, dayOfWeek: number): Promise<IScheduleDocument | null> {
-  return await (Schedule as unknown as IScheduleModel).findByLocationAndDay(locationId, dayOfWeek);
+export async function getScheduleByLocationAndDay(
+  locationId: string,
+  dayOfWeek: number
+): Promise<IScheduleDocument | null> {
+  return await (Schedule as unknown as IScheduleModel).findByLocationAndDay(
+    locationId,
+    dayOfWeek
+  );
 }
 
 export async function getWeeklySchedule(locationId: string): Promise<IScheduleDocument[]> {
@@ -75,7 +92,11 @@ export async function deactivateSchedule(scheduleId: string): Promise<IScheduleD
   );
 }
 
-export async function isLocationOpen(locationId: string, dayOfWeek: number, timeString: string): Promise<boolean> {
+export async function isLocationOpen(
+  locationId: string,
+  dayOfWeek: number,
+  timeString: string
+): Promise<boolean> {
   const schedule = await getScheduleByLocationAndDay(locationId, dayOfWeek);
 
   if (!schedule) {
@@ -85,7 +106,10 @@ export async function isLocationOpen(locationId: string, dayOfWeek: number, time
   return schedule.isOpenAt(timeString);
 }
 
-export async function getOperatingHours(locationId: string, dayOfWeek: number): Promise<number | null> {
+export async function getOperatingHours(
+  locationId: string,
+  dayOfWeek: number
+): Promise<number | null> {
   const schedule = await getScheduleByLocationAndDay(locationId, dayOfWeek);
 
   if (!schedule) {
@@ -95,12 +119,18 @@ export async function getOperatingHours(locationId: string, dayOfWeek: number): 
   return schedule.getOperatingHours();
 }
 
-export async function updateLocationSchedules(locationId: string, schedulesData: IUpdateScheduleRequest[]): Promise<IScheduleDocument[]> {
+export async function updateLocationSchedules(
+  locationId: string,
+  schedulesData: IUpdateScheduleRequest[]
+): Promise<IScheduleDocument[]> {
   const results: IScheduleDocument[] = [];
 
   for (const scheduleData of schedulesData) {
-    if (scheduleData.dayOfWeek !== undefined) {
-      const existingSchedule = await getScheduleByLocationAndDay(locationId, scheduleData.dayOfWeek);
+    if (typeof scheduleData.dayOfWeek === 'number') {
+      const existingSchedule = await getScheduleByLocationAndDay(
+        locationId,
+        scheduleData.dayOfWeek
+      );
 
       if (existingSchedule) {
         const updated = await updateSchedule(existingSchedule._id.toString(), scheduleData);
@@ -109,9 +139,9 @@ export async function updateLocationSchedules(locationId: string, schedulesData:
         const newSchedule = await createSchedule({
           locationId,
           dayOfWeek: scheduleData.dayOfWeek,
-          startTime: scheduleData.startTime || '09:00',
-          endTime: scheduleData.endTime || '17:00',
-          isActive: scheduleData.isActive !== undefined ? scheduleData.isActive : true
+          startTime: scheduleData.startTime ?? '09:00',
+          endTime: scheduleData.endTime ?? '17:00',
+          isActive: scheduleData.isActive ?? true
         });
         results.push(newSchedule);
       }

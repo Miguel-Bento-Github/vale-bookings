@@ -1,5 +1,13 @@
 import Location from '../models/Location';
-import { ILocation, ILocationDocument, ILocationModel, ILocationAvailability, ILocationWithDistance, ITimeSlot , AppError } from '../types';
+import {
+  ILocation,
+  ILocationDocument,
+  ILocationModel,
+  ILocationAvailability,
+  ILocationWithDistance,
+  ITimeSlot,
+  AppError
+} from '../types';
 
 export async function getAllLocations(): Promise<ILocationDocument[]> {
   return await Location.find({ isActive: true });
@@ -21,7 +29,10 @@ export async function createLocation(locationData: ILocation): Promise<ILocation
   }
 }
 
-export async function updateLocation(locationId: string, updateData: Partial<ILocation>): Promise<ILocationDocument | null> {
+export async function updateLocation(
+  locationId: string,
+  updateData: Partial<ILocation>
+): Promise<ILocationDocument | null> {
   return await Location.findByIdAndUpdate(
     locationId,
     { $set: updateData },
@@ -50,7 +61,11 @@ export async function deleteLocation(locationId: string): Promise<void> {
   await Location.findByIdAndDelete(locationId);
 }
 
-export async function getNearbyLocations(longitude: number, latitude: number, maxDistance: number = 5000): Promise<ILocationDocument[]> {
+export async function getNearbyLocations(
+  longitude: number,
+  latitude: number,
+  maxDistance: number = 5000
+): Promise<ILocationDocument[]> {
   return await Location.find({
     isActive: true,
     location: {
@@ -73,8 +88,16 @@ export async function deactivateLocation(locationId: string): Promise<ILocationD
   );
 }
 
-export async function findNearby(latitude: number, longitude: number, radiusInKm: number = 10): Promise<ILocationDocument[]> {
-  const locations = await (Location as unknown as ILocationModel).findNearby(latitude, longitude, radiusInKm);
+export async function findNearby(
+  latitude: number,
+  longitude: number,
+  radiusInKm: number = 10
+): Promise<ILocationDocument[]> {
+  const locations = await (Location as unknown as ILocationModel).findNearby(
+    latitude,
+    longitude,
+    radiusInKm
+  );
 
   // Calculate distance for each location and sort by distance
   const locationsWithDistance = locations.map(location => {

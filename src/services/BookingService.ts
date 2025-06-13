@@ -21,7 +21,11 @@ export async function findById(bookingId: string): Promise<IBookingDocument | nu
   return await Booking.findById(bookingId);
 }
 
-export async function getUserBookings(userId: string, page: number = 1, limit: number = 10): Promise<IBookingDocument[]> {
+export async function getUserBookings(
+  userId: string,
+  page: number = 1,
+  limit: number = 10
+): Promise<IBookingDocument[]> {
   const skip = (page - 1) * limit;
   return await Booking.find({ userId })
     .sort({ createdAt: -1 })
@@ -29,11 +33,22 @@ export async function getUserBookings(userId: string, page: number = 1, limit: n
     .limit(limit);
 }
 
-export async function getLocationBookings(locationId: string, startDate?: Date, endDate?: Date): Promise<IBookingDocument[]> {
-  return await (Booking as unknown as IBookingModel).findByLocationId(locationId, startDate, endDate);
+export async function getLocationBookings(
+  locationId: string,
+  startDate?: Date,
+  endDate?: Date
+): Promise<IBookingDocument[]> {
+  return await (Booking as unknown as IBookingModel).findByLocationId(
+    locationId,
+    startDate,
+    endDate
+  );
 }
 
-export async function updateBooking(bookingId: string, updateData: IUpdateBookingRequest): Promise<IBookingDocument | null> {
+export async function updateBooking(
+  bookingId: string,
+  updateData: IUpdateBookingRequest
+): Promise<IBookingDocument | null> {
   const booking = await Booking.findById(bookingId);
 
   if (!booking) {
@@ -41,7 +56,7 @@ export async function updateBooking(bookingId: string, updateData: IUpdateBookin
   }
 
   // If updating time, check for overlaps
-  if (updateData.startTime || updateData.endTime) {
+  if (updateData.startTime !== undefined || updateData.endTime !== undefined) {
     const startTime = updateData.startTime ? new Date(updateData.startTime) : booking.startTime;
     const endTime = updateData.endTime ? new Date(updateData.endTime) : booking.endTime;
 
@@ -64,7 +79,10 @@ export async function updateBooking(bookingId: string, updateData: IUpdateBookin
   );
 }
 
-export async function updateBookingStatus(bookingId: string, status: BookingStatus): Promise<IBookingDocument | null> {
+export async function updateBookingStatus(
+  bookingId: string,
+  status: BookingStatus
+): Promise<IBookingDocument | null> {
   return await Booking.findByIdAndUpdate(
     bookingId,
     { status },
@@ -125,7 +143,7 @@ export async function getUpcomingBookings(userId?: string): Promise<IBookingDocu
     status: { $in: ['PENDING', 'CONFIRMED'] }
   };
 
-  if (userId) {
+  if (typeof userId === 'string') {
     query.userId = userId;
   }
 
