@@ -8,18 +8,7 @@ import { ILocation } from '../../src/types';
 
 
 
-interface TestBooking {
-    startTime: Date
-    endTime: Date
-    spotsReserved?: number
-}
 
-interface TimeSlot {
-    startTime: Date
-    endTime: Date
-    available: number
-    totalSpots: number
-}
 
 describe('LocationService', () => {
   afterEach(async () => {
@@ -219,7 +208,10 @@ describe('LocationService', () => {
     it('should calculate real-time availability for location', async () => {
       const locations = await LocationService.getAllLocations();
       expect(locations.length).toBeGreaterThan(0);
-      const testLocation = locations[0]!;
+      const testLocation = locations[0];
+      if (!testLocation) {
+        throw new Error('No test location found');
+      }
 
       // Mock method for calculating availability
       // This would integrate with booking data in real implementation
@@ -237,7 +229,10 @@ describe('LocationService', () => {
     it('should return availability for specific date', async () => {
       const locations = await LocationService.getAllLocations();
       expect(locations.length).toBeGreaterThan(0);
-      const testLocation = locations[0]!;
+      const testLocation = locations[0];
+      if (!testLocation) {
+        throw new Error('No test location found');
+      }
 
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 7);
@@ -293,7 +288,11 @@ describe('LocationService', () => {
 
       // Check if sorted by distance (ascending)
       for (let i = 1; i < locations.length; i++) {
-        expect(locations[i]!.distance).toBeGreaterThanOrEqual(locations[i - 1]!.distance);
+        const currentLocation = locations[i];
+        const previousLocation = locations[i - 1];
+        if (currentLocation && previousLocation) {
+          expect(currentLocation.distance).toBeGreaterThanOrEqual(previousLocation.distance);
+        }
       }
     });
   });
@@ -306,7 +305,10 @@ describe('LocationService', () => {
     it('should return available time slots for location', async () => {
       const locations = await LocationService.getAllLocations();
       expect(locations.length).toBeGreaterThan(0);
-      const testLocation = locations[0]!;
+      const testLocation = locations[0];
+      if (!testLocation) {
+        throw new Error('No test location found');
+      }
 
       const testDate = new Date();
 
@@ -328,7 +330,10 @@ describe('LocationService', () => {
     it('should respect location operating hours', async () => {
       const locations = await LocationService.getAllLocations();
       expect(locations.length).toBeGreaterThan(0);
-      const testLocation = locations[0]!;
+      const testLocation = locations[0];
+      if (!testLocation) {
+        throw new Error('No test location found');
+      }
 
       const testDate = new Date();
 

@@ -976,7 +976,6 @@ describe('Controllers', () => {
 
     describe('updateLocation', () => {
       it('should update location successfully for admin', async () => {
-        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Original Location' };
         const mockUpdatedLocation = { _id: '507f1f77bcf86cd799439011', name: 'Updated Location' };
         
         (LocationService.updateLocation as jest.Mock).mockResolvedValue(mockUpdatedLocation);
@@ -1290,7 +1289,11 @@ describe('Controllers', () => {
 
     describe('getBookingById', () => {
       it('should get booking by id successfully', async () => {
-        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CONFIRMED' };
+        const mockBooking = {
+          _id: '507f1f77bcf86cd799439013',
+          userId: '507f1f77bcf86cd799439012',
+          status: 'CONFIRMED'
+        };
         (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
@@ -1632,8 +1635,16 @@ describe('Controllers', () => {
 
     describe('cancelBooking', () => {
       it('should cancel booking successfully', async () => {
-        const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CONFIRMED' };
-        const mockCancelledBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CANCELLED' };
+        const mockBooking = {
+          _id: '507f1f77bcf86cd799439013',
+          userId: '507f1f77bcf86cd799439012',
+          status: 'CONFIRMED'
+        };
+        const mockCancelledBooking = {
+          _id: '507f1f77bcf86cd799439013',
+          userId: '507f1f77bcf86cd799439012',
+          status: 'CANCELLED'
+        };
         
         (Booking.findById as jest.Mock).mockResolvedValue(mockBooking);
         (Booking.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockCancelledBooking);
@@ -3108,7 +3119,13 @@ describe('Controllers', () => {
 
     describe('updateAdminSchedule', () => {
       it('should update schedule successfully', async () => {
-        const mockUpdatedSchedule = { _id: '1', locationId: 'loc1', dayOfWeek: 1, startTime: '08:00', endTime: '19:00' };
+        const mockUpdatedSchedule = {
+          _id: '1',
+          locationId: 'loc1',
+          dayOfWeek: 1,
+          startTime: '08:00',
+          endTime: '19:00'
+        };
         (AdminService.updateSchedule as jest.Mock).mockResolvedValue(mockUpdatedSchedule);
 
         adminRequest.params = { id: '1' };
