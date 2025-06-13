@@ -514,14 +514,14 @@ describe('Models', () => {
 
       const ScheduleWithMethods = Schedule as typeof Schedule & {
         findByLocationId: (id: string) => Promise<Array<{
-          locationId: { _id: { toString: () => string } };
+          locationId: string;
         }>>;
       };
       const locationSchedules = await ScheduleWithMethods.findByLocationId(locationId);
 
       expect(Array.isArray(locationSchedules)).toBe(true);
       expect(locationSchedules.length).toBeGreaterThanOrEqual(1);
-      expect(locationSchedules[0]?.locationId._id.toString()).toBe(locationId);
+      expect(locationSchedules[0]?.locationId.toString()).toBe(locationId);
     });
 
     it('should have findByLocationAndDay static method', async () => {
@@ -533,12 +533,14 @@ describe('Models', () => {
         findByLocationAndDay: (
           id: string,
           day: number
-        ) => Promise<{ locationId: { _id: { toString: () => string } }; dayOfWeek: number }>
+        ) => Promise<{ locationId: string; dayOfWeek: number } | null>
       }).findByLocationAndDay(locationId, validSchedule.dayOfWeek);
 
       expect(daySchedule).toBeTruthy();
-      expect(daySchedule.locationId._id.toString()).toBe(locationId);
-      expect(daySchedule.dayOfWeek).toBe(validSchedule.dayOfWeek);
+      if (daySchedule) {
+        expect(daySchedule.locationId.toString()).toBe(locationId);
+        expect(daySchedule.dayOfWeek).toBe(validSchedule.dayOfWeek);
+      }
     });
 
     it('should have getWeeklySchedule static method', async () => {
