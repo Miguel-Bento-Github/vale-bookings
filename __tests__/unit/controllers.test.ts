@@ -21,6 +21,15 @@ jest.mock('../../src/services/BookingService');
 jest.mock('../../src/services/ScheduleService');
 jest.mock('../../src/services/AdminService');
 
+// Mock models
+jest.mock('../../src/models/Location');
+jest.mock('../../src/models/Booking');
+jest.mock('../../src/models/User');
+jest.mock('../../src/models/Schedule');
+
+import Location from '../../src/models/Location';
+import Booking from '../../src/models/Booking';
+
 interface TestAuthenticatedRequest extends Request {
   user: {
     userId: string;
@@ -1350,14 +1359,17 @@ describe('Controllers', () => {
 
     describe('createBooking', () => {
       it('should create booking successfully', async () => {
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', isActive: true };
         const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'PENDING' };
-        (BookingService.createBooking as jest.Mock).mockResolvedValue(mockBooking);
+
+        (Location.findById as jest.Mock).mockResolvedValue(mockLocation);
+        (Booking.find as jest.Mock).mockResolvedValue([]); // No overlapping bookings
+        (Booking.create as jest.Mock).mockResolvedValue(mockBooking);
 
         mockAuthenticatedRequest.body = {
           locationId: '507f1f77bcf86cd799439011',
           startTime: '2025-12-01T09:00:00Z',
-          endTime: '2025-12-01T17:00:00Z',
-          price: 50.00
+          endTime: '2025-12-01T17:00:00Z'
         };
 
         await createBooking(mockAuthenticatedRequest, mockResponse as Response);
@@ -1395,13 +1407,16 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (BookingService.createBooking as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', isActive: true };
+
+        (Location.findById as jest.Mock).mockResolvedValue(mockLocation);
+        (Booking.find as jest.Mock).mockResolvedValue([]);
+        (Booking.create as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         mockAuthenticatedRequest.body = {
           locationId: '507f1f77bcf86cd799439011',
           startTime: '2025-12-01T09:00:00Z',
-          endTime: '2025-12-01T17:00:00Z',
-          price: 50.00
+          endTime: '2025-12-01T17:00:00Z'
         };
 
         await createBooking(mockAuthenticatedRequest, mockResponse as Response);
@@ -1414,13 +1429,16 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (BookingService.createBooking as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        const mockLocation = { _id: '507f1f77bcf86cd799439011', isActive: true };
+
+        (Location.findById as jest.Mock).mockResolvedValue(mockLocation);
+        (Booking.find as jest.Mock).mockResolvedValue([]);
+        (Booking.create as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         mockAuthenticatedRequest.body = {
           locationId: '507f1f77bcf86cd799439011',
           startTime: '2025-12-01T09:00:00Z',
-          endTime: '2025-12-01T17:00:00Z',
-          price: 50.00
+          endTime: '2025-12-01T17:00:00Z'
         };
 
         await createBooking(mockAuthenticatedRequest, mockResponse as Response);
@@ -1438,8 +1456,8 @@ describe('Controllers', () => {
         const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'PENDING' };
         const mockUpdatedBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CONFIRMED' };
         
-        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
-        (BookingService.updateBookingStatus as jest.Mock).mockResolvedValue(mockUpdatedBooking);
+        (Booking.findById as jest.Mock).mockResolvedValue(mockBooking);
+        (Booking.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockUpdatedBooking);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -1483,12 +1501,12 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Status is required'
+          message: 'Booking ID and status are required'
         });
       });
 
       it('should return 404 for non-existent booking', async () => {
-        (BookingService.findById as jest.Mock).mockResolvedValue(null);
+        (Booking.findById as jest.Mock).mockResolvedValue(null);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -1508,7 +1526,7 @@ describe('Controllers', () => {
 
       it('should return 403 for booking not owned by user', async () => {
         const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439017', status: 'PENDING' };
-        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
+        (Booking.findById as jest.Mock).mockResolvedValue(mockBooking);
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
         mockAuthenticatedRequest.body = { status: 'CONFIRMED' };
@@ -1523,7 +1541,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (BookingService.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (Booking.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -1542,7 +1560,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (BookingService.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (Booking.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -1566,8 +1584,8 @@ describe('Controllers', () => {
         const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CONFIRMED' };
         const mockCancelledBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439012', status: 'CANCELLED' };
         
-        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
-        (BookingService.cancelBooking as jest.Mock).mockResolvedValue(mockCancelledBooking);
+        (Booking.findById as jest.Mock).mockResolvedValue(mockBooking);
+        (Booking.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockCancelledBooking);
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
@@ -1576,7 +1594,8 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          message: 'Booking cancelled successfully'
+          message: 'Booking cancelled successfully',
+          data: mockCancelledBooking
         });
       });
 
@@ -1593,7 +1612,7 @@ describe('Controllers', () => {
       });
 
       it('should return 404 for non-existent booking', async () => {
-        (BookingService.findById as jest.Mock).mockResolvedValue(null);
+        (Booking.findById as jest.Mock).mockResolvedValue(null);
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439016' };
 
@@ -1608,7 +1627,7 @@ describe('Controllers', () => {
 
       it('should return 403 for booking not owned by user', async () => {
         const mockBooking = { _id: '507f1f77bcf86cd799439013', userId: '507f1f77bcf86cd799439017', status: 'CONFIRMED' };
-        (BookingService.findById as jest.Mock).mockResolvedValue(mockBooking);
+        (Booking.findById as jest.Mock).mockResolvedValue(mockBooking);
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
@@ -1622,7 +1641,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (BookingService.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (Booking.findById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 
@@ -1636,7 +1655,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (BookingService.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (Booking.findById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
 

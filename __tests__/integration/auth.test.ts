@@ -117,6 +117,80 @@ describe('Auth Integration Tests', () => {
 
       expect(response.body.data.user.role).toBe('ADMIN');
     });
+
+    describe('Email Validation', () => {
+      it('should reject registration with email exceeding length limits', async () => {
+        const longEmail = 'a'.repeat(65) + '@example.com';
+        const response = await request(app)
+          .post('/api/auth/register')
+          .send({
+            email: longEmail,
+            password: 'password123',
+            profile: { name: 'Test User' }
+          })
+          .expect(400);
+
+        expect(response.body).toMatchObject({
+          success: false,
+          message: 'Invalid email format'
+        });
+      });
+
+      it('should reject registration with invalid email characters', async () => {
+        const response = await request(app)
+          .post('/api/auth/register')
+          .send({
+            email: 'user name@example.com',
+            password: 'password123',
+            profile: { name: 'Test User' }
+          })
+          .expect(400);
+
+        expect(response.body).toMatchObject({
+          success: false,
+          message: 'Invalid email format'
+        });
+      });
+
+      it('should reject registration with malformed email', async () => {
+        const response = await request(app)
+          .post('/api/auth/register')
+          .send({
+            email: 'user@',
+            password: 'password123',
+            profile: { name: 'Test User' }
+          })
+          .expect(400);
+
+        expect(response.body).toMatchObject({
+          success: false,
+          message: 'Invalid email format'
+        });
+      });
+
+      it('should accept registration with valid email format', async () => {
+        const response = await request(app)
+          .post('/api/auth/register')
+          .send({
+            email: 'valid.user+tag@example.com',
+            password: 'password123',
+            profile: { name: 'Test User' }
+          })
+          .expect(201);
+
+        expect(response.body).toMatchObject({
+          success: true,
+          message: 'User registered successfully',
+          data: {
+            user: {
+              email: 'valid.user+tag@example.com'
+            },
+            token: expect.any(String),
+            refreshToken: expect.any(String)
+          }
+        });
+      });
+    });
   });
 
   describe('POST /api/auth/login', () => {
@@ -259,6 +333,83 @@ describe('Auth Integration Tests', () => {
       expect(response.body).toMatchObject({
         success: false,
         message: expect.any(String)
+      });
+    });
+  });
+
+  describe('GET /api/auth/me', () => {
+    let accessToken: string;
+    let userId: string;
+
+    beforeEach(async () => {
+      // Register user and get access token
+      const user = new User(validUser);
+      await user.save();
+      userId = user._id.toString();
+
+      const loginResponse = await request(app)
+        .post('/api/auth/login')
+        .send(validLoginRequest);
+
+      accessToken = loginResponse.body.data.token;
+    });
+
+    it('should get current user profile with valid token', async () => {
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          user: {
+            _id: userId,
+            email: validUser.email,
+            role: validUser.role,
+            profile: {
+              name: validUser.profile.name
+            }
+          }
+        }
+      });
+
+      // Should not include password
+      expect(response.body.data.user.password).toBeUndefined();
+    });
+
+    it('should fail without authentication token', async () => {
+      const response = await request(app)
+        .get('/api/auth/me')
+        .expect(401);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining('Authentication required')
+      });
+    });
+
+    it('should fail with invalid token', async () => {
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', 'Bearer invalid-token')
+        .expect(401);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining('Invalid token')
+      });
+    });
+
+    it('should fail with malformed authorization header', async () => {
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', 'InvalidFormat token')
+        .expect(401);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining('Authentication required')
       });
     });
   });

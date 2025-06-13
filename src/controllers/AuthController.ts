@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { register as registerUser, login as loginUser, refreshTokens as refreshUserTokens } from '../services/AuthService';
-import { AppError } from '../types';
+import { AppError, AuthenticatedRequest } from '../types';
 import { validateEmail, validatePassword } from '../utils/validation';
 
 export async function register(req: Request, res: Response): Promise<void> {
@@ -147,5 +147,41 @@ export async function refreshToken(req: Request, res: Response): Promise<void> {
         message: 'Internal server error'
       });
     }
+  }
+}
+
+export async function me(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+      return;
+    }
+
+    // Get full user details from database
+    const User = (await import('../models/User')).default;
+    const user = await User.findById(req.user.userId).select('-password');
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: user
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
 } 

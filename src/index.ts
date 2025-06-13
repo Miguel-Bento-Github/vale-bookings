@@ -1,9 +1,11 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import { rateLimit } from 'express-rate-limit';
+import { AppError } from './types';
 
 import routes from './routes';
 
@@ -12,11 +14,53 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Security middleware
 app.use(helmet());
 app.use(cors());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+
+// Logging
 app.use(morgan('combined'));
-app.use(express.json());
+
+// Content type validation middleware
+app.use((req: Request, res: Response, next: NextFunction): void => {
+  // Only check POST/PUT/PATCH requests that should have JSON bodies
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    const contentType = req.get('Content-Type');
+
+    // If content-type is explicitly set to something other than JSON, reject it
+    if (contentType && contentType.includes('text/plain')) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid JSON payload'
+      });
+      return;
+    }
+  }
+  next();
+});
+
+// JSON parsing with error handling
+app.use(express.json({
+  limit: '10kb', // Limit payload size
+  verify: (req: Request, res: Response, buf: Buffer, encoding: string) => {
+    try {
+      JSON.parse(buf.toString());
+    } catch (e) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid JSON payload'
+      });
+      throw new Error('Invalid JSON');
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // Health check
@@ -28,12 +72,19 @@ app.get('/health', (req, res) => {
 app.use('/api', routes);
 
 // Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error'
-  });
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message
+    });
+  } else {
+    console.error('Error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
 });
 
 // 404 handler

@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import { authenticate, authorize } from '../../src/middleware/auth';
 import * as AuthService from '../../src/services/AuthService';
 import { AuthenticatedRequest, AppError, UserRole } from '../../src/types';
+import request from 'supertest';
+import app from '../../src/app';
 
 // Mock AuthService
 jest.mock('../../src/services/AuthService');
@@ -457,6 +459,73 @@ describe('Auth Middleware', () => {
         message: 'Authentication required'
       });
       expect(mockNext).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('Middleware Tests', () => {
+  describe('JSON Parsing Middleware', () => {
+    it('should handle malformed JSON with 400 status', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .set('Content-Type', 'application/json')
+        .send('{"email": "test@example.com", "password": "password123", "profile": {"name": "Test User"}') // Missing closing brace
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: 'Invalid JSON payload'
+      });
+    });
+
+    it('should handle empty JSON body', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .set('Content-Type', 'application/json')
+        .send('')
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: 'Invalid JSON payload'
+      });
+    });
+
+    it('should handle non-JSON content type', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .set('Content-Type', 'text/plain')
+        .send('not json')
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: 'Invalid JSON payload'
+      });
+    });
+  });
+
+  describe('Error Handling Middleware', () => {
+    it('should handle AppError with custom status code', async () => {
+      const response = await request(app)
+        .get('/api/test-error')
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: 'Test error'
+      });
+    });
+
+    it('should handle unknown errors with 500 status', async () => {
+      const response = await request(app)
+        .get('/api/test-unknown-error')
+        .expect(500);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: 'Internal server error'
+      });
     });
   });
 }); 

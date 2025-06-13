@@ -326,6 +326,9 @@ describe('Bookings Integration Tests', () => {
     });
 
     it('should allow valet to update booking status', async () => {
+      // First, set booking to CONFIRMED status (valets can only transition from CONFIRMED to IN_PROGRESS)
+      await Booking.findByIdAndUpdate(bookingId, { status: 'CONFIRMED' });
+
       const response = await request(app)
         .put(`/api/bookings/${bookingId}/status`)
         .set('Authorization', `Bearer ${valetToken}`)

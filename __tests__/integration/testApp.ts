@@ -11,7 +11,40 @@ const createTestApp = (): express.Application => {
   app.use(helmet());
   app.use(cors());
   app.use(morgan('combined'));
-  app.use(express.json());
+
+  // Content type validation middleware
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction): void => {
+    // Only check POST/PUT/PATCH requests that should have JSON bodies
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      const contentType = req.get('Content-Type');
+
+      // If content-type is explicitly set to something other than JSON, reject it
+      if (contentType && contentType.includes('text/plain')) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid JSON payload'
+        });
+        return;
+      }
+    }
+    next();
+  });
+
+  // JSON parsing with error handling
+  app.use(express.json({
+    limit: '10kb', // Limit payload size
+    verify: (req: express.Request, res: express.Response, buf: Buffer, encoding: string) => {
+      try {
+        JSON.parse(buf.toString());
+      } catch (e) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid JSON payload'
+        });
+        throw new Error('Invalid JSON');
+      }
+    }
+  }));
   app.use(express.urlencoded({ extended: true }));
 
   // Health check
