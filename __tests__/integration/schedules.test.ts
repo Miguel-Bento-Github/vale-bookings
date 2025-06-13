@@ -18,8 +18,6 @@ describe('Schedules Integration Tests', () => {
   let app: Application;
   let userToken: string;
   let adminToken: string;
-  let userId: string;
-  let adminId: string;
   let locationId: string;
   let scheduleId: string;
 
@@ -30,12 +28,10 @@ describe('Schedules Integration Tests', () => {
   beforeEach(async () => {
     // Create test users and get tokens
     const user = new User(validUser);
-    const savedUser = await user.save();
-    userId = savedUser._id.toString();
+    await user.save();
 
     const admin = new User(adminUser);
-    const savedAdmin = await admin.save();
-    adminId = savedAdmin._id.toString();
+    await admin.save();
 
     // Login to get tokens
     const userLoginResponse = await request(app)

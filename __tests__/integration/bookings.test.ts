@@ -22,8 +22,6 @@ describe('Bookings Integration Tests', () => {
   let adminToken: string;
   let valetToken: string;
   let userId: string;
-  let adminId: string;
-  let valetId: string;
   let locationId: string;
   let bookingId: string;
 
@@ -38,12 +36,10 @@ describe('Bookings Integration Tests', () => {
     userId = savedUser._id.toString();
 
     const admin = new User(adminUser);
-    const savedAdmin = await admin.save();
-    adminId = savedAdmin._id.toString();
+    await admin.save();
 
     const valet = new User(valetUser);
-    const savedValet = await valet.save();
-    valetId = savedValet._id.toString();
+    await valet.save();
 
     // Login to get tokens
     const userLoginResponse = await request(app)

@@ -7,8 +7,7 @@ import {
   validRegisterRequest,
   validLoginRequest,
   invalidUserData,
-  validUser,
-  adminUser
+  validUser
 } from '../fixtures';
 
 import createTestApp from './testApp';

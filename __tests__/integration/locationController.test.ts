@@ -3,7 +3,7 @@ import request from 'supertest';
 import app from '../../src/index';
 import '../setup';
 import { generateTokens } from '../../src/services/AuthService';
-import { UserRole } from '../../src/types';
+import { IUserDocument, UserRole } from '../../src/types';
 
 // Helper function to generate access token
 const generateAccessToken = (user: { _id: string; email: string; role: UserRole }): string => {
@@ -11,7 +11,7 @@ const generateAccessToken = (user: { _id: string; email: string; role: UserRole 
     _id: user._id,
     email: user.email,
     role: user.role
-  } as any);
+  } as unknown as IUserDocument);
   return tokens.accessToken;
 };
 
