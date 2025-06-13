@@ -468,7 +468,8 @@ describe('Middleware Tests', () => {
       const response = await request(app)
         .post('/api/auth/register')
         .set('Content-Type', 'application/json')
-        .send('{"email": "test@example.com", "password": "password123", "profile": {"name": "Test User"}') // Missing brace
+        .send('{"email": "test@example.com", "password": "password123", ' +
+          '"profile": {"name": "Test User"}') // Missing brace
         .expect(400);
 
       expect(response.body).toMatchObject({

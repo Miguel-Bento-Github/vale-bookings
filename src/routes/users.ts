@@ -6,13 +6,13 @@ import { authenticate } from '../middleware/auth';
 const router = Router();
 
 router.get('/profile', authenticate, (req, res, next) => {
-    getProfile(req, res).catch(next);
+  getProfile(req, res).catch(next);
 });
 router.put('/profile', authenticate, (req, res, next) => {
-    updateProfile(req, res).catch(next);
+  updateProfile(req, res).catch(next);
 });
 router.delete('/profile', authenticate, (req, res, next) => {
-    deleteAccount(req, res).catch(next);
+  deleteAccount(req, res).catch(next);
 });
 
 export default router; 

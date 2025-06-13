@@ -41,7 +41,7 @@ function isUpdateBookingStatusRequestBody(body: unknown): body is UpdateBookingS
     typeof body === 'object' &&
     body !== null &&
     typeof bodyObj.status === 'string' &&
-    ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(bodyObj.status as string)
+    ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(bodyObj.status)
   );
 }
 

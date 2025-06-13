@@ -512,9 +512,12 @@ describe('Models', () => {
       const schedule = new Schedule(scheduleData);
       await schedule.save();
 
-      const locationSchedules = await (Schedule as typeof Schedule & {
-        findByLocationId: (id: string) => Promise<Array<{ locationId: { _id: { toString: () => string } } }>>
-      }).findByLocationId(locationId);
+      const ScheduleWithMethods = Schedule as typeof Schedule & {
+        findByLocationId: (id: string) => Promise<Array<{
+          locationId: { _id: { toString: () => string } };
+        }>>;
+      };
+      const locationSchedules = await ScheduleWithMethods.findByLocationId(locationId);
 
       expect(Array.isArray(locationSchedules)).toBe(true);
       expect(locationSchedules.length).toBeGreaterThanOrEqual(1);

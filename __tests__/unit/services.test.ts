@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 
-
 // Import services that we'll create
 import Booking from '../../src/models/Booking';
 import Location from '../../src/models/Location';
@@ -10,20 +9,16 @@ import * as AuthService from '../../src/services/AuthService';
 import * as BookingService from '../../src/services/BookingService';
 import * as LocationService from '../../src/services/LocationService';
 import * as ScheduleService from '../../src/services/ScheduleService';
-
-// Import models
 import * as UserService from '../../src/services/UserService';
 
 // Import types
 import { UserRole } from '../../src/types';
 import {
   validUser,
-  adminUser,
   validLocation,
   validBooking,
   validSchedule,
-  validRegisterRequest,
-  validLoginRequest
+  validRegisterRequest
 } from '../fixtures';
 
 describe('Services', () => {
@@ -921,7 +916,8 @@ describe('Services', () => {
       await ScheduleService.createSchedule(scheduleData);
 
       // Try to create a duplicate schedule (same location and day)
-      await expect(ScheduleService.createSchedule(scheduleData)).rejects.toThrow('Schedule already exists for this location and day');
+      await expect(ScheduleService.createSchedule(scheduleData))
+        .rejects.toThrow('Schedule already exists for this location and day');
     });
 
     it('should handle generic errors in createSchedule', async () => {
@@ -1011,7 +1007,7 @@ describe('Services', () => {
       expect(updatedSchedules[0]?.dayOfWeek).toBe(1);
     });
 
-    it('should get day name for valid day numbers', async () => {
+    it('should get day name for valid day numbers', () => {
       expect(ScheduleService.getDayName(0)).toBe('Sunday');
       expect(ScheduleService.getDayName(1)).toBe('Monday');
       expect(ScheduleService.getDayName(2)).toBe('Tuesday');
@@ -1021,7 +1017,7 @@ describe('Services', () => {
       expect(ScheduleService.getDayName(6)).toBe('Saturday');
     });
 
-    it('should handle invalid day numbers in getDayName', async () => {
+    it('should handle invalid day numbers in getDayName', () => {
       expect(ScheduleService.getDayName(7)).toBe('Invalid Day');
       expect(ScheduleService.getDayName(-1)).toBe('Invalid Day');
       expect(ScheduleService.getDayName(10)).toBe('Invalid Day');
