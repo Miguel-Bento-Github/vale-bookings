@@ -1,4 +1,5 @@
 import { Response } from 'express';
+
 import { findById, updateProfile as updateUserProfile, deleteUser } from '../services/UserService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validatePhoneNumber } from '../utils/validation';

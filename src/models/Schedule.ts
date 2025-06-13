@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+
 import { IScheduleDocument } from '../types';
 
 const ScheduleSchema: Schema = new Schema(
@@ -96,8 +97,8 @@ ScheduleSchema.statics.getWeeklySchedule = function (locationId: string) {
     locationId,
     isActive: true
   })
-  .sort({ dayOfWeek: 1 })
-  .populate('locationId', 'name address');
+    .sort({ dayOfWeek: 1 })
+    .populate('locationId', 'name address');
 };
 
 // Instance method to check if location is open at specific time

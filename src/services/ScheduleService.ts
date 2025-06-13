@@ -1,6 +1,5 @@
 import Schedule from '../models/Schedule';
-import { ISchedule, IScheduleDocument, IUpdateScheduleRequest, IScheduleModel } from '../types';
-import { AppError } from '../types';
+import { ISchedule, IScheduleDocument, IUpdateScheduleRequest, IScheduleModel , AppError } from '../types';
 
 export async function createSchedule(scheduleData: ISchedule): Promise<IScheduleDocument> {
   try {

@@ -1,6 +1,5 @@
 import User from '../models/User';
-import { IUser, IUserDocument } from '../types';
-import { AppError } from '../types';
+import { IUser, IUserDocument , AppError } from '../types';
 
 export async function createUser(userData: IUser): Promise<IUserDocument> {
   try {

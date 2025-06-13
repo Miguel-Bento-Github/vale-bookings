@@ -1,5 +1,5 @@
-import { Document } from 'mongoose';
 import { Request } from 'express';
+import { Document } from 'mongoose';
 
 // Base interface for entities with timestamps
 export interface ITimestamps {
@@ -237,7 +237,12 @@ export interface IRevenueMatchStage extends IMongoQuery {
 // Model method types
 export interface IBookingModel {
   findByLocationId(locationId: string, startDate?: Date, endDate?: Date): Promise<IBookingDocument[]>;
-  findOverlapping(locationId: string, startTime: Date, endTime: Date, excludeBookingId?: string): Promise<IBookingDocument[]>;
+  findOverlapping(
+    locationId: string,
+    startTime: Date,
+    endTime: Date,
+    excludeBookingId?: string
+  ): Promise<IBookingDocument[]>;
 }
 
 export interface ILocationModel {

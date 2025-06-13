@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import { getProfile, updateProfile, deleteAccount } from '../controllers/UserController';
 import { authenticate } from '../middleware/auth';
 

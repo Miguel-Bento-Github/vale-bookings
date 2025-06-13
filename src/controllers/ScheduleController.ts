@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
-import { getLocationSchedules as getSchedulesForLocation, createSchedule as createNewSchedule, updateSchedule as updateExistingSchedule, getScheduleById as findScheduleById, deleteSchedule as deleteExistingSchedule } from '../services/ScheduleService';
+import mongoose from 'mongoose';
+
 import { getLocationById } from '../services/LocationService';
+import { getLocationSchedules as getSchedulesForLocation, createSchedule as createNewSchedule, updateSchedule as updateExistingSchedule, getScheduleById as findScheduleById, deleteSchedule as deleteExistingSchedule } from '../services/ScheduleService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validateTimeFormat } from '../utils/validation';
-import mongoose from 'mongoose';
+
 
 export async function getLocationSchedules(req: Request, res: Response): Promise<void> {
   try {

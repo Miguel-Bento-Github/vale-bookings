@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import authRoutes from './auth';
-import userRoutes from './users';
-import locationRoutes from './locations';
-import bookingRoutes from './bookings';
-import scheduleRoutes from './schedules';
+
 import adminRoutes from './admin';
+import authRoutes from './auth';
+import bookingRoutes from './bookings';
+import locationRoutes from './locations';
+import scheduleRoutes from './schedules';
+import userRoutes from './users';
 
 const router = Router();
 

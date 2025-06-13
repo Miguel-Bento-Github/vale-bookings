@@ -1,11 +1,14 @@
-import request from 'supertest';
 import { Application } from 'express';
-import createTestApp from './testApp';
+import request from 'supertest';
+
+
 import User from '../../src/models/User';
 import {
   validUser,
   adminUser
 } from '../fixtures';
+
+import createTestApp from './testApp';
 
 describe('Users Integration Tests', () => {
   let app: Application;

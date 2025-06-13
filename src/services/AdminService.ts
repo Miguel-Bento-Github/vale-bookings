@@ -1,7 +1,7 @@
-import User from '../models/User';
-import Location from '../models/Location';
 import Booking from '../models/Booking';
+import Location from '../models/Location';
 import Schedule from '../models/Schedule';
+import User from '../models/User';
 import { 
   IUserDocument, 
   ILocationDocument, 

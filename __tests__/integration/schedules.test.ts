@@ -1,15 +1,18 @@
-import request from 'supertest';
 import { Application } from 'express';
-import createTestApp from './testApp';
-import User from '../../src/models/User';
+import request from 'supertest';
+
+
 import Location from '../../src/models/Location';
 import Schedule from '../../src/models/Schedule';
+import User from '../../src/models/User';
 import {
   validUser,
   adminUser,
   validCreateLocationRequest,
   validCreateScheduleRequest
 } from '../fixtures';
+
+import createTestApp from './testApp';
 
 describe('Schedules Integration Tests', () => {
   let app: Application;

@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+
 import { ILocationDocument } from '../types';
 
 const CoordinatesSchema = new Schema(

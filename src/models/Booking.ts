@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+
 import { IBookingDocument } from '../types';
 
 const BookingSchema: Schema = new Schema(

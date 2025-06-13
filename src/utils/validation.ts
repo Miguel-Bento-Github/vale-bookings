@@ -1,6 +1,7 @@
 export const validateEmail = (email: string): boolean => {
-  // RFC 5322 compliant email regex that requires a proper domain with TLD
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+  // More restrictive but safe email regex to avoid ReDoS attacks
+  // Only allows alphanumeric, dots, hyphens, underscores, and plus signs
+  const emailRegex = /^[a-zA-Z0-9._+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
   // Check if email matches regex and is within length limits
   // RFC 5321: total length <= 254 characters
@@ -12,10 +13,10 @@ export const validateEmail = (email: string): boolean => {
   const parts = email.split('@');
   if (parts.length !== 2) return false;
 
-  // We can safely assert non-null here because we checked parts.length === 2
-  const localPart = parts[0]!;
-  const domain = parts[1]!;
+  const localPart = parts[0];
+  const domain = parts[1];
 
+  if (localPart === undefined || domain === undefined) return false;
   if (localPart.length > 64) return false;
   if (domain.length > 255) return false;
 

@@ -1,4 +1,11 @@
 import mongoose from 'mongoose';
+
+
+// Import models that we'll create
+import Booking from '../../src/models/Booking';
+import Location from '../../src/models/Location';
+import Schedule from '../../src/models/Schedule';
+import User from '../../src/models/User';
 import {
   validUser,
   adminUser,
@@ -9,12 +16,6 @@ import {
   invalidLocationData,
   invalidBookingData
 } from '../fixtures';
-
-// Import models that we'll create
-import User from '../../src/models/User';
-import Location from '../../src/models/Location';
-import Booking from '../../src/models/Booking';
-import Schedule from '../../src/models/Schedule';
 
 describe('Models', () => {
   describe('User Model', () => {

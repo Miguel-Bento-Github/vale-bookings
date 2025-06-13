@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
+
 import { getAllLocations, findNearby, getLocationById as findLocationById, createLocation as createNewLocation, updateLocation as updateExistingLocation, deleteLocation as deleteExistingLocation } from '../services/LocationService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validateCoordinates } from '../utils/validation';
-import mongoose from 'mongoose';
 
 export async function getLocations(req: Request, res: Response): Promise<void> {
   try {

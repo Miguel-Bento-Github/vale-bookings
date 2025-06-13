@@ -1,16 +1,19 @@
 import { Request, Response } from 'express';
-import { register, login, refreshToken } from '../../src/controllers/AuthController';
-import { getProfile, updateProfile, deleteAccount } from '../../src/controllers/UserController';
-import { getLocations, getNearbyLocations, getLocationById, createLocation, updateLocation, deleteLocation } from '../../src/controllers/LocationController';
-import { getUserBookings, getBookingById, createBooking, updateBookingStatus, cancelBooking } from '../../src/controllers/BookingController';
-import { getLocationSchedules, createSchedule, updateSchedule, deleteSchedule } from '../../src/controllers/ScheduleController';
+
 import { getAllUsers, updateUserRole, deleteUser, getAllValets, createValet, updateValet, deleteValet, createLocation as createAdminLocation, updateLocation as updateAdminLocation, deleteLocation as deleteAdminLocation, getAllSchedules, createSchedule as createAdminSchedule, updateSchedule as updateAdminSchedule, deleteSchedule as deleteAdminSchedule, createBulkSchedules, getAllBookings, updateBookingStatus as updateAdminBookingStatus, getAnalyticsOverview, getRevenueAnalytics, getBookingAnalytics } from '../../src/controllers/AdminController';
-import * as AuthService from '../../src/services/AuthService';
-import * as UserService from '../../src/services/UserService';
-import * as LocationService from '../../src/services/LocationService';
-import * as BookingService from '../../src/services/BookingService';
-import * as ScheduleService from '../../src/services/ScheduleService';
+import { register, login, refreshToken } from '../../src/controllers/AuthController';
+import { getUserBookings, getBookingById, createBooking, updateBookingStatus, cancelBooking } from '../../src/controllers/BookingController';
+import { getLocations, getNearbyLocations, getLocationById, createLocation, updateLocation, deleteLocation } from '../../src/controllers/LocationController';
+import { getLocationSchedules, createSchedule, updateSchedule, deleteSchedule } from '../../src/controllers/ScheduleController';
+import { getProfile, updateProfile, deleteAccount } from '../../src/controllers/UserController';
+import Booking from '../../src/models/Booking';
+import Location from '../../src/models/Location';
 import AdminService from '../../src/services/AdminService';
+import * as AuthService from '../../src/services/AuthService';
+import * as BookingService from '../../src/services/BookingService';
+import * as LocationService from '../../src/services/LocationService';
+import * as ScheduleService from '../../src/services/ScheduleService';
+import * as UserService from '../../src/services/UserService';
 import { AppError, AuthenticatedRequest, UserRole } from '../../src/types';
 
 // Mock all services
@@ -26,9 +29,6 @@ jest.mock('../../src/models/Location');
 jest.mock('../../src/models/Booking');
 jest.mock('../../src/models/User');
 jest.mock('../../src/models/Schedule');
-
-import Location from '../../src/models/Location';
-import Booking from '../../src/models/Booking';
 
 interface TestAuthenticatedRequest extends Request {
   user: {

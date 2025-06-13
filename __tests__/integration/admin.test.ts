@@ -1,13 +1,14 @@
-import request from 'supertest';
 import { Application } from 'express';
 import mongoose from 'mongoose';
+import request from 'supertest';
+
 import app from '../../src/index';
-import { IUser, UserRole } from '../../src/types';
-import { generateTokens } from '../../src/services/AuthService';
-import User from '../../src/models/User';
-import Location from '../../src/models/Location';
 import Booking from '../../src/models/Booking';
+import Location from '../../src/models/Location';
 import Schedule from '../../src/models/Schedule';
+import User from '../../src/models/User';
+import { generateTokens } from '../../src/services/AuthService';
+import { IUser, UserRole } from '../../src/types';
 
 // Helper function to generate access token
 const generateAccessToken = (user: { _id: string; email: string; role: UserRole }): string => {

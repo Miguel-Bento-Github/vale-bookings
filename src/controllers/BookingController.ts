@@ -1,9 +1,10 @@
 import { Response } from 'express';
-import { getUserBookings as getBookingsForUser, findById as findBookingById, createBooking as createNewBooking, updateBookingStatus as updateStatus, cancelBooking as cancelExistingBooking } from '../services/BookingService';
-import { AppError, AuthenticatedRequest, BookingStatus } from '../types';
-import User from '../models/User';
+
 import Booking from '../models/Booking';
 import Location from '../models/Location';
+import User from '../models/User';
+import { getUserBookings as getBookingsForUser, findById as findBookingById, createBooking as createNewBooking, updateBookingStatus as updateStatus, cancelBooking as cancelExistingBooking } from '../services/BookingService';
+import { AppError, AuthenticatedRequest, BookingStatus } from '../types';
 
 export async function getUserBookings(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {

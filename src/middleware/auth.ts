@@ -1,16 +1,17 @@
 import { Response, NextFunction } from 'express';
-import { verifyToken } from '../services/AuthService';
-import { AppError, AuthenticatedRequest } from '../types';
 
-export const authenticate = async (
+import { verifyToken } from '../services/AuthService';
+import { AppError, AuthenticatedRequest, UserRole } from '../types';
+
+export const authenticate = (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): Promise<void> => {
+): void => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (authHeader === undefined || authHeader === null || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({
         success: false,
         message: 'Authentication required'
@@ -20,7 +21,7 @@ export const authenticate = async (
 
     const token = authHeader.substring(7).trim();
     
-    if (!token) {
+    if (token.length === 0) {
       res.status(401).json({
         success: false,
         message: 'Authentication required'
@@ -52,9 +53,9 @@ export const authenticate = async (
   }
 };
 
-export const authorize = (roles: string[]) => {
+export const authorize = (roles: UserRole[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
+    if (req.user === undefined || req.user === null) {
       res.status(401).json({
         success: false,
         message: 'Authentication required'

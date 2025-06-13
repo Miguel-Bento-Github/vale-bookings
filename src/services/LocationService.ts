@@ -1,6 +1,5 @@
 import Location from '../models/Location';
-import { ILocation, ILocationDocument, ILocationModel, ILocationAvailability, ILocationWithDistance, ITimeSlot } from '../types';
-import { AppError } from '../types';
+import { ILocation, ILocationDocument, ILocationModel, ILocationAvailability, ILocationWithDistance, ITimeSlot , AppError } from '../types';
 
 export async function getAllLocations(): Promise<ILocationDocument[]> {
   return await Location.find({ isActive: true });

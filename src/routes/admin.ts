@@ -1,27 +1,28 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middleware/auth';
+
 import {
-    getAllUsers,
-    updateUserRole,
-    deleteUser,
-    getAllValets,
-    createValet,
-    updateValet,
-    deleteValet,
-    createLocation,
-    updateLocation,
-    deleteLocation,
-    getAllSchedules,
-    createSchedule,
-    updateSchedule,
-    deleteSchedule,
-    createBulkSchedules,
-    getAllBookings,
-    updateBookingStatus,
-    getAnalyticsOverview,
-    getRevenueAnalytics,
-    getBookingAnalytics
+  getAllUsers,
+  updateUserRole,
+  deleteUser,
+  getAllValets,
+  createValet,
+  updateValet,
+  deleteValet,
+  createLocation,
+  updateLocation,
+  deleteLocation,
+  getAllSchedules,
+  createSchedule,
+  updateSchedule,
+  deleteSchedule,
+  createBulkSchedules,
+  getAllBookings,
+  updateBookingStatus,
+  getAnalyticsOverview,
+  getRevenueAnalytics,
+  getBookingAnalytics
 } from '../controllers/AdminController';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
 

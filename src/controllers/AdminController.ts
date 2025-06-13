@@ -1,7 +1,7 @@
 import { Response } from 'express';
-import { AuthenticatedRequest, UserRole, BookingStatus } from '../types';
+
 import AdminService from '../services/AdminService';
-import { AppError } from '../types';
+import { AuthenticatedRequest, UserRole, BookingStatus , AppError } from '../types';
 
 // User Management
 export async function getAllUsers(req: AuthenticatedRequest, res: Response): Promise<void> {

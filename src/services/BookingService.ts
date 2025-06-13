@@ -1,6 +1,5 @@
 import Booking from '../models/Booking';
-import { IBooking, IBookingDocument, IUpdateBookingRequest, BookingStatus, IBookingModel } from '../types';
-import { AppError } from '../types';
+import { IBooking, IBookingDocument, IUpdateBookingRequest, BookingStatus, IBookingModel , AppError } from '../types';
 
 export async function createBooking(bookingData: IBooking): Promise<IBookingDocument> {
   // Check for overlapping bookings

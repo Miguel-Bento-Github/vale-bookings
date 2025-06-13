@@ -1,5 +1,6 @@
-import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import mongoose, { Schema } from 'mongoose';
+
 import { IUserDocument } from '../types';
 
 const UserSchema: Schema = new Schema(

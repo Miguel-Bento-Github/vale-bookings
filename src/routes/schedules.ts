@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import { getLocationSchedules, createSchedule, updateSchedule, deleteSchedule } from '../controllers/ScheduleController';
 import { authenticate, authorize } from '../middleware/auth';
 

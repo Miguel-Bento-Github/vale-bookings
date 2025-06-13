@@ -1,4 +1,21 @@
 import mongoose from 'mongoose';
+
+
+// Import services that we'll create
+import Booking from '../../src/models/Booking';
+import Location from '../../src/models/Location';
+import Schedule from '../../src/models/Schedule';
+import User from '../../src/models/User';
+import * as AuthService from '../../src/services/AuthService';
+import * as BookingService from '../../src/services/BookingService';
+import * as LocationService from '../../src/services/LocationService';
+import * as ScheduleService from '../../src/services/ScheduleService';
+
+// Import models
+import * as UserService from '../../src/services/UserService';
+
+// Import types
+import { UserRole } from '../../src/types';
 import {
   validUser,
   adminUser,
@@ -8,22 +25,6 @@ import {
   validRegisterRequest,
   validLoginRequest
 } from '../fixtures';
-
-// Import services that we'll create
-import * as UserService from '../../src/services/UserService';
-import * as AuthService from '../../src/services/AuthService';
-import * as LocationService from '../../src/services/LocationService';
-import * as BookingService from '../../src/services/BookingService';
-import * as ScheduleService from '../../src/services/ScheduleService';
-
-// Import models
-import User from '../../src/models/User';
-import Location from '../../src/models/Location';
-import Booking from '../../src/models/Booking';
-import Schedule from '../../src/models/Schedule';
-
-// Import types
-import { UserRole } from '../../src/types';
 
 describe('Services', () => {
   describe('UserService', () => {

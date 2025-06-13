@@ -1,15 +1,16 @@
 import { Router } from 'express';
+
 import {
-    getLocations,
-    getNearbyLocations,
-    getLocationById,
-    createLocation,
-    updateLocation,
-    deleteLocation,
-    searchLocations,
-    getLocationAvailability,
-    getLocationTimeSlots,
-    getRealtimeAvailability
+  getLocations,
+  getNearbyLocations,
+  getLocationById,
+  createLocation,
+  updateLocation,
+  deleteLocation,
+  searchLocations,
+  getLocationAvailability,
+  getLocationTimeSlots,
+  getRealtimeAvailability
 } from '../controllers/LocationController';
 import { authenticate, authorize } from '../middleware/auth';
 

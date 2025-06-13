@@ -1,6 +1,7 @@
-import request from 'supertest';
 import { Application } from 'express';
-import createTestApp from './testApp';
+import request from 'supertest';
+
+
 import User from '../../src/models/User';
 import {
   validRegisterRequest,
@@ -9,6 +10,8 @@ import {
   validUser,
   adminUser
 } from '../fixtures';
+
+import createTestApp from './testApp';
 
 describe('Auth Integration Tests', () => {
   let app: Application;

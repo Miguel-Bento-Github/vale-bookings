@@ -1,7 +1,8 @@
-import express from 'express';
 import cors from 'cors';
+import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
+
 import routes from '../../src/routes';
 
 const createTestApp = (): express.Application => {
