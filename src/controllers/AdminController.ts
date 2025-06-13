@@ -1,7 +1,149 @@
 import { Response } from 'express';
 
 import AdminService from '../services/AdminService';
-import { AuthenticatedRequest, UserRole, BookingStatus , AppError } from '../types';
+import {
+  AuthenticatedRequest,
+  UserRole,
+  BookingStatus,
+  AppError,
+  ICreateLocationRequest,
+  IUpdateLocationRequest,
+  ICreateScheduleRequest,
+  IUpdateScheduleRequest
+} from '../types';
+
+// Type definitions for request bodies
+interface UpdateUserRoleRequestBody {
+  role: UserRole;
+}
+
+interface CreateValetRequestBody {
+  email: string;
+  password: string;
+  profile: {
+    name: string;
+    phone?: string;
+  };
+}
+
+interface UpdateValetRequestBody {
+  profile?: {
+    name?: string;
+    phone?: string;
+  };
+}
+
+interface UpdateBookingStatusRequestBody {
+  status: BookingStatus;
+}
+
+// Type guards for request validation
+function isUpdateUserRoleRequestBody(body: unknown): body is UpdateUserRoleRequestBody {
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    typeof (body as Record<string, unknown>).role === 'string' &&
+    ['CUSTOMER', 'VALET', 'ADMIN'].includes((body as Record<string, unknown>).role as string)
+  );
+}
+
+function isCreateValetRequestBody(body: unknown): body is CreateValetRequestBody {
+  const bodyObj = body as Record<string, unknown>;
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    typeof bodyObj.email === 'string' &&
+    typeof bodyObj.password === 'string' &&
+    typeof bodyObj.profile === 'object' &&
+    bodyObj.profile !== null &&
+    typeof (bodyObj.profile as Record<string, unknown>).name === 'string'
+  );
+}
+
+function isUpdateValetRequestBody(body: unknown): body is UpdateValetRequestBody {
+  const bodyObj = body as Record<string, unknown>;
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    (bodyObj.profile === undefined ||
+      (typeof bodyObj.profile === 'object' && bodyObj.profile !== null))
+  );
+}
+
+function isUpdateBookingStatusRequestBody(body: unknown): body is UpdateBookingStatusRequestBody {
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    typeof (body as Record<string, unknown>).status === 'string' &&
+    ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(
+      (body as Record<string, unknown>).status as string
+    )
+  );
+}
+
+function isValidUserRole(role: string): role is UserRole {
+  return ['CUSTOMER', 'VALET', 'ADMIN'].includes(role);
+}
+
+function isValidBookingStatus(status: string): status is BookingStatus {
+  return ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(status);
+}
+
+function isCreateLocationRequestBody(body: unknown): body is ICreateLocationRequest {
+  const bodyObj = body as Record<string, unknown>;
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    typeof bodyObj.name === 'string' &&
+    typeof bodyObj.address === 'string' &&
+    typeof bodyObj.coordinates === 'object' &&
+    bodyObj.coordinates !== null &&
+    typeof (bodyObj.coordinates as Record<string, unknown>).latitude === 'number' &&
+    typeof (bodyObj.coordinates as Record<string, unknown>).longitude === 'number'
+  );
+}
+
+function isUpdateLocationRequestBody(body: unknown): body is IUpdateLocationRequest {
+  const bodyObj = body as Record<string, unknown>;
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    (bodyObj.name === undefined || typeof bodyObj.name === 'string') &&
+    (bodyObj.address === undefined || typeof bodyObj.address === 'string') &&
+    (bodyObj.coordinates === undefined ||
+      (typeof bodyObj.coordinates === 'object' &&
+        bodyObj.coordinates !== null &&
+        typeof (bodyObj.coordinates as Record<string, unknown>).latitude === 'number' &&
+        typeof (bodyObj.coordinates as Record<string, unknown>).longitude === 'number'))
+  );
+}
+
+function isCreateScheduleRequestBody(body: unknown): body is ICreateScheduleRequest {
+  const bodyObj = body as Record<string, unknown>;
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    typeof bodyObj.locationId === 'string' &&
+    typeof bodyObj.dayOfWeek === 'number' &&
+    bodyObj.dayOfWeek >= 0 &&
+    bodyObj.dayOfWeek <= 6 &&
+    typeof bodyObj.startTime === 'string' &&
+    typeof bodyObj.endTime === 'string'
+  );
+}
+
+function isUpdateScheduleRequestBody(body: unknown): body is IUpdateScheduleRequest {
+  const bodyObj = body as Record<string, unknown>;
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    (bodyObj.dayOfWeek === undefined ||
+      (typeof bodyObj.dayOfWeek === 'number' && bodyObj.dayOfWeek >= 0 && bodyObj.dayOfWeek <= 6)) &&
+    (bodyObj.startTime === undefined || typeof bodyObj.startTime === 'string') &&
+    (bodyObj.endTime === undefined || typeof bodyObj.endTime === 'string') &&
+    (bodyObj.isActive === undefined || typeof bodyObj.isActive === 'boolean')
+  );
+}
 
 // User Management
 export async function getAllUsers(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -33,9 +175,8 @@ export async function getAllUsers(req: AuthenticatedRequest, res: Response): Pro
 export async function updateUserRole(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const { id } = req.params;
-    const { role } = req.body;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'User ID is required'
@@ -43,7 +184,7 @@ export async function updateUserRole(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    if (!['CUSTOMER', 'VALET', 'ADMIN'].includes(role)) {
+    if (!isUpdateUserRoleRequestBody(req.body)) {
       res.status(400).json({
         success: false,
         message: 'Invalid role'
@@ -51,7 +192,8 @@ export async function updateUserRole(req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    const user = await AdminService.updateUserRole(id, role as UserRole);
+    const { role } = req.body;
+    const user = await AdminService.updateUserRole(id, role);
 
     res.status(200).json({
       success: true,
@@ -77,7 +219,7 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response): Prom
     const { id } = req.params;
     const currentUserId = req.user?.userId;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'User ID is required'
@@ -140,9 +282,17 @@ export async function getAllValets(req: AuthenticatedRequest, res: Response): Pr
 
 export async function createValet(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
+    if (!isCreateValetRequestBody(req.body)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid valet data'
+      });
+      return;
+    }
+
     const valetData = {
       ...req.body,
-      role: 'VALET' as UserRole
+      role: 'VALET' as const
     };
 
     const valet = await AdminService.createValet(valetData);
@@ -170,10 +320,18 @@ export async function updateValet(req: AuthenticatedRequest, res: Response): Pro
   try {
     const { id } = req.params;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Valet ID is required'
+      });
+      return;
+    }
+
+    if (!isUpdateValetRequestBody(req.body)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid valet update data'
       });
       return;
     }
@@ -203,7 +361,7 @@ export async function deleteValet(req: AuthenticatedRequest, res: Response): Pro
   try {
     const { id } = req.params;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Valet ID is required'
@@ -235,6 +393,14 @@ export async function deleteValet(req: AuthenticatedRequest, res: Response): Pro
 // Location Management
 export async function createLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
+    if (!isCreateLocationRequestBody(req.body)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid location data'
+      });
+      return;
+    }
+
     const location = await AdminService.createLocation(req.body);
 
     res.status(201).json({
@@ -260,10 +426,18 @@ export async function updateLocation(req: AuthenticatedRequest, res: Response): 
   try {
     const { id } = req.params;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Location ID is required'
+      });
+      return;
+    }
+
+    if (!isUpdateLocationRequestBody(req.body)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid location update data'
       });
       return;
     }
@@ -293,7 +467,7 @@ export async function deleteLocation(req: AuthenticatedRequest, res: Response): 
   try {
     const { id } = req.params;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Location ID is required'
@@ -348,6 +522,14 @@ export async function getAllSchedules(req: AuthenticatedRequest, res: Response):
 
 export async function createSchedule(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
+    if (!isCreateScheduleRequestBody(req.body)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid schedule data'
+      });
+      return;
+    }
+
     const schedule = await AdminService.createSchedule(req.body);
 
     res.status(201).json({
@@ -373,10 +555,18 @@ export async function updateSchedule(req: AuthenticatedRequest, res: Response): 
   try {
     const { id } = req.params;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Schedule ID is required'
+      });
+      return;
+    }
+
+    if (!isUpdateScheduleRequestBody(req.body)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid schedule update data'
       });
       return;
     }
@@ -406,7 +596,7 @@ export async function deleteSchedule(req: AuthenticatedRequest, res: Response): 
   try {
     const { id } = req.params;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Schedule ID is required'
@@ -437,8 +627,39 @@ export async function deleteSchedule(req: AuthenticatedRequest, res: Response): 
 
 export async function createBulkSchedules(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const { locationId, schedules } = req.body;
-    const result = await AdminService.createBulkSchedules(locationId, schedules);
+    const bodyObj = req.body as Record<string, unknown>;
+
+    if (
+      typeof bodyObj.locationId !== 'string' ||
+      !Array.isArray(bodyObj.schedules) ||
+      bodyObj.schedules.length === 0
+    ) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid bulk schedule data'
+      });
+      return;
+    }
+
+    // Validate each schedule in the array
+    const schedules = bodyObj.schedules;
+    for (const schedule of schedules) {
+      if (!isCreateScheduleRequestBody({ ...schedule, locationId: bodyObj.locationId })) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid schedule data in bulk request'
+        });
+        return;
+      }
+    }
+
+    const { locationId } = bodyObj;
+    const validatedSchedules = schedules.map(schedule => ({
+      ...schedule,
+      locationId
+    })) as ICreateScheduleRequest[];
+
+    const result = await AdminService.createBulkSchedules(locationId, validatedSchedules);
 
     if (result.failed.length > 0) {
       res.status(207).json({
@@ -499,9 +720,8 @@ export async function getAllBookings(req: AuthenticatedRequest, res: Response): 
 export async function updateBookingStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const { id } = req.params;
-    const { status } = req.body;
 
-    if (!id) {
+    if (id === undefined || id === null || id.trim().length === 0) {
       res.status(400).json({
         success: false,
         message: 'Booking ID is required'
@@ -509,6 +729,15 @@ export async function updateBookingStatus(req: AuthenticatedRequest, res: Respon
       return;
     }
 
+    if (!isUpdateBookingStatusRequestBody(req.body)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid booking status'
+      });
+      return;
+    }
+
+    const { status } = req.body;
     const booking = await AdminService.updateBookingStatus(id, status);
 
     res.status(200).json({
