@@ -28,6 +28,13 @@ interface IUserWithStatistics extends IUserDocument {
   };
 }
 
+interface IBookingAggregationResult {
+  _id: null;
+  totalBookings: number;
+  completedBookings: number;
+  totalRevenue: number;
+}
+
 interface IBookingFilters {
   status?: BookingStatus;
   startDate?: string;
@@ -58,8 +65,8 @@ class AdminService {
       itemsPerPage: number;
     };
   }> {
-    const page = options.page || 1;
-    const limit = options.limit || 10;
+    const page = (typeof options.page === 'number' && options.page > 0) ? options.page : 1;
+    const limit = (typeof options.limit === 'number' && options.limit > 0) ? options.limit : 10;
     const skip = (page - 1) * limit;
 
     const [users, totalItems] = await Promise.all([
@@ -146,15 +153,25 @@ class AdminService {
           }
         ]);
 
-        const stats = bookingStats[0] || {
+        const stats: IBookingAggregationResult = (bookingStats[0] as IBookingAggregationResult) ?? {
+          _id: null,
           totalBookings: 0,
           completedBookings: 0,
           totalRevenue: 0
         };
 
         return {
-          ...valet.toObject(),
-          statistics: stats
+          _id: String(valet._id),
+          email: valet.email,
+          role: valet.role,
+          profile: valet.profile,
+          createdAt: valet.createdAt as Date,
+          updatedAt: valet.updatedAt as Date,
+          statistics: {
+            totalBookings: stats.totalBookings,
+            completedBookings: stats.completedBookings,
+            totalRevenue: stats.totalRevenue
+          }
         } as IUserWithStatistics;
       })
     );
@@ -347,26 +364,36 @@ class AdminService {
       query.status = filters.status;
     }
 
-    if (filters.startDate || filters.endDate) {
+    if (typeof filters.startDate === 'string' || typeof filters.endDate === 'string') {
       const dateRange: IDateRangeQuery = {};
-      if (filters.startDate) {
+      if (typeof filters.startDate === 'string') {
         // Parse date string as local time to avoid timezone issues
         const dateParts = filters.startDate.split('-').map(Number);
-        if (dateParts.length === 3 && dateParts[0] && dateParts[1] && dateParts[2]) {
-          const year = dateParts[0];
-          const month = dateParts[1];
-          const day = dateParts[2];
+        const isValidDateParts = dateParts.length === 3 &&
+          typeof dateParts[0] === 'number' &&
+          typeof dateParts[1] === 'number' &&
+          typeof dateParts[2] === 'number';
+
+        if (isValidDateParts) {
+          const year = dateParts[0] as number;
+          const month = dateParts[1] as number;
+          const day = dateParts[2] as number;
           const startDate = new Date(year, month - 1, day); // month is 0-indexed
           dateRange.$gte = startDate;
         }
       }
-      if (filters.endDate) {
+      if (typeof filters.endDate === 'string') {
         // Parse date string as local time and set to end of day
         const dateParts = filters.endDate.split('-').map(Number);
-        if (dateParts.length === 3 && dateParts[0] && dateParts[1] && dateParts[2]) {
-          const year = dateParts[0];
-          const month = dateParts[1];
-          const day = dateParts[2];
+        const isValidDateParts = dateParts.length === 3 &&
+          typeof dateParts[0] === 'number' &&
+          typeof dateParts[1] === 'number' &&
+          typeof dateParts[2] === 'number';
+
+        if (isValidDateParts) {
+          const year = dateParts[0] as number;
+          const month = dateParts[1] as number;
+          const day = dateParts[2] as number;
           const endDate = new Date(year, month - 1, day); // month is 0-indexed
           endDate.setHours(23, 59, 59, 999);
           dateRange.$lte = endDate;
@@ -429,11 +456,11 @@ class AdminService {
       Booking.aggregate([
         { $match: { status: 'COMPLETED' } },
         { $group: { _id: null, totalRevenue: { $sum: '$price' } } }
-      ]),
+      ]) as unknown as Array<{ _id: null; totalRevenue: number }>,
       Location.countDocuments({ isActive: true })
     ]);
 
-    const totalRevenue = revenueData[0]?.totalRevenue || 0;
+    const totalRevenue = revenueData[0]?.totalRevenue ?? 0;
 
     return {
       totalUsers,
@@ -450,26 +477,36 @@ class AdminService {
   }> {
     const matchStage: IRevenueMatchStage = { status: 'COMPLETED' };
 
-    if (filters.startDate || filters.endDate) {
+    if (typeof filters.startDate === 'string' || typeof filters.endDate === 'string') {
       const dateRange: IDateRangeQuery = {};
-      if (filters.startDate) {
+      if (typeof filters.startDate === 'string') {
         // Parse date string as local time to avoid timezone issues
         const dateParts = filters.startDate.split('-').map(Number);
-        if (dateParts.length === 3 && dateParts[0] && dateParts[1] && dateParts[2]) {
-          const year = dateParts[0];
-          const month = dateParts[1];
-          const day = dateParts[2];
+        const isValidDateParts = dateParts.length === 3 &&
+          typeof dateParts[0] === 'number' &&
+          typeof dateParts[1] === 'number' &&
+          typeof dateParts[2] === 'number';
+
+        if (isValidDateParts) {
+          const year = dateParts[0] as number;
+          const month = dateParts[1] as number;
+          const day = dateParts[2] as number;
           const startDate = new Date(year, month - 1, day); // month is 0-indexed
           dateRange.$gte = startDate;
         }
       }
-      if (filters.endDate) {
+      if (typeof filters.endDate === 'string') {
         // Parse date string as local time and set to end of day
         const dateParts = filters.endDate.split('-').map(Number);
-        if (dateParts.length === 3 && dateParts[0] && dateParts[1] && dateParts[2]) {
-          const year = dateParts[0];
-          const month = dateParts[1];
-          const day = dateParts[2];
+        const isValidDateParts = dateParts.length === 3 &&
+          typeof dateParts[0] === 'number' &&
+          typeof dateParts[1] === 'number' &&
+          typeof dateParts[2] === 'number';
+
+        if (isValidDateParts) {
+          const year = dateParts[0] as number;
+          const month = dateParts[1] as number;
+          const day = dateParts[2] as number;
           const endDate = new Date(year, month - 1, day); // month is 0-indexed
           endDate.setHours(23, 59, 59, 999);
           dateRange.$lte = endDate;
@@ -489,7 +526,12 @@ class AdminService {
             averageBookingValue: { $avg: '$price' }
           }
         }
-      ]),
+      ]) as unknown as Array<{
+        _id: null;
+        totalRevenue: number;
+        totalBookings: number;
+        averageBookingValue: number;
+      }>,
       Booking.aggregate([
         { $match: matchStage },
         {
@@ -514,10 +556,11 @@ class AdminService {
           }
         },
         { $sort: { '_id.year': 1, '_id.month': 1 } }
-      ])
+      ]) as unknown as Array<{ month: string; revenue: number }>
     ]);
 
-    const stats = revenueData[0] || {
+    const stats = revenueData[0] ?? {
+      _id: null,
       totalRevenue: 0,
       totalBookings: 0,
       averageBookingValue: 0
@@ -552,7 +595,7 @@ class AdminService {
             _id: 0
           }
         }
-      ]),
+      ]) as unknown as Array<{ status: string; count: number }>,
       Booking.aggregate([
         {
           $lookup: {
@@ -576,7 +619,7 @@ class AdminService {
             _id: 0
           }
         }
-      ]),
+      ]) as unknown as Array<{ location: string; count: number }>,
       Booking.aggregate([
         {
           $group: {
@@ -597,7 +640,7 @@ class AdminService {
           }
         },
         { $sort: { date: 1 } }
-      ])
+      ]) as unknown as Array<{ date: string; count: number }>
     ]);
 
     return {

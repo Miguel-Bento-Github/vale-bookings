@@ -73,7 +73,7 @@ UserSchema.pre('save', async function (next): Promise<void> {
 
 // Instance method to compare password
 UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
-  return compare(candidatePassword, String(this.password));
+  return await compare(candidatePassword, String(this.password));
 };
 
 // Static method to find user by email

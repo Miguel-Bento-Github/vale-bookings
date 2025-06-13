@@ -131,7 +131,7 @@ ScheduleSchema.statics.getWeeklySchedule = function (locationId: string): Promis
 
 // Instance method to check if location is open at specific time
 ScheduleSchema.methods.isOpenAt = function (timeString: string): boolean {
-  if (!this.isActive) return false;
+  if (this.isActive !== true) return false;
 
   const timeParts = timeString.split(':');
   if (timeParts.length !== 2) return false;
@@ -180,8 +180,22 @@ ScheduleSchema.methods.getOperatingHours = function (): number {
 
 // Static method to get day name from day of week number
 ScheduleSchema.statics.getDayName = function (dayOfWeek: number): string {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[dayOfWeek] ?? 'Invalid Day';
+  // Validate dayOfWeek is within bounds
+  if (typeof dayOfWeek !== 'number' || dayOfWeek < 0 || dayOfWeek > 6) {
+    return 'Invalid Day';
+  }
+
+  // Use switch statement to avoid object injection warning
+  switch (dayOfWeek) {
+  case 0: return 'Sunday';
+  case 1: return 'Monday';
+  case 2: return 'Tuesday';
+  case 3: return 'Wednesday';
+  case 4: return 'Thursday';
+  case 5: return 'Friday';
+  case 6: return 'Saturday';
+  default: return 'Invalid Day';
+  }
 };
 
 export default mongoose.model<IScheduleDocument, IScheduleModel>('Schedule', ScheduleSchema); 

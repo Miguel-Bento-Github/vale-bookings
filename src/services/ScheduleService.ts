@@ -133,7 +133,7 @@ export async function updateLocationSchedules(
       );
 
       if (existingSchedule) {
-        const updated = await updateSchedule(existingSchedule._id.toString(), scheduleData);
+        const updated = await updateSchedule(String(existingSchedule._id), scheduleData);
         if (updated) results.push(updated);
       } else {
         const newSchedule = await createSchedule({

@@ -168,7 +168,7 @@ export async function getLocationsWithDistance(
   const locations = await findNearby(userLatitude, userLongitude, radiusInKm);
 
   // Calculate distance for each location and sort by distance
-  const locationsWithDistance = locations.map(location => {
+  const locationsWithDistance: ILocationWithDistance[] = locations.map(location => {
     const distance = calculateDistance(
       userLatitude,
       userLongitude,
@@ -176,10 +176,18 @@ export async function getLocationsWithDistance(
       location.coordinates.longitude
     );
 
-    return {
-      ...location.toObject(),
+    // Create a properly typed location with distance
+    const locationWithDistance: ILocationWithDistance = {
+      name: location.name,
+      address: location.address,
+      coordinates: location.coordinates,
+      isActive: location.isActive,
+      createdAt: location.createdAt,
+      updatedAt: location.updatedAt,
       distance
     };
+
+    return locationWithDistance;
   });
 
   // Sort by distance (ascending)

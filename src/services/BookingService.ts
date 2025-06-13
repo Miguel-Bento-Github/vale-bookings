@@ -57,8 +57,8 @@ export async function updateBooking(
 
   // If updating time, check for overlaps
   if (updateData.startTime !== undefined || updateData.endTime !== undefined) {
-    const startTime = updateData.startTime ? new Date(updateData.startTime) : booking.startTime;
-    const endTime = updateData.endTime ? new Date(updateData.endTime) : booking.endTime;
+    const startTime = updateData.startTime !== undefined ? new Date(updateData.startTime) : booking.startTime;
+    const endTime = updateData.endTime !== undefined ? new Date(updateData.endTime) : booking.endTime;
 
     const hasOverlap = await checkOverlappingBookings(
       booking.locationId.toString(),
