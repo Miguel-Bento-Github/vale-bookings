@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import { sign, verify, SignOptions } from 'jsonwebtoken';
 
 import {
   IRegisterRequest,
@@ -57,16 +57,16 @@ export function generateTokens(user: IUserDocument): IAuthTokens {
     role: user.role
   };
 
-  const accessToken = jwt.sign(
+  const accessToken = sign(
     payload, 
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+    { expiresIn: JWT_EXPIRES_IN } as SignOptions
   );
 
-  const refreshToken = jwt.sign(
+  const refreshToken = sign(
     payload, 
     JWT_REFRESH_SECRET,
-    { expiresIn: JWT_REFRESH_EXPIRES_IN } as jwt.SignOptions
+    { expiresIn: JWT_REFRESH_EXPIRES_IN } as SignOptions
   );
 
   return { accessToken, refreshToken };
@@ -74,7 +74,7 @@ export function generateTokens(user: IUserDocument): IAuthTokens {
 
 export function verifyToken(token: string): IJWTPayload {
   try {
-    return jwt.verify(token, JWT_SECRET) as IJWTPayload;
+    return verify(token, JWT_SECRET) as IJWTPayload;
   } catch (error) {
     throw new AppError('Invalid token', 401);
   }
@@ -82,7 +82,7 @@ export function verifyToken(token: string): IJWTPayload {
 
 export function verifyRefreshToken(token: string): IJWTPayload {
   try {
-    return jwt.verify(token, JWT_REFRESH_SECRET) as IJWTPayload;
+    return verify(token, JWT_REFRESH_SECRET) as IJWTPayload;
   } catch (error) {
     throw new AppError('Invalid refresh token', 401);
   }
