@@ -1,6 +1,23 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Model } from 'mongoose';
 
 import { IScheduleDocument } from '../types';
+
+interface IScheduleModel extends Model<IScheduleDocument> {
+  findByLocationId(
+    locationId: string,
+    activeOnly?: boolean
+  ): Promise<IScheduleDocument[]>;
+
+  findByLocationAndDay(
+    locationId: string,
+    dayOfWeek: number,
+    activeOnly?: boolean
+  ): Promise<IScheduleDocument | null>;
+
+  getWeeklySchedule(locationId: string): Promise<IScheduleDocument[]>;
+
+  getDayName(dayOfWeek: number): string;
+}
 
 const ScheduleSchema: Schema = new Schema(
   {
@@ -79,7 +96,8 @@ ScheduleSchema.statics.findByLocationId = function (
     query.isActive = true;
   }
 
-  return this.find(query)
+  const ScheduleModel = mongoose.model<IScheduleDocument>('Schedule');
+  return ScheduleModel.find(query)
     .populate('locationId', 'name address')
     .sort({ dayOfWeek: 1, startTime: 1 });
 };
@@ -96,12 +114,14 @@ ScheduleSchema.statics.findByLocationAndDay = function (
     query.isActive = true;
   }
 
-  return this.findOne(query).populate('locationId', 'name address');
+  const ScheduleModel = mongoose.model<IScheduleDocument>('Schedule');
+  return ScheduleModel.findOne(query).populate('locationId', 'name address');
 };
 
 // Static method to get all schedules for the week
 ScheduleSchema.statics.getWeeklySchedule = function (locationId: string): Promise<IScheduleDocument[]> {
-  return this.find({
+  const ScheduleModel = mongoose.model<IScheduleDocument>('Schedule');
+  return ScheduleModel.find({
     locationId,
     isActive: true
   })
@@ -164,4 +184,4 @@ ScheduleSchema.statics.getDayName = function (dayOfWeek: number): string {
   return days[dayOfWeek] ?? 'Invalid Day';
 };
 
-export default mongoose.model<IScheduleDocument>('Schedule', ScheduleSchema); 
+export default mongoose.model<IScheduleDocument, IScheduleModel>('Schedule', ScheduleSchema); 

@@ -1,6 +1,27 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Model } from 'mongoose';
 
 import { IBookingDocument } from '../types';
+
+interface IBookingModel extends Model<IBookingDocument> {
+  findOverlapping(
+    locationId: string,
+    startTime: Date,
+    endTime: Date,
+    excludeBookingId?: string
+  ): Promise<IBookingDocument[]>;
+
+  findByUserId(
+    userId: string,
+    page?: number,
+    limit?: number
+  ): Promise<IBookingDocument[]>;
+
+  findByLocationId(
+    locationId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<IBookingDocument[]>;
+}
 
 const BookingSchema: Schema = new Schema(
   {
@@ -108,7 +129,9 @@ BookingSchema.statics.findOverlapping = function (
     query._id = { $ne: excludeBookingId };
   }
 
-  return this.find(query);
+  // Use the model directly to avoid 'this' typing issues
+  const BookingModel = mongoose.model<IBookingDocument>('Booking');
+  return BookingModel.find(query);
 };
 
 // Static method to get user bookings with pagination
@@ -118,7 +141,8 @@ BookingSchema.statics.findByUserId = function (
   limit: number = 10
 ): Promise<IBookingDocument[]> {
   const skip = (page - 1) * limit;
-  return this.find({ userId })
+  const BookingModel = mongoose.model<IBookingDocument>('Booking');
+  return BookingModel.find({ userId })
     .populate('locationId', 'name address')
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -134,12 +158,14 @@ BookingSchema.statics.findByLocationId = function (
   const query: mongoose.FilterQuery<IBookingDocument> = { locationId };
 
   if (startDate instanceof Date || endDate instanceof Date) {
-    query.startTime = {};
-    if (startDate instanceof Date) query.startTime.$gte = startDate;
-    if (endDate instanceof Date) query.startTime.$lte = endDate;
+    const timeQuery: Record<string, Date> = {};
+    if (startDate instanceof Date) timeQuery.$gte = startDate;
+    if (endDate instanceof Date) timeQuery.$lte = endDate;
+    query.startTime = timeQuery;
   }
 
-  return this.find(query)
+  const BookingModel = mongoose.model<IBookingDocument>('Booking');
+  return BookingModel.find(query)
     .populate('userId', 'profile.name email')
     .sort({ startTime: 1 });
 };
@@ -153,4 +179,4 @@ BookingSchema.methods.getDurationHours = function (): number {
   return diffMs / (1000 * 60 * 60);
 };
 
-export default mongoose.model<IBookingDocument>('Booking', BookingSchema); 
+export default mongoose.model<IBookingDocument, IBookingModel>('Booking', BookingSchema); 
