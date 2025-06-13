@@ -5,9 +5,17 @@ import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
-router.post('/register', register);
-router.post('/login', login);
-router.post('/refresh', refreshToken);
-router.get('/me', authenticate, me);
+router.post('/register', (req, res, next) => {
+    register(req, res).catch(next);
+});
+router.post('/login', (req, res, next) => {
+    login(req, res).catch(next);
+});
+router.post('/refresh', (req, res, next) => {
+    refreshToken(req, res).catch(next);
+});
+router.get('/me', authenticate, (req, res, next) => {
+    me(req, res).catch(next);
+});
 
 export default router; 
