@@ -316,7 +316,7 @@ describe('Auth Middleware', () => {
   });
 
   describe('combined authentication and authorization flow', () => {
-    it('should work correctly when chained together', async () => {
+    it('should work correctly when chained together', () => {
       const mockPayload = {
         userId: 'user123',
         email: 'admin@example.com',
@@ -432,7 +432,7 @@ describe('Auth Middleware', () => {
       mockRequest.user = {
         userId: 'user123',
         email: 'test@example.com',
-        role: undefined as any
+        role: undefined as unknown as UserRole
       };
 
       const authorizeMiddleware = authorize(['ADMIN']);
@@ -447,7 +447,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should handle null user object', () => {
-      mockRequest.user = null as any;
+      mockRequest.user = undefined;
 
       const authorizeMiddleware = authorize(['ADMIN']);
       authorizeMiddleware(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);

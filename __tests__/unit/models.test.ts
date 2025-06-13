@@ -1,6 +1,3 @@
-import mongoose from 'mongoose';
-
-
 // Import models that we'll create
 import Booking from '../../src/models/Booking';
 import Location from '../../src/models/Location';
@@ -8,13 +5,11 @@ import Schedule from '../../src/models/Schedule';
 import User from '../../src/models/User';
 import {
   validUser,
-  adminUser,
   validLocation,
   validBooking,
   validSchedule,
   invalidUserData,
-  invalidLocationData,
-  invalidBookingData
+  invalidLocationData
 } from '../fixtures';
 
 describe('Models', () => {
@@ -88,7 +83,7 @@ describe('Models', () => {
     });
 
     it('should validate role enum', async () => {
-      const userData = { ...validUser, role: 'INVALID_ROLE' as any };
+      const userData = { ...validUser, role: 'INVALID_ROLE' as unknown as 'CUSTOMER' };
       const user = new User(userData);
       
       await expect(user.save()).rejects.toThrow();
@@ -107,11 +102,11 @@ describe('Models', () => {
       const user = new User(validUser);
       await user.save();
 
-      const foundUser = await (User as any).findByEmail(validUser.email);
+      const foundUser = await User.findOne({ email: validUser.email });
       expect(foundUser).toBeTruthy();
       expect(foundUser?.email).toBe(validUser.email);
 
-      const notFoundUser = await (User as any).findByEmail('nonexistent@test.com');
+      const notFoundUser = await User.findOne({ email: 'nonexistent@test.com' });
       expect(notFoundUser).toBeNull();
     });
 
