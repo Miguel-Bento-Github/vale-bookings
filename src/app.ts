@@ -1,5 +1,5 @@
 import cors from 'cors';
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction, json } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -47,7 +47,7 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
 });
 
 // JSON parsing with error handling
-app.use(express.json({
+app.use(json({
   limit: '10kb', // Limit payload size
   verify: (req: Request, res: Response, buf: Buffer, _encoding: string) => {
     try {

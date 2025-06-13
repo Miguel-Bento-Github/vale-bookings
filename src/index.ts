@@ -1,6 +1,6 @@
 import cors from 'cors';
-import dotenv from 'dotenv';
-import express, { Request, Response, NextFunction } from 'express';
+import { config } from 'dotenv';
+import express, { Request, Response, NextFunction, json, urlencoded } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
 import mongoose from 'mongoose';
@@ -10,7 +10,7 @@ import routes from './routes';
 import { AppError } from './types';
 
 
-dotenv.config();
+config();
 
 const app = express();
 const PORT = process.env.PORT ?? '3000';
@@ -48,7 +48,7 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
 });
 
 // JSON parsing with error handling
-app.use(express.json({
+app.use(json({
   limit: '10kb', // Limit payload size
   verify: (req: Request, res: Response, buf: Buffer, _encoding: string) => {
     try {
@@ -62,7 +62,7 @@ app.use(express.json({
     }
   }
 }));
-app.use(express.urlencoded({ extended: true }));
+app.use(urlencoded({ extended: true }));
 
 // Health check
 app.get('/health', (req, res) => {
