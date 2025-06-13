@@ -32,16 +32,16 @@ app.use(morgan('dev'));
 app.use((req: Request, res: Response, next: NextFunction): void => {
   // Only check POST/PUT/PATCH requests that should have JSON bodies
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-      const contentType = req.get('Content-Type');
+    const contentType = req.get('Content-Type');
 
-      // If content-type is explicitly set to something other than JSON, reject it
-      if (contentType && contentType.includes('text/plain')) {
-          res.status(400).json({
-              success: false,
-              message: 'Invalid JSON payload'
-          });
-          return;
-      }
+    // If content-type is explicitly set to something other than JSON, reject it
+    if (contentType !== undefined && contentType.includes('text/plain')) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid JSON payload'
+      });
+      return;
+    }
   }
   next();
 });
@@ -49,16 +49,16 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
 // JSON parsing with error handling
 app.use(express.json({
   limit: '10kb', // Limit payload size
-  verify: (req: Request, res: Response, buf: Buffer, encoding: string) => {
-      try {
-          JSON.parse(buf.toString());
-      } catch (e) {
-          res.status(400).json({
-              success: false,
-              message: 'Invalid JSON payload'
-          });
-          throw new Error('Invalid JSON');
-      }
+  verify: (req: Request, res: Response, buf: Buffer, _encoding: string) => {
+    try {
+      JSON.parse(buf.toString());
+    } catch (e) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid JSON payload'
+      });
+      throw new Error('Invalid JSON');
+    }
   }
 }));
 
@@ -80,18 +80,19 @@ app.get('/api/test-unknown-error', () => {
 });
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof AppError) {
-      res.status(err.statusCode).json({
-          success: false,
-          message: err.message
-      });
+    res.status(err.statusCode).json({
+      success: false,
+      message: err.message
+    });
   } else {
-      console.error(err);
-      res.status(500).json({
-          success: false,
-          message: 'Internal server error'
-      });
+    // eslint-disable-next-line no-console
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
 });
 

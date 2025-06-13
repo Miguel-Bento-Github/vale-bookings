@@ -1,18 +1,19 @@
-import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import express, { Request, Response, NextFunction } from 'express';
 import { rateLimit } from 'express-rate-limit';
-import { AppError } from './types';
+import helmet from 'helmet';
+import mongoose from 'mongoose';
+import morgan from 'morgan';
 
 import routes from './routes';
+import { AppError } from './types';
+
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT ?? '3000';
 
 // Security middleware
 app.use(helmet());
@@ -35,7 +36,7 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
     const contentType = req.get('Content-Type');
 
     // If content-type is explicitly set to something other than JSON, reject it
-    if (contentType && contentType.includes('text/plain')) {
+    if (contentType !== undefined && contentType.includes('text/plain')) {
       res.status(400).json({
         success: false,
         message: 'Invalid JSON payload'
@@ -49,7 +50,7 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
 // JSON parsing with error handling
 app.use(express.json({
   limit: '10kb', // Limit payload size
-  verify: (req: Request, res: Response, buf: Buffer, encoding: string) => {
+  verify: (req: Request, res: Response, buf: Buffer, _encoding: string) => {
     try {
       JSON.parse(buf.toString());
     } catch (e) {
@@ -72,13 +73,14 @@ app.get('/health', (req, res) => {
 app.use('/api', routes);
 
 // Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       success: false,
       message: err.message
     });
   } else {
+    // eslint-disable-next-line no-console
     console.error('Error:', err);
     res.status(500).json({
       success: false,
@@ -96,23 +98,26 @@ app.use('*', (req, res) => {
 });
 
 // Database connection and server start
-const startServer = async () => {
+const startServer = async (): Promise<void> => {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/vale_db';
+    const mongoUri = process.env.MONGODB_URI ?? 'mongodb://localhost:27017/vale_db';
     await mongoose.connect(mongoUri);
+    // eslint-disable-next-line no-console
     console.log('Connected to MongoDB');
     
     app.listen(PORT, () => {
+      // eslint-disable-next-line no-console
       console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to start server:', error);
-    process.exit(1);
+    throw error; // Throw instead of process.exit
   }
 };
 
 if (process.env.NODE_ENV !== 'test') {
-  startServer();
+  void startServer(); // Explicitly mark as ignored floating promise
 }
 
 export default app; 
