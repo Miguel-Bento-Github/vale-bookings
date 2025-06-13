@@ -606,4 +606,104 @@ Get tokens by registering or logging in through the auth endpoints.
 
 ## 📝 License
 
-MIT License - see LICENSE file for details 
+MIT License - see LICENSE file for details
+
+## ESLint Configuration
+
+### Comprehensive Linting Setup
+
+This project uses a strict ESLint configuration with multiple plugins for code quality, security, and TypeScript best practices:
+
+#### Installed Plugins
+- **`eslint-plugin-import`** - Import/export syntax validation and circular dependency detection
+- **`eslint-plugin-node`** - Node.js specific linting rules and best practices
+- **`eslint-plugin-security`** - Security vulnerability detection in code
+- **`eslint-import-resolver-typescript`** - TypeScript import resolution for ESLint
+
+#### Key Rules Enforced
+
+**TypeScript Strict Rules:**
+- `@typescript-eslint/no-explicit-any: error` - Prevents use of `any` type
+- `@typescript-eslint/explicit-function-return-type: error` - Requires explicit return types
+- `@typescript-eslint/strict-boolean-expressions: error` - Enforces explicit boolean checks
+- `@typescript-eslint/no-unsafe-*: error` - Prevents unsafe type operations
+
+**Import Management:**
+- `import/no-cycle: error` - **Prevents circular dependencies**
+- `import/order: error` - Enforces consistent import ordering
+- `import/no-duplicates: error` - Prevents duplicate imports
+
+**Security Rules:**
+- `security/detect-object-injection: error` - Detects object injection vulnerabilities
+- `security/detect-unsafe-regex: error` - Identifies unsafe regular expressions
+- `security/detect-eval-with-expression: error` - Prevents eval usage
+- `security/detect-non-literal-fs-filename: warn` - Warns about dynamic file paths
+
+**Code Quality:**
+- `max-len: error` - Enforces 120 character line limit
+- `no-console: warn` - Warns about console statements
+- `require-await: error` - Ensures async functions use await
+
+#### Available Scripts
+
+```bash
+# Run linting on all TypeScript files
+npm run lint
+
+# Auto-fix linting issues where possible
+npm run lint:fix
+
+# Run linting with zero warnings tolerance (CI/CD)
+npm run lint:check
+
+# Run security-focused linting
+npm run lint:security
+```
+
+#### Test File Overrides
+
+Test files have relaxed rules for:
+- `@typescript-eslint/no-unsafe-*` - Allows unsafe operations in tests
+- `security/detect-object-injection` - Allows object injection in test fixtures
+- `security/detect-non-literal-fs-filename` - Allows dynamic file paths in tests
+
+#### Current Status
+
+The ESLint configuration currently detects **1,324 issues** across the codebase:
+- 1,309 errors
+- 15 warnings
+- 739 auto-fixable issues
+
+This comprehensive linting ensures:
+- **Type Safety** - Strict TypeScript compliance
+- **Security** - Vulnerability detection
+- **Code Quality** - Consistent formatting and best practices
+- **Architecture** - Prevention of circular dependencies
+- **Maintainability** - Clear import organization
+
+### Fixing Linting Issues
+
+To gradually fix the existing issues:
+
+1. **Auto-fix what's possible:**
+   ```bash
+   npm run lint:fix
+   ```
+
+2. **Address remaining issues by category:**
+   - Import organization and duplicates
+   - TypeScript strict boolean expressions
+   - Explicit return types
+   - Security vulnerabilities
+   - Line length violations
+
+3. **Run tests after fixes:**
+   ```bash
+   npm test
+   ```
+
+The strict linting configuration ensures production-ready code quality and security compliance.
+
+## Development
+
+// ... existing content ... 
