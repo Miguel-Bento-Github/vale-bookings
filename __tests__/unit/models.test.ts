@@ -532,7 +532,7 @@ describe('Models', () => {
         findByLocationAndDay: (
           id: string,
           day: number
-        ) => Promise<unknown | null>
+        ) => Promise<unknown>
       }).findByLocationAndDay(locationId, validSchedule.dayOfWeek);
 
       expect(daySchedule).toBeTruthy();
