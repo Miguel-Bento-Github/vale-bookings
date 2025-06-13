@@ -513,7 +513,7 @@ export async function getLocationTimeSlots(req: Request, res: Response): Promise
     }
 
     // Validate date parameter
-    if (isNaN(Date.parse(date as string))) {
+    if (isNaN(Date.parse(date))) {
       res.status(400).json({
         success: false,
         message: 'Invalid date format'
@@ -530,7 +530,7 @@ export async function getLocationTimeSlots(req: Request, res: Response): Promise
       return;
     }
 
-    const targetDate = date ? new Date(date as string) : new Date();
+    const targetDate = date ? new Date(date) : new Date();
 
     // Generate mock time slots for the day
     const timeSlots = [];

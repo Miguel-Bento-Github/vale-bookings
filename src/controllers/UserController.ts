@@ -1,14 +1,14 @@
 import { Response } from 'express';
 
 import { findById, updateProfile as updateUserProfile, deleteUser } from '../services/UserService';
-import { AppError, AuthenticatedRequest } from '../types';
+import { AppError, AuthenticatedRequest, IUserProfile } from '../types';
 import { validatePhoneNumber } from '../utils/validation';
 
 export async function getProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const userId = req.user?.userId;
 
-    if (!userId) {
+    if (typeof userId !== 'string') {
       res.status(401).json({
         success: false,
         message: 'Unauthorized'
@@ -48,9 +48,9 @@ export async function getProfile(req: AuthenticatedRequest, res: Response): Prom
 export async function updateProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const userId = req.user?.userId;
-    const requestBody = req.body;
+    const requestBody = req.body as Record<string, unknown>;
 
-    if (!userId) {
+    if (typeof userId !== 'string') {
       res.status(401).json({
         success: false,
         message: 'Unauthorized'
@@ -59,7 +59,7 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response): P
     }
 
     // Check if user is trying to update restricted fields
-    if (requestBody.email || requestBody.role) {
+    if (typeof requestBody.email === 'string' || typeof requestBody.role === 'string') {
       res.status(400).json({
         success: false,
         message: 'Email and role updates are not allowed through this endpoint'
@@ -67,7 +67,7 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    if (!requestBody.profile) {
+    if (typeof requestBody.profile !== 'object' || requestBody.profile === null) {
       res.status(400).json({
         success: false,
         message: 'Profile data is required'
@@ -75,10 +75,18 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    const { profile } = requestBody;
+    const profile = requestBody.profile as Record<string, unknown>;
 
     // Validate profile data
-    if (profile.name && typeof profile.name !== 'string') {
+    if (typeof profile.name === 'string' && profile.name.trim().length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Name cannot be empty'
+      });
+      return;
+    }
+
+    if (typeof profile.name !== 'undefined' && typeof profile.name !== 'string') {
       res.status(400).json({
         success: false,
         message: 'Name must be a string'
@@ -86,7 +94,7 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    if (profile.phone && !validatePhoneNumber(profile.phone)) {
+    if (typeof profile.phone === 'string' && !validatePhoneNumber(profile.phone)) {
       res.status(400).json({
         success: false,
         message: 'Invalid phone number format'
@@ -94,7 +102,26 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    const updatedUser = await updateUserProfile(userId, { profile });
+    const profileUpdate: Partial<IUserProfile> = {};
+    if (typeof profile.name === 'string') {
+      profileUpdate.name = profile.name;
+    }
+    if (typeof profile.phone === 'string') {
+      profileUpdate.phone = profile.phone;
+    }
+
+    // Only update if we have valid profile data
+    if (Object.keys(profileUpdate).length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'No valid profile data provided'
+      });
+      return;
+    }
+
+    const updatedUser = await updateUserProfile(userId, {
+      profile: profileUpdate as IUserProfile
+    });
 
     if (!updatedUser) {
       res.status(401).json({
@@ -128,7 +155,7 @@ export async function deleteAccount(req: AuthenticatedRequest, res: Response): P
   try {
     const userId = req.user?.userId;
 
-    if (!userId) {
+    if (typeof userId !== 'string') {
       res.status(401).json({
         success: false,
         message: 'Unauthorized'
