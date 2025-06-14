@@ -399,7 +399,10 @@ class AdminService {
           dateRange.$lte = endDate;
         }
       }
-      query.startTime = dateRange;
+      // Only add dateRange to query if it has valid properties
+      if (dateRange.$gte || dateRange.$lte) {
+        query.startTime = dateRange;
+      }
     }
 
     const bookings = await Booking.find(query)
@@ -512,7 +515,10 @@ class AdminService {
           dateRange.$lte = endDate;
         }
       }
-      matchStage.startTime = dateRange;
+      // Only add dateRange to matchStage if it has valid properties
+      if (dateRange.$gte || dateRange.$lte) {
+        matchStage.startTime = dateRange;
+      }
     }
 
     const [revenueData, monthlyData] = await Promise.all([
