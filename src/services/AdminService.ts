@@ -400,7 +400,7 @@ class AdminService {
         }
       }
       // Only add dateRange to query if it has valid properties
-      if (dateRange.$gte || dateRange.$lte) {
+      if (dateRange.$gte ?? dateRange.$lte) {
         query.startTime = dateRange;
       }
     }
@@ -516,7 +516,7 @@ class AdminService {
         }
       }
       // Only add dateRange to matchStage if it has valid properties
-      if (dateRange.$gte || dateRange.$lte) {
+      if (dateRange.$gte ?? dateRange.$lte) {
         matchStage.startTime = dateRange;
       }
     }

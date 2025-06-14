@@ -27,7 +27,8 @@ export async function createLocation(locationData: ILocation): Promise<ILocation
       const mongoError = error as { keyPattern?: Record<string, unknown>; keyValue?: Record<string, unknown> };
       if (mongoError.keyPattern && 'name' in mongoError.keyPattern && 'address' in mongoError.keyPattern) {
         throw new AppError(
-          `A location with the name "${locationData.name}" already exists at address "${locationData.address}". Multiple establishments can exist at the same address but must have different names.`,
+          `A location with the name "${locationData.name}" already exists at address "${locationData.address}". ` +
+          'Multiple establishments can exist at the same address but must have different names.',
           409
         );
       }

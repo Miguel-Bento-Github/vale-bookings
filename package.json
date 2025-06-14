@@ -22,7 +22,8 @@
     "format": "prettier --write src/**/*.ts",
     "prepare": "husky",
     "commitlint": "commitlint --edit",
-    "commitlint:test": "echo 'feat(api): example backend commit message' | commitlint"
+    "commitlint:test": "echo 'feat(api): example backend commit message' | commitlint",
+    "create-admin": "ts-node src/scripts/createAdmin.ts"
   },
   "keywords": [
     "valet",

@@ -62,6 +62,15 @@ app.use(json({
   }
 }));
 
+// Health check endpoint
+app.get('/health', (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    service: 'valet-backend'
+  });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

@@ -470,10 +470,10 @@ describe('Services', () => {
 
     beforeEach(async () => {
       const user = await User.create(validUser);
-      userId = user._id.toString();
+      userId = String(user._id);
 
       const location = await Location.create(validLocation);
-      locationId = location._id.toString();
+      locationId = String(location._id);
     });
 
     it('should create a new booking', async () => {
@@ -762,7 +762,8 @@ describe('Services', () => {
         endTime: validBooking.endTime.toISOString()
       };
 
-      await expect(BookingService.updateBooking(booking2Id, updateData)).rejects.toThrow('Updated booking time slot is not available');
+      await expect(BookingService.updateBooking(booking2Id, updateData))
+        .rejects.toThrow('Updated booking time slot is not available');
     });
 
     it('should handle checkOverlappingBookings with exclusion ID', async () => {
@@ -801,7 +802,9 @@ describe('Services', () => {
       const updatedBooking = await BookingService.updateBooking(bookingId, updateData);
 
       expect(updatedBooking).toBeTruthy();
-      expect(new Date(updatedBooking!.startTime)).toEqual(new Date(updateData.startTime));
+      if (updatedBooking) {
+        expect(new Date(updatedBooking.startTime)).toEqual(new Date(updateData.startTime));
+      }
     });
 
     it('should handle updateBooking with only endTime update', async () => {
@@ -816,7 +819,9 @@ describe('Services', () => {
       const updatedBooking = await BookingService.updateBooking(bookingId, updateData);
 
       expect(updatedBooking).toBeTruthy();
-      expect(new Date(updatedBooking!.endTime)).toEqual(new Date(updateData.endTime));
+      if (updatedBooking) {
+        expect(new Date(updatedBooking.endTime)).toEqual(new Date(updateData.endTime));
+      }
     });
 
     it('should return null when updating status of non-existent booking', async () => {
@@ -833,13 +838,13 @@ describe('Services', () => {
         ...validUser,
         email: 'pastbooking@example.com'
       });
-      const userId = user._id.toString();
+      const userId = String(user._id);
 
       const location = await Location.create({
         ...validLocation,
         name: 'Past Booking Location'
       });
-      const locationId = location._id.toString();
+      const locationId = String(location._id);
 
       // Create a booking in the future first (to pass validation)
       const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day from now
@@ -868,7 +873,7 @@ describe('Services', () => {
         ...validUser,
         email: 'newuser@example.com'
       });
-      const newUserId = newUser._id.toString();
+      const newUserId = String(newUser._id);
 
       const upcomingBookings = await BookingService.getUpcomingBookings(newUserId);
 
@@ -880,7 +885,7 @@ describe('Services', () => {
         ...validLocation,
         name: 'Empty Location'
       });
-      const newLocationId = newLocation._id.toString();
+      const newLocationId = String(newLocation._id);
 
       const locationBookings = await BookingService.getLocationBookings(newLocationId);
 
@@ -892,7 +897,7 @@ describe('Services', () => {
         ...validUser,
         email: 'emptyuser@example.com'
       });
-      const newUserId = newUser._id.toString();
+      const newUserId = String(newUser._id);
 
       const userBookings = await BookingService.getUserBookings(newUserId);
 
@@ -925,7 +930,7 @@ describe('Services', () => {
 
     beforeEach(async () => {
       const location = await Location.create(validLocation);
-      locationId = location._id.toString();
+      locationId = String(location._id);
     });
 
     it('should create a new schedule', async () => {
