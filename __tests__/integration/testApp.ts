@@ -20,7 +20,7 @@ const createTestApp = (): express.Application => {
       const contentType = req.get('Content-Type');
 
       // If content-type is explicitly set to something other than JSON, reject it
-      if (contentType !== null && contentType !== undefined && contentType.includes('text/plain')) {
+      if (contentType?.includes('text/plain') === true) {
         res.status(400).json({
           success: false,
           message: 'Invalid JSON payload'
@@ -37,7 +37,7 @@ const createTestApp = (): express.Application => {
     verify: (req: express.Request, res: express.Response, buf: Buffer, _encoding: string) => {
       try {
         JSON.parse(buf.toString());
-      } catch (e) {
+      } catch {
         res.status(400).json({
           success: false,
           message: 'Invalid JSON payload'

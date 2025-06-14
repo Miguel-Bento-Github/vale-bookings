@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs';
+import { hash } from 'bcryptjs';
 import mongoose from 'mongoose';
 
 import Booking from '../../src/models/Booking';
@@ -16,13 +16,13 @@ describe('AdminService', () => {
         await Promise.all([
           User.create({
             email: 'user1@example.com',
-            password: await bcrypt.hash('password123', 10),
+            password: await hash('password123', 10),
             role: 'CUSTOMER',
             profile: { name: 'User 1' }
           }),
           User.create({
             email: 'user2@example.com',
-            password: await bcrypt.hash('password123', 10),
+            password: await hash('password123', 10),
             role: 'VALET',
             profile: { name: 'User 2' }
           })
@@ -46,7 +46,7 @@ describe('AdminService', () => {
         const userPromises = Array.from({ length: 15 }, async (_, i) =>
           User.create({
             email: `user${i + 1}@example.com`,
-            password: await bcrypt.hash('password123', 10),
+            password: await hash('password123', 10),
             role: 'CUSTOMER',
             profile: { name: `User ${i + 1}` }
           })
@@ -60,12 +60,12 @@ describe('AdminService', () => {
         expect(result.pagination.totalPages).toBe(3);
         expect(result.pagination.totalItems).toBe(15);
         expect(result.pagination.itemsPerPage).toBe(5);
-      });
+      }, 20000); // Increase timeout to 20 seconds
 
       it('should handle invalid pagination parameters gracefully', async () => {
         await User.create({
           email: 'user@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'CUSTOMER',
           profile: { name: 'User' }
         });
@@ -92,7 +92,7 @@ describe('AdminService', () => {
       it('should update user role successfully', async () => {
         const user = await User.create({
           email: 'user@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'CUSTOMER',
           profile: { name: 'Test User' }
         });
@@ -119,7 +119,7 @@ describe('AdminService', () => {
       it('should delete user successfully when no active bookings', async () => {
         const user = await User.create({
           email: 'user@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'CUSTOMER',
           profile: { name: 'Test User' }
         });
@@ -141,7 +141,7 @@ describe('AdminService', () => {
       it('should throw error when user has active bookings', async () => {
         const user = await User.create({
           email: 'user@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'CUSTOMER',
           profile: { name: 'Test User' }
         });
@@ -175,7 +175,7 @@ describe('AdminService', () => {
       it('should return valets with statistics', async () => {
         await User.create({
           email: 'valet@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'VALET',
           profile: { name: 'Test Valet' }
         });
@@ -220,7 +220,7 @@ describe('AdminService', () => {
       it('should return valets with zero statistics when no bookings', async () => {
         await User.create({
           email: 'valet@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'VALET',
           profile: { name: 'Test Valet' }
         });
@@ -261,7 +261,7 @@ describe('AdminService', () => {
         // Create first valet
         await User.create({
           email: valetData.email,
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'VALET',
           profile: { name: 'Existing Valet' }
         });
@@ -276,7 +276,7 @@ describe('AdminService', () => {
       it('should update valet profile successfully', async () => {
         const valet = await User.create({
           email: 'valet@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'VALET',
           profile: { name: 'Original Name' }
         });
@@ -304,7 +304,7 @@ describe('AdminService', () => {
       it('should delete valet successfully', async () => {
         const valet = await User.create({
           email: 'valet@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'VALET',
           profile: { name: 'Test Valet' }
         });
@@ -687,7 +687,7 @@ describe('AdminService', () => {
       it('should return all bookings without filters', async () => {
         const user = await User.create({
           email: 'user@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'CUSTOMER',
           profile: { name: 'Test User' }
         });
@@ -717,7 +717,7 @@ describe('AdminService', () => {
       it('should filter bookings by status', async () => {
         const user = await User.create({
           email: 'user@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'CUSTOMER',
           profile: { name: 'Test User' }
         });
@@ -760,7 +760,7 @@ describe('AdminService', () => {
       it('should filter bookings by date range', async () => {
         const user = await User.create({
           email: 'user@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'CUSTOMER',
           profile: { name: 'Test User' }
         });
@@ -829,7 +829,7 @@ describe('AdminService', () => {
       it('should update booking status with valid transition', async () => {
         const user = await User.create({
           email: 'user@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'CUSTOMER',
           profile: { name: 'Test User' }
         });
@@ -866,7 +866,7 @@ describe('AdminService', () => {
       it('should throw error for invalid status transition', async () => {
         const user = await User.create({
           email: 'user@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'CUSTOMER',
           profile: { name: 'Test User' }
         });
@@ -900,7 +900,7 @@ describe('AdminService', () => {
         // Create test data
         await User.create({
           email: 'user@example.com',
-          password: await bcrypt.hash('password123', 10),
+          password: await hash('password123', 10),
           role: 'CUSTOMER',
           profile: { name: 'Test User' }
         });

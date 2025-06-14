@@ -35,7 +35,7 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
     const contentType = req.get('Content-Type');
 
     // If content-type is explicitly set to something other than JSON, reject it
-    if (contentType !== undefined && contentType.includes('text/plain')) {
+    if (contentType?.includes('text/plain') === true) {
       res.status(400).json({
         success: false,
         message: 'Invalid JSON payload'
@@ -52,7 +52,7 @@ app.use(json({
   verify: (req: Request, res: Response, buf: Buffer, _encoding: string) => {
     try {
       JSON.parse(buf.toString());
-    } catch (e) {
+    } catch {
       res.status(400).json({
         success: false,
         message: 'Invalid JSON payload'

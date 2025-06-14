@@ -237,7 +237,7 @@ export async function me(req: AuthenticatedRequest, res: Response): Promise<void
         user: user
       }
     });
-  } catch (error) {
+  } catch {
     res.status(500).json({
       success: false,
       message: 'Internal server error'

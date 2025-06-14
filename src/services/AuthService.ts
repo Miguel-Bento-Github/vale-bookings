@@ -75,7 +75,7 @@ export function generateTokens(user: IUserDocument): IAuthTokens {
 export function verifyToken(token: string): IJWTPayload {
   try {
     return verify(token, JWT_SECRET) as IJWTPayload;
-  } catch (error) {
+  } catch {
     throw new AppError('Invalid token', 401);
   }
 }
@@ -83,7 +83,7 @@ export function verifyToken(token: string): IJWTPayload {
 export function verifyRefreshToken(token: string): IJWTPayload {
   try {
     return verify(token, JWT_REFRESH_SECRET) as IJWTPayload;
-  } catch (error) {
+  } catch {
     throw new AppError('Invalid refresh token', 401);
   }
 }
