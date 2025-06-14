@@ -697,9 +697,226 @@ describe('Services', () => {
       
       const userBookingsPage1 = await BookingService.getUserBookings(userId, 1, 2);
       const userBookingsPage2 = await BookingService.getUserBookings(userId, 2, 2);
-      
+
       expect(userBookingsPage1.length).toBeLessThanOrEqual(2);
       expect(Array.isArray(userBookingsPage2)).toBe(true);
+    });
+
+    // Additional edge case tests for improved branch coverage
+    it('should throw error when creating booking with overlapping times', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      await BookingService.createBooking(bookingData);
+
+      // Try to create another booking with same time slot
+      await expect(BookingService.createBooking(bookingData)).rejects.toThrow('Booking time slot is not available');
+    });
+
+    it('should throw error when cancelling non-existent booking', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+
+      await expect(BookingService.cancelBooking(fakeId)).rejects.toThrow('Booking not found');
+    });
+
+    it('should throw error when cancelling completed booking', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const booking = await BookingService.createBooking(bookingData);
+      const bookingId = String(booking._id);
+
+      // Mark as completed first
+      await BookingService.updateBookingStatus(bookingId, 'COMPLETED');
+
+      await expect(BookingService.cancelBooking(bookingId)).rejects.toThrow('Completed bookings cannot be cancelled');
+    });
+
+    it('should throw error when cancelling already cancelled booking', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const booking = await BookingService.createBooking(bookingData);
+      const bookingId = String(booking._id);
+
+      // Cancel first time
+      await BookingService.cancelBooking(bookingId);
+
+      // Try to cancel again
+      await expect(BookingService.cancelBooking(bookingId)).rejects.toThrow('Booking is already cancelled');
+    });
+
+    it('should handle updateBooking with time overlap error', async () => {
+      // Create first booking
+      const bookingData1 = { ...validBooking, userId, locationId };
+      await BookingService.createBooking(bookingData1);
+
+      // Create second booking with different time
+      const bookingData2 = {
+        ...validBooking,
+        userId,
+        locationId,
+        startTime: new Date(Date.now() + 3 * 60 * 60 * 1000),
+        endTime: new Date(Date.now() + 5 * 60 * 60 * 1000)
+      };
+      const booking2 = await BookingService.createBooking(bookingData2);
+      const booking2Id = String(booking2._id);
+
+      // Try to update second booking to overlap with first
+      const updateData = {
+        startTime: validBooking.startTime.toISOString(),
+        endTime: validBooking.endTime.toISOString()
+      };
+
+      await expect(BookingService.updateBooking(booking2Id, updateData)).rejects.toThrow('Updated booking time slot is not available');
+    });
+
+    it('should handle checkOverlappingBookings with exclusion ID', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const booking = await BookingService.createBooking(bookingData);
+      const bookingId = String(booking._id);
+
+      // Should return false when excluding the same booking
+      const hasOverlap = await BookingService.checkOverlappingBookings(
+        locationId,
+        validBooking.startTime,
+        validBooking.endTime,
+        bookingId
+      );
+
+      expect(hasOverlap).toBe(false);
+    });
+
+    it('should return null when finding booking with invalid ID', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+
+      const result = await BookingService.findById(fakeId);
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle updateBooking with only startTime update', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const booking = await BookingService.createBooking(bookingData);
+      const bookingId = String(booking._id);
+
+      const updateData = {
+        startTime: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString() // 6 hours later
+      };
+
+      const updatedBooking = await BookingService.updateBooking(bookingId, updateData);
+
+      expect(updatedBooking).toBeTruthy();
+      expect(new Date(updatedBooking!.startTime)).toEqual(new Date(updateData.startTime));
+    });
+
+    it('should handle updateBooking with only endTime update', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      const booking = await BookingService.createBooking(bookingData);
+      const bookingId = String(booking._id);
+
+      const updateData = {
+        endTime: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString() // 8 hours later
+      };
+
+      const updatedBooking = await BookingService.updateBooking(bookingId, updateData);
+
+      expect(updatedBooking).toBeTruthy();
+      expect(new Date(updatedBooking!.endTime)).toEqual(new Date(updateData.endTime));
+    });
+
+    it('should return null when updating status of non-existent booking', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+
+      const result = await BookingService.updateBookingStatus(fakeId, 'CONFIRMED');
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle getUpcomingBookings with no upcoming bookings', async () => {
+      // Create a booking in the past (not upcoming)
+      const user = await User.create({
+        ...validUser,
+        email: 'pastbooking@example.com'
+      });
+      const userId = user._id.toString();
+
+      const location = await Location.create({
+        ...validLocation,
+        name: 'Past Booking Location'
+      });
+      const locationId = location._id.toString();
+
+      // Create a booking in the future first (to pass validation)
+      const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day from now
+      const booking = await Booking.create({
+        ...validBooking,
+        userId,
+        locationId,
+        status: 'COMPLETED', // Mark as completed
+        startTime: futureDate,
+        endTime: new Date(futureDate.getTime() + 2 * 60 * 60 * 1000)
+      });
+
+      // Now update it to be in the past (this bypasses the validation since it's not a new booking)
+      const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // 1 day ago
+      await Booking.findByIdAndUpdate(booking._id, {
+        startTime: pastDate,
+        endTime: new Date(pastDate.getTime() + 2 * 60 * 60 * 1000)
+      });
+
+      const upcomingBookings = await BookingService.getUpcomingBookings();
+      expect(upcomingBookings.length).toBe(0);
+    });
+
+    it('should handle getUpcomingBookings for specific user with no bookings', async () => {
+      const newUser = await User.create({
+        ...validUser,
+        email: 'newuser@example.com'
+      });
+      const newUserId = newUser._id.toString();
+
+      const upcomingBookings = await BookingService.getUpcomingBookings(newUserId);
+
+      expect(upcomingBookings.length).toBe(0);
+    });
+
+    it('should handle getLocationBookings with no bookings', async () => {
+      const newLocation = await Location.create({
+        ...validLocation,
+        name: 'Empty Location'
+      });
+      const newLocationId = newLocation._id.toString();
+
+      const locationBookings = await BookingService.getLocationBookings(newLocationId);
+
+      expect(locationBookings.length).toBe(0);
+    });
+
+    it('should handle getUserBookings with no bookings', async () => {
+      const newUser = await User.create({
+        ...validUser,
+        email: 'emptyuser@example.com'
+      });
+      const newUserId = newUser._id.toString();
+
+      const userBookings = await BookingService.getUserBookings(newUserId);
+
+      expect(userBookings.length).toBe(0);
+    });
+
+    it('should handle getBookingsByStatus with no matching bookings', async () => {
+      const bookingData = { ...validBooking, userId, locationId };
+      await BookingService.createBooking(bookingData);
+
+      const inProgressBookings = await BookingService.getBookingsByStatus('IN_PROGRESS');
+
+      expect(inProgressBookings.length).toBe(0);
+    });
+
+    it('should handle getUserBookings with pagination edge cases', async () => {
+      // Create one booking
+      const bookingData = { ...validBooking, userId, locationId };
+      await BookingService.createBooking(bookingData);
+
+      // Request page 2 when only 1 booking exists
+      const emptyPage = await BookingService.getUserBookings(userId, 2, 10);
+
+      expect(emptyPage.length).toBe(0);
     });
   });
 

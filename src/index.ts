@@ -80,7 +80,6 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
       message: err.message
     });
   } else {
-    // eslint-disable-next-line no-console
     console.error('Error:', err);
     res.status(500).json({
       success: false,
