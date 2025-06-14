@@ -263,6 +263,98 @@ describe('Locations Integration Tests', () => {
         message: expect.any(String)
       });
     });
+
+    it('should prevent duplicate locations with same name and address', async () => {
+      const duplicateLocationData = {
+        name: validCreateLocationRequest.name, // Same name
+        address: validCreateLocationRequest.address, // Same address
+        coordinates: {
+          latitude: 40.7589,
+          longitude: -73.9851
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/locations')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(duplicateLocationData)
+        .expect(409);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining('already exists at address')
+      });
+      expect(response.body.message).toContain(validCreateLocationRequest.name);
+      expect(response.body.message).toContain(validCreateLocationRequest.address);
+    });
+
+    it('should allow multiple establishments at same address with different names', async () => {
+      const sameAddressDifferentName = {
+        name: 'Casino Restaurant', // Different name
+        address: validCreateLocationRequest.address, // Same address
+        coordinates: {
+          latitude: 40.7589,
+          longitude: -73.9851
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/locations')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(sameAddressDifferentName)
+        .expect(201);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Location created successfully',
+        data: {
+          name: sameAddressDifferentName.name,
+          address: sameAddressDifferentName.address,
+          coordinates: sameAddressDifferentName.coordinates,
+          isActive: true
+        }
+      });
+
+      // Verify both locations exist in database
+      const locations = await Location.find({ address: validCreateLocationRequest.address });
+      expect(locations).toHaveLength(2);
+      expect(locations.map(l => l.name)).toContain(validCreateLocationRequest.name);
+      expect(locations.map(l => l.name)).toContain(sameAddressDifferentName.name);
+    });
+
+    it('should allow same name at different addresses', async () => {
+      const sameNameDifferentAddress = {
+        name: validCreateLocationRequest.name, // Same name
+        address: '456 Different St, Other City, OC 67890', // Different address
+        coordinates: {
+          latitude: 41.8781,
+          longitude: -87.6298
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/locations')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(sameNameDifferentAddress)
+        .expect(201);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: 'Location created successfully',
+        data: {
+          name: sameNameDifferentAddress.name,
+          address: sameNameDifferentAddress.address,
+          coordinates: sameNameDifferentAddress.coordinates,
+          isActive: true
+        }
+      });
+
+      // Verify both locations exist in database
+      const locations = await Location.find({ name: validCreateLocationRequest.name });
+      expect(locations).toHaveLength(2);
+      expect(locations.map(l => l.address)).toContain(validCreateLocationRequest.address);
+      expect(locations.map(l => l.address)).toContain(sameNameDifferentAddress.address);
+    });
   });
 
   describe('PUT /api/locations/:id', () => {

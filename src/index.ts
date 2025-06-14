@@ -103,6 +103,11 @@ const startServer = async (): Promise<void> => {
     await mongoose.connect(mongoUri);
     console.info('Connected to MongoDB');
     
+    // Ensure all indexes are created
+    const { default: Location } = await import('./models/Location');
+    await Location.createIndexes();
+    console.info('Database indexes created');
+
     app.listen(PORT, () => {
       console.info(`Server running on port ${PORT}`);
     });

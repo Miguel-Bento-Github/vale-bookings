@@ -60,6 +60,18 @@ LocationSchema.index({
   address: 'text'
 });
 
+// Create compound unique index to prevent duplicate locations with same name AND address
+// This allows multiple establishments at the same address with different names
+LocationSchema.index({
+  name: 1,
+  address: 1
+}, {
+  unique: true,
+  name: 'unique_name_address'
+});
+
+
+
 // Static method to find locations within radius
 LocationSchema.statics.findNearby = function (
   latitude: number,

@@ -23,6 +23,14 @@ export async function createLocation(locationData: ILocation): Promise<ILocation
     return await location.save();
   } catch (error: unknown) {
     if (error instanceof Error && 'code' in error && error.code === 11000) {
+      // Check if it's the name+address duplicate constraint
+      const mongoError = error as { keyPattern?: Record<string, unknown>; keyValue?: Record<string, unknown> };
+      if (mongoError.keyPattern && 'name' in mongoError.keyPattern && 'address' in mongoError.keyPattern) {
+        throw new AppError(
+          `A location with the name "${locationData.name}" already exists at address "${locationData.address}". Multiple establishments can exist at the same address but must have different names.`,
+          409
+        );
+      }
       throw new AppError('Location already exists', 409);
     }
     throw error;
