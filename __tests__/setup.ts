@@ -32,4 +32,10 @@ global.console = {
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn()
-}; 
+};
+
+// Set NODE_ENV to test for better test isolation
+process.env.NODE_ENV = 'test';
+
+// Disable HTTP request logging in tests
+process.env.DISABLE_LOGGING = 'true'; 

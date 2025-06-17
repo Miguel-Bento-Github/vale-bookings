@@ -19,11 +19,18 @@ module.exports = {
   },
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
   testTimeout: 10000,
-  verbose: true,
+  verbose: false, // Reduce verbose output for CI/non-interactive
   // Optimize parallel execution
   maxWorkers: '75%', // Use 75% of available CPU cores
   // Cache to speed up subsequent runs
   cache: true,
   // Run tests in parallel within files
-  testRunner: 'jest-circus/runner'
+  testRunner: 'jest-circus/runner',
+  // Non-interactive configuration
+  watchman: false, // Disable watchman for non-interactive runs
+  silent: false, // Keep test output but reduce noise
+  // Coverage configuration for non-interactive
+  coverageReporters: ['text', 'json', 'html'],
+  // Disable watch mode by default
+  watchAll: false
 }; 

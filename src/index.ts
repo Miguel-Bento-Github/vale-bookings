@@ -26,8 +26,10 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Logging
-app.use(morgan('combined'));
+// Logging - disable during tests
+if (process.env.NODE_ENV !== 'test' && process.env.DISABLE_LOGGING !== 'true') {
+  app.use(morgan('combined'));
+}
 
 // Content type validation middleware
 app.use((req: Request, res: Response, next: NextFunction): void => {
