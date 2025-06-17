@@ -38,4 +38,9 @@ global.console = {
 process.env.NODE_ENV = 'test';
 
 // Disable HTTP request logging in tests
-process.env.DISABLE_LOGGING = 'true'; 
+process.env.DISABLE_LOGGING = 'true';
+
+// Mock Morgan to prevent HTTP logs in tests
+jest.mock('morgan', () => {
+  return () => (req: any, res: any, next: any) => next();
+}); 
