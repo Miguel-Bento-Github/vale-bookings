@@ -26,8 +26,11 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Logging - disable during tests
-if (process.env.NODE_ENV !== 'test' && process.env.DISABLE_LOGGING !== 'true') {
+// Logging - disable during tests and when explicitly disabled
+if (process.env.NODE_ENV !== 'test' &&
+  process.env.DISABLE_LOGGING !== 'true' &&
+  !process.argv.includes('--coverage') &&
+  !process.argv.includes('jest')) {
   app.use(morgan('combined'));
 }
 
