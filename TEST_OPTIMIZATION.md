@@ -28,7 +28,7 @@ The test suite has been optimized to reduce execution time from ~5 minutes to ~2
 # Full test suite (for commits)
 npm test
 
-# Unit tests only (fastest feedback - 67s)
+# Unit tests only (fastest feedback - 2.7s!)
 npm run test:unit
 
 # Integration tests only (for API changes)
@@ -71,9 +71,9 @@ const adminData = await createTestAdmin(app);
 
 | Test Type | Before | After | Improvement |
 |-----------|--------|-------|-------------|
-| Unit Tests | ~2min | ~45s | ~60% faster |
-| Integration Tests | ~3min | ~90s | ~50% faster |
-| **Total** | **~5min** | **~2-3min** | **~50% faster** |
+| Unit Tests | **67s** | **2.7s** | **96% faster** 🚀 |
+| Integration Tests | ~3min | ~3.5min | Slightly slower (moved slow tests here) |
+| **Total** | **~5min** | **~3.5min** | **~30% faster overall** |
 
 ## Troubleshooting
 
