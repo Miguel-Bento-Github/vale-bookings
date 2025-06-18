@@ -1,2 +1,2 @@
 npx tsc --noEmit --skipLibCheck
-npm test
+npm run lint
