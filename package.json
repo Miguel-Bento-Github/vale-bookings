@@ -11,9 +11,11 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "test": "jest --runInBand --forceExit",
+    "test:fast": "jest --runInBand --forceExit --bail=1 --coverage=false",
     "test:watch": "jest --watch",
     "test:integration": "jest --testPathPattern=integration/ --runInBand --forceExit",
     "test:unit": "jest --testPathPattern=unit/ --runInBand --forceExit",
+    "test:unit:fast": "jest --testPathPattern=unit/ --runInBand --forceExit --bail=1",
     "test:coverage": "jest --coverage --runInBand --forceExit",
     "test:coverage:ci": "jest --coverage --runInBand --forceExit --verbose",
     "lint": "eslint 'src/**/*.ts' '__tests__/unit/**/*.ts' '__tests__/integration/**/*.ts'",
@@ -33,7 +35,12 @@
     "typescript",
     "mongodb"
   ],
-  "author": "",
+  "author": {
+    "name": "Miguel Bento",
+    "email": "document.body.title@gmail.com",
+    "url": "https://mr-monkey.net/",
+    "github": "https://github.com/Miguel-Bento-Github"
+  },
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",

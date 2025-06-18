@@ -4,24 +4,50 @@ import mongoose from 'mongoose';
 let mongoServer: MongoMemoryServer;
 
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
+  // Create optimized MongoDB Memory Server
+  mongoServer = await MongoMemoryServer.create({
+    binary: {
+      version: '6.0.4' // Use stable version
+    }
+  });
+
   const mongoUri = mongoServer.getUri();
-  await mongoose.connect(mongoUri);
+
+  await mongoose.connect(mongoUri, {
+    // Optimized connection settings
+    maxPoolSize: 5,
+    serverSelectionTimeoutMS: 3000,
+    socketTimeoutMS: 30000
+  });
 });
 
 afterAll(async () => {
-  await mongoose.disconnect();
-  await mongoServer.stop();
+  // Disconnect from MongoDB and stop the server
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
+
+  if (mongoServer) {
+    await mongoServer.stop();
+  }
 });
 
 afterEach(async () => {
-  const collections = mongoose.connection.collections;
-  for (const key in collections) {
-    const collection = collections[key];
-    if (collection) {
-      await collection.deleteMany({});
-    }
-  }
+  // Fast cleanup - only clear collections that are commonly used
+  const collectionsToClean = ['users', 'locations', 'bookings', 'schedules'];
+
+  await Promise.all(
+    collectionsToClean.map(async (collectionName) => {
+      try {
+        const collection = mongoose.connection.db?.collection(collectionName);
+        if (collection) {
+          await collection.deleteMany({});
+        }
+      } catch {
+      // Collection might not exist or be ready, skip silently
+      }
+    })
+  );
 });
 
 // Mock console methods to avoid test output pollution

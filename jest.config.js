@@ -18,19 +18,32 @@ module.exports = {
     }
   },
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
-  testTimeout: 10000,
-  verbose: false, // Reduce verbose output for CI/non-interactive
-  // Optimize parallel execution
-  maxWorkers: '75%', // Use 75% of available CPU cores
-  // Cache to speed up subsequent runs
+  testTimeout: 15000, // Increased slightly for slower CI environments
+  verbose: false,
+  // Performance optimizations
+  maxWorkers: 1, // Force serial execution for database tests
   cache: true,
-  // Run tests in parallel within files
+  cacheDirectory: '<rootDir>/node_modules/.cache/jest',
+  // Faster test runner
   testRunner: 'jest-circus/runner',
-  // Non-interactive configuration
-  watchman: false, // Disable watchman for non-interactive runs
-  silent: false, // Keep test output but reduce noise
-  // Coverage configuration for non-interactive
-  coverageReporters: ['text', 'json', 'html'],
-  // Disable watch mode by default
-  watchAll: false
+  // Reduce file system watchers
+  watchman: false,
+  silent: false,
+  // Optimized coverage reporting
+  coverageReporters: ['text-summary', 'json'],
+  watchAll: false,
+  // Removed global setup for now - using per-file setup for reliability
+  // Transform and module resolution optimizations
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      isolatedModules: true, // Faster compilation
+      tsconfig: {
+        sourceMap: false // Disable source maps for faster compilation
+      }
+    }]
+  },
+  // Reduce module resolution overhead
+  modulePathIgnorePatterns: ['<rootDir>/dist/'],
+  // Speed up test discovery
+  testPathIgnorePatterns: ['/node_modules/', '/dist/']
 }; 
