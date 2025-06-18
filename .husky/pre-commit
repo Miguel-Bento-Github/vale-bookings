@@ -1,2 +1,3 @@
+npm run test:unit
 npx tsc --noEmit --skipLibCheck
 npm run lint

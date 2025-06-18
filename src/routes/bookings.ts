@@ -30,4 +30,4 @@ router.delete('/:id', authenticate, (req, res, next) => {
   cancelBooking(req, res).catch(next);
 });
 
-export default router; 
+export default router;
