@@ -46,7 +46,20 @@ function isUpdateBookingStatusRequestBody(body: unknown): body is UpdateBookingS
 
 export async function getUserBookings(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const userId = req.user?.userId;
+    let userId = req.user?.userId;
+
+    // If userId is provided as a parameter, use that instead (for admin access)
+    if (req.params?.userId !== undefined && req.params.userId !== null && req.params.userId.trim().length > 0) {
+      // Check if current user is admin or accessing their own bookings
+      if (req.user?.role !== 'ADMIN' && req.params.userId !== userId) {
+        res.status(403).json({
+          success: false,
+          message: 'Forbidden: access denied'
+        });
+        return;
+      }
+      userId = req.params.userId;
+    }
 
     if (userId === undefined || userId === null) {
       res.status(401).json({

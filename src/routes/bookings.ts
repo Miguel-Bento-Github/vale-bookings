@@ -14,6 +14,9 @@ const router = Router();
 router.get('/', authenticate, (req, res, next) => {
   getUserBookings(req, res).catch(next);
 });
+router.get('/user/:userId', authenticate, (req, res, next) => {
+  getUserBookings(req, res).catch(next);
+});
 router.get('/:id', authenticate, (req, res, next) => {
   getBookingById(req, res).catch(next);
 });
