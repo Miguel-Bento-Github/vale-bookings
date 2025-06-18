@@ -4,10 +4,10 @@ import express, { Request, Response, NextFunction, json, urlencoded } from 'expr
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
 import mongoose from 'mongoose';
-import morgan from 'morgan';
 
 import routes from './routes';
 import { AppError } from './types';
+import { createPrettyLogger, responseTimeMiddleware, logInfo, logSuccess, logError } from './utils/logger';
 
 
 config();
@@ -26,12 +26,15 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Response time tracking and logging
+app.use(responseTimeMiddleware);
+
 // Logging - disable during tests and when explicitly disabled
 if (process.env.NODE_ENV !== 'test' &&
   process.env.DISABLE_LOGGING !== 'true' &&
   !process.argv.includes('--coverage') &&
   !process.argv.includes('jest')) {
-  app.use(morgan('combined'));
+  app.use(createPrettyLogger());
 }
 
 // Content type validation middleware
@@ -85,7 +88,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
       message: err.message
     });
   } else {
-    console.error('Error:', err);
+    logError('Unhandled error:', err);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -106,18 +109,18 @@ const startServer = async (): Promise<void> => {
   try {
     const mongoUri = process.env.MONGODB_URI ?? 'mongodb://localhost:27017/vale_db';
     await mongoose.connect(mongoUri);
-    console.info('Connected to MongoDB');
+    logSuccess('Connected to MongoDB');
     
     // Ensure all indexes are created
     const { default: Location } = await import('./models/Location');
     await Location.createIndexes();
-    console.info('Database indexes created');
+    logInfo('Database indexes created');
 
     app.listen(PORT, () => {
-      console.info(`Server running on port ${PORT}`);
+      logSuccess(`Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logError('Failed to start server:', error);
     throw error; // Throw instead of process.exit
   }
 };

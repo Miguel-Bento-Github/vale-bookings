@@ -2,7 +2,6 @@ import cors from 'cors';
 import express, { Request, Response, NextFunction, json } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
-import morgan from 'morgan';
 
 import adminRoutes from './routes/admin';
 import authRoutes from './routes/auth';
@@ -11,6 +10,7 @@ import locationRoutes from './routes/locations';
 import scheduleRoutes from './routes/schedules';
 import userRoutes from './routes/users';
 import { AppError } from './types';
+import { createPrettyLogger, responseTimeMiddleware, logError } from './utils/logger';
 
 const app = express();
 
@@ -25,12 +25,15 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Response time tracking and logging
+app.use(responseTimeMiddleware);
+
 // Logging - disable during tests and when explicitly disabled
 if (process.env.NODE_ENV !== 'test' &&
   process.env.DISABLE_LOGGING !== 'true' &&
   !process.argv.includes('--coverage') &&
   !process.argv.includes('jest')) {
-  app.use(morgan('dev'));
+  app.use(createPrettyLogger());
 }
 
 // Content type validation middleware
@@ -101,7 +104,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
       message: err.message
     });
   } else {
-    console.error(err);
+    logError('Unhandled error:', err);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
