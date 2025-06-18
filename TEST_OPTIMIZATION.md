@@ -24,40 +24,33 @@ The test suite has been optimized to reduce execution time from ~5 minutes to ~2
 
 ## Available Test Scripts
 
-### Fast Development Scripts
 ```bash
-# Run all tests with optimizations (no coverage)
-npm run test:fast
-
-# Run only unit tests (fastest)
-npm run test:unit
-
-# Run unit tests with fail-fast
-npm run test:unit:fast
-
-# Run integration tests only
-npm run test:integration
-```
-
-### Standard Scripts
-```bash
-# Full test suite with coverage
+# Full test suite (for commits)
 npm test
 
-# Full test suite with detailed coverage
+# Unit tests only (fastest feedback - 67s)
+npm run test:unit
+
+# Integration tests only (for API changes)
+npm run test:integration
+
+# Generate coverage reports
 npm run test:coverage
+
+# Development mode with file watching
+npm run test:watch
 ```
 
 ## Usage Guidelines
 
 ### During Development
-- Use `npm run test:unit:fast` for rapid feedback
-- Use `npm run test:fast` for quick full validation
+- Use `npm run test:unit` for rapid feedback on business logic
 - Use `npm run test:integration` when testing API endpoints
+- Use `npm run test:watch` for continuous testing during development
 
 ### Before Commit
-- Always run full `npm test` to ensure all tests pass
-- Coverage thresholds must be met (80% minimum)
+- Always run `npm test` to ensure all tests pass
+- Use `npm run test:coverage` to verify coverage thresholds (80% minimum)
 
 ## Test Data Utilities
 
