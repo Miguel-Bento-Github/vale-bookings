@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import morgan from 'morgan';
+import morgan, { token } from 'morgan';
 
 // ANSI color codes for terminal output
 const colors = {
@@ -21,7 +21,7 @@ if (process.env.NODE_ENV !== 'test' &&
     !process.argv.includes('jest')) {
 
   // Custom morgan token for colored status codes
-  morgan.token('status-colored', (req: Request, res: Response): string => {
+  token('status-colored', (req: Request, res: Response): string => {
     const status = res.statusCode;
     let color = colors.green; // Default for 2xx
 
@@ -37,7 +37,7 @@ if (process.env.NODE_ENV !== 'test' &&
   });
 
   // Custom morgan token for colored method
-  morgan.token('method-colored', (req: Request): string => {
+  token('method-colored', (req: Request): string => {
     const method = req.method;
     let color = colors.blue;
 
@@ -63,7 +63,7 @@ if (process.env.NODE_ENV !== 'test' &&
   });
 
   // Custom morgan token for response time with color
-  morgan.token('response-time-colored', (req: Request, res: Response): string => {
+  token('response-time-colored', (req: Request, res: Response): string => {
     const startTime = res.locals.startTime as number;
     const time = startTime ? Date.now() - startTime : 0;
     let color = colors.green;
@@ -113,21 +113,17 @@ export const createPrettyLogger = (): ReturnType<typeof morgan> => {
 
 // Console log helpers with colors
 export const logInfo = (message: string, ...args: unknown[]): void => {
-  // eslint-disable-next-line no-console
-  console.log(`${colors.blue}[INFO]${colors.reset} ${message}`, ...args);
+  console.info(`${colors.blue}[INFO]${colors.reset} ${message}`, ...args);
 };
 
 export const logSuccess = (message: string, ...args: unknown[]): void => {
-  // eslint-disable-next-line no-console
-  console.log(`${colors.green}[SUCCESS]${colors.reset} ${message}`, ...args);
+  console.info(`${colors.green}[SUCCESS]${colors.reset} ${message}`, ...args);
 };
 
 export const logWarning = (message: string, ...args: unknown[]): void => {
-  // eslint-disable-next-line no-console
-  console.log(`${colors.yellow}[WARN]${colors.reset} ${message}`, ...args);
+  console.info(`${colors.yellow}[WARN]${colors.reset} ${message}`, ...args);
 };
 
 export const logError = (message: string, ...args: unknown[]): void => {
-  // eslint-disable-next-line no-console
-  console.log(`${colors.red}[ERROR]${colors.reset} ${message}`, ...args);
+  console.info(`${colors.red}[ERROR]${colors.reset} ${message}`, ...args);
 }; 
