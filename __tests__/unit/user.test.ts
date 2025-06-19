@@ -1,0 +1,244 @@
+import { hash } from 'bcryptjs';
+import mongoose from 'mongoose';
+
+import User from '../../src/models/User';
+
+describe('User Model Unit Tests', () => {
+  describe('Pre-save middleware', () => {
+    it('should hash password when password is modified', async () => {
+      const userData = {
+        email: 'test@example.com',
+        password: 'password123',
+        role: 'CUSTOMER',
+        profile: { name: 'Test User' }
+      };
+
+      const user = new User(userData);
+      await user.save();
+
+      // Password should be hashed
+      expect(user.password).not.toBe('password123');
+      expect(user.password).toMatch(/^\$2[aby]\$\d+\$/); // bcrypt hash pattern
+    });
+
+    it('should not hash password when password is not modified', async () => {
+      const userData = {
+        email: 'test2@example.com',
+        password: 'password123',
+        role: 'CUSTOMER',
+        profile: { name: 'Test User 2' }
+      };
+
+      const user = new User(userData);
+      await user.save();
+
+      const originalPassword = user.password;
+
+      // Modify a non-password field
+      user.profile.name = 'Updated Name';
+      await user.save();
+
+      // Password should remain the same
+      expect(user.password).toBe(originalPassword);
+    });
+
+    it('should handle errors during password hashing', async () => {
+      const userData = {
+        email: 'test3@example.com',
+        password: 'password123',
+        role: 'CUSTOMER',
+        profile: { name: 'Test User 3' }
+      };
+
+      const user = new User(userData);
+
+      // Mock hash function to throw an error
+      const originalHash = require('bcryptjs').hash;
+      const mockHash = jest.fn().mockRejectedValue(new Error('Hashing failed'));
+      require('bcryptjs').hash = mockHash;
+
+      await expect(user.save()).rejects.toThrow('Hashing failed');
+
+      // Restore original hash function
+      require('bcryptjs').hash = originalHash;
+    });
+  });
+
+  describe('Instance methods', () => {
+    let user: any;
+
+    beforeEach(async () => {
+      const userData = {
+        email: 'test4@example.com',
+        password: 'password123',
+        role: 'CUSTOMER',
+        profile: { name: 'Test User 4' }
+      };
+
+      user = new User(userData);
+      await user.save();
+    });
+
+    it('should compare password correctly when password matches', async () => {
+      const isMatch = await user.comparePassword('password123');
+      expect(isMatch).toBe(true);
+    });
+
+    it('should compare password correctly when password does not match', async () => {
+      const isMatch = await user.comparePassword('wrongpassword');
+      expect(isMatch).toBe(false);
+    });
+  });
+
+  describe('Static methods', () => {
+    beforeEach(async () => {
+      await User.create({
+        email: 'UPPERCASE@EXAMPLE.COM',
+        password: 'password123',
+        role: 'CUSTOMER',
+        profile: { name: 'Test User 5' }
+      });
+    });
+
+    it('should find user by email (case insensitive)', async () => {
+      const user = await (User as any).findByEmail('UPPERCASE@EXAMPLE.COM');
+      expect(user).toBeTruthy();
+      expect(user?.email).toBe('uppercase@example.com'); // Should be lowercase
+    });
+
+    it('should find user by email with different case', async () => {
+      const user = await (User as any).findByEmail('uppercase@example.com');
+      expect(user).toBeTruthy();
+      expect(user?.email).toBe('uppercase@example.com');
+    });
+
+    it('should return null when user not found', async () => {
+      const user = await (User as any).findByEmail('nonexistent@example.com');
+      expect(user).toBeNull();
+    });
+  });
+
+  describe('Schema validation', () => {
+    it('should validate email format', async () => {
+      const userData = {
+        email: 'invalid-email',
+        password: 'password123',
+        role: 'CUSTOMER',
+        profile: { name: 'Test User' }
+      };
+
+      const user = new User(userData);
+      await expect(user.validate()).rejects.toThrow('Please provide a valid email address');
+    });
+
+    it('should validate phone format when provided', async () => {
+      const userData = {
+        email: 'test@example.com',
+        password: 'password123',
+        role: 'CUSTOMER',
+        profile: {
+          name: 'Test User',
+          phone: 'invalid-phone-format'
+        }
+      };
+
+      const user = new User(userData);
+      await expect(user.validate()).rejects.toThrow('Please provide a valid phone number');
+    });
+
+    it('should accept valid phone formats', async () => {
+      const validPhones = [
+        '+1234567890',
+        '123-456-7890',
+        '(123) 456-7890',
+        '+1 (123) 456-7890',
+        '123 456 7890'
+      ];
+
+      for (const phone of validPhones) {
+        const userData = {
+          email: `test${phone.replace(/\D/g, '')}@example.com`,
+          password: 'password123',
+          role: 'CUSTOMER',
+          profile: {
+            name: 'Test User',
+            phone
+          }
+        };
+
+        const user = new User(userData);
+        await expect(user.validate()).resolves.not.toThrow();
+      }
+    });
+
+    it('should validate password minimum length', async () => {
+      const userData = {
+        email: 'test@example.com',
+        password: '12345', // Too short
+        role: 'CUSTOMER',
+        profile: { name: 'Test User' }
+      };
+
+      const user = new User(userData);
+      await expect(user.validate()).rejects.toThrow('Password must be at least 6 characters long');
+    });
+
+    it('should validate name maximum length', async () => {
+      const userData = {
+        email: 'test@example.com',
+        password: 'password123',
+        role: 'CUSTOMER',
+        profile: {
+          name: 'A'.repeat(101) // Too long
+        }
+      };
+
+      const user = new User(userData);
+      await expect(user.validate()).rejects.toThrow('Name cannot exceed 100 characters');
+    });
+
+    it('should validate required fields', async () => {
+      const userData = {
+        // Missing email
+        password: 'password123',
+        role: 'CUSTOMER',
+        profile: { name: 'Test User' }
+      };
+
+      const user = new User(userData);
+      await expect(user.validate()).rejects.toThrow('Email is required');
+    });
+
+    it('should validate role enum', async () => {
+      const userData = {
+        email: 'test@example.com',
+        password: 'password123',
+        role: 'INVALID_ROLE',
+        profile: { name: 'Test User' }
+      };
+
+      const user = new User(userData);
+      await expect(user.validate()).rejects.toThrow();
+    });
+  });
+
+  describe('toJSON transform', () => {
+    it('should exclude password from JSON output', async () => {
+      const userData = {
+        email: 'test@example.com',
+        password: 'password123',
+        role: 'CUSTOMER',
+        profile: { name: 'Test User' }
+      };
+
+      const user = new User(userData);
+      await user.save();
+
+      const userJSON = user.toJSON();
+      expect(userJSON).not.toHaveProperty('password');
+      expect(userJSON).toHaveProperty('email');
+      expect(userJSON).toHaveProperty('role');
+      expect(userJSON).toHaveProperty('profile');
+    });
+  });
+}); 

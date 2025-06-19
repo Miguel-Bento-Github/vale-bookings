@@ -74,6 +74,16 @@ describe('Validation Utils', () => {
       expect(validateEmail('@@')).toBe(false);
       expect(validateEmail('@@@')).toBe(false);
     });
+
+    it('should test additional boundary cases', () => {
+      // Test over 254 characters (should fail)
+      const overLength = 'a'.repeat(251) + '@b.co'; // 256 chars
+      expect(validateEmail(overLength)).toBe(false);
+
+      // Test over 64 character local part (should fail)
+      const overLocalLength = 'a'.repeat(65) + '@b.co';
+      expect(validateEmail(overLocalLength)).toBe(false);
+    });
   });
 
   describe('validatePassword', () => {

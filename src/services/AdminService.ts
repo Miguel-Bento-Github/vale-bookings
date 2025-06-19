@@ -367,7 +367,7 @@ class AdminService {
     if (typeof filters.startDate === 'string' || typeof filters.endDate === 'string') {
       const dateRange: IDateRangeQuery = {};
       if (typeof filters.startDate === 'string') {
-        // Parse date string as local time to avoid timezone issues
+        // Parse date string as UTC to avoid timezone issues
         const dateParts = filters.startDate.split('-').map(Number);
         const isValidDateParts = dateParts.length === 3 &&
           typeof dateParts[0] === 'number' &&
@@ -378,12 +378,13 @@ class AdminService {
           const year = dateParts[0] as number;
           const month = dateParts[1] as number;
           const day = dateParts[2] as number;
-          const startDate = new Date(year, month - 1, day); // month is 0-indexed
+          // Use UTC to avoid timezone issues
+          const startDate = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed
           dateRange.$gte = startDate;
         }
       }
       if (typeof filters.endDate === 'string') {
-        // Parse date string as local time and set to end of day
+        // Parse date string as UTC and set to end of day
         const dateParts = filters.endDate.split('-').map(Number);
         const isValidDateParts = dateParts.length === 3 &&
           typeof dateParts[0] === 'number' &&
@@ -394,8 +395,9 @@ class AdminService {
           const year = dateParts[0] as number;
           const month = dateParts[1] as number;
           const day = dateParts[2] as number;
-          const endDate = new Date(year, month - 1, day); // month is 0-indexed
-          endDate.setHours(23, 59, 59, 999);
+          // Use UTC to avoid timezone issues
+          const endDate = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed
+          endDate.setUTCHours(23, 59, 59, 999);
           dateRange.$lte = endDate;
         }
       }
@@ -483,7 +485,7 @@ class AdminService {
     if (typeof filters.startDate === 'string' || typeof filters.endDate === 'string') {
       const dateRange: IDateRangeQuery = {};
       if (typeof filters.startDate === 'string') {
-        // Parse date string as local time to avoid timezone issues
+        // Parse date string as UTC to avoid timezone issues
         const dateParts = filters.startDate.split('-').map(Number);
         const isValidDateParts = dateParts.length === 3 &&
           typeof dateParts[0] === 'number' &&
@@ -494,12 +496,13 @@ class AdminService {
           const year = dateParts[0] as number;
           const month = dateParts[1] as number;
           const day = dateParts[2] as number;
-          const startDate = new Date(year, month - 1, day); // month is 0-indexed
+          // Use UTC to avoid timezone issues
+          const startDate = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed
           dateRange.$gte = startDate;
         }
       }
       if (typeof filters.endDate === 'string') {
-        // Parse date string as local time and set to end of day
+        // Parse date string as UTC and set to end of day
         const dateParts = filters.endDate.split('-').map(Number);
         const isValidDateParts = dateParts.length === 3 &&
           typeof dateParts[0] === 'number' &&
@@ -510,8 +513,9 @@ class AdminService {
           const year = dateParts[0] as number;
           const month = dateParts[1] as number;
           const day = dateParts[2] as number;
-          const endDate = new Date(year, month - 1, day); // month is 0-indexed
-          endDate.setHours(23, 59, 59, 999);
+          // Use UTC to avoid timezone issues
+          const endDate = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed
+          endDate.setUTCHours(23, 59, 59, 999);
           dateRange.$lte = endDate;
         }
       }
