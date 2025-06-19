@@ -2,13 +2,13 @@ import { Application } from 'express';
 import request from 'supertest';
 
 
-import User from '../../src/models/User';
+import User from '../../../src/models/User';
 import {
   validRegisterRequest,
   validLoginRequest,
   invalidUserData,
   validUser
-} from '../fixtures';
+} from '../../fixtures';
 
 import createTestApp from './testApp';
 

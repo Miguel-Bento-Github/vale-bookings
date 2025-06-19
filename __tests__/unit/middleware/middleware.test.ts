@@ -2,10 +2,10 @@ import { Response, NextFunction } from 'express';
 import { JsonWebTokenError } from 'jsonwebtoken';
 import request from 'supertest';
 
-import app from '../../src/app';
-import { authenticate, authorize } from '../../src/middleware/auth';
-import * as AuthService from '../../src/services/AuthService';
-import { AuthenticatedRequest, AppError, UserRole } from '../../src/types';
+import app from '../../../src/app';
+import { authenticate, authorize } from '../../../src/middleware/auth';
+import * as AuthService from '../../../src/services/AuthService';
+import { AuthenticatedRequest, AppError, UserRole } from '../../../src/types';
 
 // Mock AuthService
 jest.mock('../../src/services/AuthService');

@@ -1,9 +1,9 @@
 
 import mongoose from 'mongoose';
 
-import Location from '../../src/models/Location';
-import * as LocationService from '../../src/services/LocationService';
-import { ILocation } from '../../src/types';
+import Location from '../../../src/models/Location';
+import * as LocationService from '../../../src/services/LocationService';
+import { ILocation } from '../../../src/types';
 
 
 

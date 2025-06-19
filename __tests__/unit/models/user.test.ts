@@ -1,5 +1,5 @@
-import User from '../../src/models/User';
-import { IUserDocument } from '../../src/types';
+import User from '../../../src/models/User';
+import { IUserDocument } from '../../../src/types';
 
 describe('User Model Unit Tests', () => {
   beforeAll(async () => {

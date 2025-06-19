@@ -6,14 +6,14 @@ import {
   logWarning,
   logError,
   createPrettyLogger
-} from '../../src/utils/logger';
+} from '../../../src/utils/logger';
 import {
   validateEmail,
   validatePassword,
   validateCoordinates,
   validateTimeFormat,
   validatePhoneNumber
-} from '../../src/utils/validation';
+} from '../../../src/utils/validation';
 
 // Mock console methods
 const mockConsoleInfo = jest.spyOn(console, 'info').mockImplementation(() => { });

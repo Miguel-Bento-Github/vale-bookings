@@ -4,7 +4,7 @@ import {
   validateCoordinates,
   validateTimeFormat,
   validatePhoneNumber
-} from '../../src/utils/validation';
+} from '../../../src/utils/validation';
 
 describe('Validation Utils', () => {
   describe('validateEmail', () => {

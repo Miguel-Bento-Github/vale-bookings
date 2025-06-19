@@ -7,7 +7,7 @@ import {
   logSuccess,
   logWarning,
   logError
-} from '../../src/utils/logger';
+} from '../../../src/utils/logger';
 
 // Mock morgan before importing logger
 jest.mock('morgan', () => {

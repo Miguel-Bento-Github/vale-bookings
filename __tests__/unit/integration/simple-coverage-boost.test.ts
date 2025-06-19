@@ -1,9 +1,9 @@
-import Booking from '../../src/models/Booking';
-import Location from '../../src/models/Location';
-import User from '../../src/models/User';
-import * as BookingService from '../../src/services/BookingService';
-import * as LocationService from '../../src/services/LocationService';
-import * as UserService from '../../src/services/UserService';
+import Booking from '../../../src/models/Booking';
+import Location from '../../../src/models/Location';
+import User from '../../../src/models/User';
+import * as BookingService from '../../../src/services/BookingService';
+import * as LocationService from '../../../src/services/LocationService';
+import * as UserService from '../../../src/services/UserService';
 
 // Suppress console output during tests
 beforeAll(() => {

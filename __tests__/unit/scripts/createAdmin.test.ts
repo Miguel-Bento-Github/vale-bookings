@@ -1,11 +1,11 @@
 import { hash } from 'bcryptjs';
 import mongoose from 'mongoose';
 
-import User from '../../src/models/User';
-import createAdminUser from '../../src/scripts/createAdmin';
+import User from '../../../src/models/User';
+import createAdminUser from '../../../src/scripts/createAdmin';
 
 // Mock User model before importing createAdminUser
-jest.mock('../../src/models/User', () => {
+jest.mock('../../../src/models/User', () => {
   const mockUser = jest.fn().mockImplementation(() => ({
     save: jest.fn()
   }));

@@ -2,14 +2,14 @@ import { Application } from 'express';
 import request from 'supertest';
 
 
-import Location from '../../src/models/Location';
-import User from '../../src/models/User';
+import Location from '../../../src/models/Location';
+import User from '../../../src/models/User';
 import {
   validUser,
   adminUser,
   validCreateLocationRequest,
   invalidLocationData
-} from '../fixtures';
+} from '../../fixtures';
 
 import createTestApp from './testApp';
 

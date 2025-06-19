@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-import Schedule from '../../src/models/Schedule';
+import Schedule from '../../../src/models/Schedule';
 
 describe('Schedule Model Unit Tests', () => {
   describe('Pre-validation hooks', () => {

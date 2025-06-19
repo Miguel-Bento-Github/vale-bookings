@@ -1,13 +1,13 @@
 import { Application } from 'express';
 import request from 'supertest';
 
-import Booking from '../../src/models/Booking';
-import User from '../../src/models/User';
+import Booking from '../../../src/models/Booking';
+import User from '../../../src/models/User';
 import {
   validUser,
   validCreateBookingRequest,
   invalidBookingData
-} from '../fixtures';
+} from '../../fixtures';
 import { setupTestContext, expectError, expectSuccess } from '../utils/testHelpers';
 
 import createTestApp from './testApp';

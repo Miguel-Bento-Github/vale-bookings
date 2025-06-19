@@ -1,15 +1,15 @@
 import mongoose from 'mongoose';
 import request from 'supertest';
 
-import app from '../../src/app';
-import Booking from '../../src/models/Booking';
-import Location from '../../src/models/Location';
-import User from '../../src/models/User';
-import * as AuthService from '../../src/services/AuthService';
-import * as BookingService from '../../src/services/BookingService';
-import * as LocationService from '../../src/services/LocationService';
-import * as UserService from '../../src/services/UserService';
-import { AppError, IUserDocument, ILocationDocument } from '../../src/types';
+import app from '../../../src/app';
+import Booking from '../../../src/models/Booking';
+import Location from '../../../src/models/Location';
+import User from '../../../src/models/User';
+import * as AuthService from '../../../src/services/AuthService';
+import * as BookingService from '../../../src/services/BookingService';
+import * as LocationService from '../../../src/services/LocationService';
+import * as UserService from '../../../src/services/UserService';
+import { AppError, IUserDocument, ILocationDocument } from '../../../src/types';
 
 // eslint-disable-next-line no-console
 const originalConsoleError = console.error;

@@ -18,15 +18,15 @@ import {
   getAnalyticsOverview,
   getRevenueAnalytics,
   getBookingAnalytics
-} from '../../src/controllers/AdminController';
-import { register, login, refreshToken } from '../../src/controllers/AuthController';
+} from '../../../src/controllers/AdminController';
+import { register, login, refreshToken } from '../../../src/controllers/AuthController';
 import {
   getUserBookings,
   getBookingById,
   createBooking,
   updateBookingStatus,
   cancelBooking
-} from '../../src/controllers/BookingController';
+} from '../../../src/controllers/BookingController';
 import {
   getLocations,
   getNearbyLocations,
@@ -34,23 +34,23 @@ import {
   createLocation,
   updateLocation,
   deleteLocation
-} from '../../src/controllers/LocationController';
+} from '../../../src/controllers/LocationController';
 import {
   getLocationSchedules,
   createSchedule,
   updateSchedule,
   deleteSchedule
-} from '../../src/controllers/ScheduleController';
-import { getProfile, updateProfile, deleteAccount } from '../../src/controllers/UserController';
-import Booking from '../../src/models/Booking';
-import Location from '../../src/models/Location';
-import AdminService from '../../src/services/AdminService';
-import * as AuthService from '../../src/services/AuthService';
-import * as BookingService from '../../src/services/BookingService';
-import * as LocationService from '../../src/services/LocationService';
-import * as ScheduleService from '../../src/services/ScheduleService';
-import * as UserService from '../../src/services/UserService';
-import { AppError, AuthenticatedRequest, UserRole } from '../../src/types';
+} from '../../../src/controllers/ScheduleController';
+import { getProfile, updateProfile, deleteAccount } from '../../../src/controllers/UserController';
+import Booking from '../../../src/models/Booking';
+import Location from '../../../src/models/Location';
+import AdminService from '../../../src/services/AdminService';
+import * as AuthService from '../../../src/services/AuthService';
+import * as BookingService from '../../../src/services/BookingService';
+import * as LocationService from '../../../src/services/LocationService';
+import * as ScheduleService from '../../../src/services/ScheduleService';
+import * as UserService from '../../../src/services/UserService';
+import { AppError, AuthenticatedRequest, UserRole } from '../../../src/types';
 
 // Mock all services
 jest.mock('../../src/services/AuthService');

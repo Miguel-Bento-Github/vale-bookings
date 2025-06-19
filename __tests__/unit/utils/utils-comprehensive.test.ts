@@ -7,14 +7,14 @@ import {
   logSuccess,
   logWarning,
   logError
-} from '../../src/utils/logger';
+} from '../../../src/utils/logger';
 import {
   validateEmail,
   validatePassword,
   validateCoordinates,
   validateTimeFormat,
   validatePhoneNumber
-} from '../../src/utils/validation';
+} from '../../../src/utils/validation';
 
 
 // Suppress console output during tests
