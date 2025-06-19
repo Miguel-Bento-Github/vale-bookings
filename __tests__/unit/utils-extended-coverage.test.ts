@@ -1,14 +1,13 @@
-// Mock morgan before any imports
-import { Request, Response } from 'express';
-
-import { responseTimeMiddleware, logInfo, logSuccess, logWarning, logError } from '../../src/utils/logger';
-import { validateEmail, validatePassword, validateCoordinates, validateTimeFormat, validatePhoneNumber } from '../../src/utils/validation';
-
+// Mock morgan before any imports that might use it
 const mockMorgan = jest.fn(() => jest.fn());
 const mockToken = jest.fn();
 (mockMorgan as unknown as { token: jest.Mock }).token = mockToken;
 
 jest.mock('morgan', () => mockMorgan);
+
+import { Request, Response } from 'express';
+import { responseTimeMiddleware, logInfo, logSuccess, logWarning, logError } from '../../src/utils/logger';
+import { validateEmail, validatePassword, validateCoordinates, validateTimeFormat, validatePhoneNumber } from '../../src/utils/validation';
 
 describe('Utils Extended Coverage Tests', () => {
     describe('Validation Edge Cases for Uncovered Lines', () => {
