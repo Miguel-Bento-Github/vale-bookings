@@ -15,7 +15,7 @@
     "test:unit": "jest --testPathPattern=unit/ --forceExit",
     "test:integration": "jest --testPathPattern=integration/ --forceExit --maxWorkers=4 --testTimeout=15000",
     "test:integration:fast": "jest --testPathPattern=integration/ --forceExit --maxWorkers=50% --testTimeout=10000 --cache --bail",
-    "test:coverage": "jest --coverage --forceExit --detectOpenHandles",
+    "test:coverage": "jest --coverage --verbose --forceExit --detectOpenHandles",
     "test:serial": "jest --runInBand --forceExit",
     "lint": "eslint 'src/**/*.ts' '__tests__/unit/**/*.ts' '__tests__/integration/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' '__tests__/unit/**/*.ts' '__tests__/integration/**/*.ts' --fix",
