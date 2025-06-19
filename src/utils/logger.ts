@@ -15,67 +15,74 @@ const colors = {
   white: '\x1b[37m'
 };
 
+// Token functions exported for testing
+export const createStatusColoredToken = (req: Request, res: Response): string => {
+  const status = res.statusCode;
+  let color = colors.green; // Default for 2xx
+
+  if (status >= 500) {
+    color = colors.red;
+  } else if (status >= 400) {
+    color = colors.yellow;
+  } else if (status >= 300) {
+    color = colors.cyan;
+  }
+
+  return `${color}${status}${colors.reset}`;
+};
+
+export const createMethodColoredToken = (req: Request): string => {
+  const method = req.method;
+  let color = colors.blue;
+
+  switch (method) {
+  case 'GET':
+    color = colors.green;
+    break;
+  case 'POST':
+    color = colors.yellow;
+    break;
+  case 'PUT':
+    color = colors.magenta;
+    break;
+  case 'DELETE':
+    color = colors.red;
+    break;
+  case 'PATCH':
+    color = colors.cyan;
+    break;
+  }
+
+  return `${color}${method}${colors.reset}`;
+};
+
+export const createResponseTimeColoredToken = (req: Request, res: Response): string => {
+  const startTime = res.locals.startTime as number;
+  const time = startTime ? Date.now() - startTime : 0;
+  let color = colors.green;
+
+  if (time > 1000) {
+    color = colors.red;
+  } else if (time > 500) {
+    color = colors.yellow;
+  }
+
+  return `${color}${time.toFixed(0)}ms${colors.reset}`;
+};
+
 // Setup morgan tokens only if not in test environment
 if (process.env.NODE_ENV !== 'test' &&
-    !process.argv.includes('--coverage') &&
-    !process.argv.includes('jest')) {
+  !process.argv.includes('--coverage') &&
+  !process.argv.includes('jest')) {
 
   // Custom morgan token for colored status codes
-  token('status-colored', (req: Request, res: Response): string => {
-    const status = res.statusCode;
-    let color = colors.green; // Default for 2xx
-
-    if (status >= 500) {
-      color = colors.red;
-    } else if (status >= 400) {
-      color = colors.yellow;
-    } else if (status >= 300) {
-      color = colors.cyan;
-    }
-
-    return `${color}${status}${colors.reset}`;
-  });
+  token('status-colored', createStatusColoredToken);
 
   // Custom morgan token for colored method
-  token('method-colored', (req: Request): string => {
-    const method = req.method;
-    let color = colors.blue;
-
-    switch (method) {
-    case 'GET':
-      color = colors.green;
-      break;
-    case 'POST':
-      color = colors.yellow;
-      break;
-    case 'PUT':
-      color = colors.magenta;
-      break;
-    case 'DELETE':
-      color = colors.red;
-      break;
-    case 'PATCH':
-      color = colors.cyan;
-      break;
-    }
-
-    return `${color}${method}${colors.reset}`;
-  });
+  token('method-colored', createMethodColoredToken);
 
   // Custom morgan token for response time with color
-  token('response-time-colored', (req: Request, res: Response): string => {
-    const startTime = res.locals.startTime as number;
-    const time = startTime ? Date.now() - startTime : 0;
-    let color = colors.green;
-
-    if (time > 1000) {
-      color = colors.red;
-    } else if (time > 500) {
-      color = colors.yellow;
-    }
-
-    return `${color}${time.toFixed(0)}ms${colors.reset}`;
-  });
+  token('response-time-colored', createResponseTimeColoredToken);
 }
 
 // Middleware to track response time
