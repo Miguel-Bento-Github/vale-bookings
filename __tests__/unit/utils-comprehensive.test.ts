@@ -39,7 +39,7 @@ jest.mock('morgan', () => {
   // Mock token function for custom tokens
   (mockMorgan as unknown as { token: jest.Mock }).token = jest.fn(
     (name: string, fn: (...args: unknown[]) => string) => {
-  // Store token functions for testing
+      // Store token functions for testing
       const mockMorganAny = mockMorgan as unknown as { _tokens?: Record<string, unknown> };
       mockMorganAny._tokens = mockMorganAny._tokens ?? {};
       mockMorganAny._tokens[name] = fn;
