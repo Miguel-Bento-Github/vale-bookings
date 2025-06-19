@@ -376,6 +376,40 @@ describe('Logger Utils', () => {
     });
   });
 
+  describe('Development Format', () => {
+    it('should create logger in development environment without error', () => {
+      process.env.NODE_ENV = 'development';
+      process.argv = ['node', 'server.js'];
+
+      expect(() => {
+        const logger = createPrettyLogger();
+        expect(typeof logger).toBe('function');
+      }).not.toThrow();
+    });
+
+    it('should create logger with different environment settings', () => {
+      const testEnvironments = [
+        { env: undefined, argv: ['node', 'server.js'] },
+        { env: 'production', argv: ['node', 'server.js'] },
+        { env: 'staging', argv: ['node', 'server.js'] }
+      ];
+
+      testEnvironments.forEach(({ env, argv }) => {
+        if (env !== undefined) {
+          process.env.NODE_ENV = env;
+        } else {
+          delete process.env.NODE_ENV;
+        }
+        process.argv = argv;
+
+        expect(() => {
+          const logger = createPrettyLogger();
+          expect(typeof logger).toBe('function');
+        }).not.toThrow();
+      });
+    });
+  });
+
   describe('Token Functions', () => {
     describe('createStatusColoredToken', () => {
       it('should return green color for 2xx status codes', () => {
