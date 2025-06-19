@@ -22,7 +22,7 @@ const mockConsoleInfo = jest.spyOn(console, 'info').mockImplementation(() => { }
 jest.mock('morgan', () => {
   const mockMorgan = jest.fn((format: string, options?: { skip?: () => boolean }) => {
     return jest.fn((req: Request, res: Response, next: () => void) => {
-      if (options && options.skip && options.skip()) {
+      if (options?.skip?.()) {
         return next();
       }
       next();
