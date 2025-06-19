@@ -1,4 +1,5 @@
 import User from '../../src/models/User';
+import { IUserDocument } from '../../src/types';
 
 describe('User Model Unit Tests', () => {
   beforeAll(async () => {
@@ -47,7 +48,7 @@ describe('User Model Unit Tests', () => {
   });
 
   describe('Instance methods', () => {
-    let user: any;
+    let user: IUserDocument;
 
     beforeEach(async () => {
       const userData = {
@@ -83,19 +84,25 @@ describe('User Model Unit Tests', () => {
     });
 
     it('should find user by email (case insensitive)', async () => {
-      const user = await (User as any).findByEmail('UPPERCASE@EXAMPLE.COM');
+      const user = await (User as typeof User & {
+        findByEmail: (email: string) => Promise<IUserDocument | null>
+      }).findByEmail('UPPERCASE@EXAMPLE.COM');
       expect(user).toBeTruthy();
       expect(user?.email).toBe('uppercase@example.com'); // Should be lowercase
     });
 
     it('should find user by email with different case', async () => {
-      const user = await (User as any).findByEmail('uppercase@example.com');
+      const user = await (User as typeof User & {
+        findByEmail: (email: string) => Promise<IUserDocument | null>
+      }).findByEmail('uppercase@example.com');
       expect(user).toBeTruthy();
       expect(user?.email).toBe('uppercase@example.com');
     });
 
     it('should return null when user not found', async () => {
-      const user = await (User as any).findByEmail('nonexistent@example.com');
+      const user = await (User as typeof User & {
+        findByEmail: (email: string) => Promise<IUserDocument | null>
+      }).findByEmail('nonexistent@example.com');
       expect(user).toBeNull();
     });
   });

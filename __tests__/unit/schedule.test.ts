@@ -82,10 +82,10 @@ describe('Schedule Model Unit Tests', () => {
     });
 
     it('should return "Invalid Day" for non-number inputs', () => {
-      expect(Schedule.getDayName('invalid' as any)).toBe('Invalid Day');
-      expect(Schedule.getDayName(null as any)).toBe('Invalid Day');
-      expect(Schedule.getDayName(undefined as any)).toBe('Invalid Day');
-      expect(Schedule.getDayName({} as any)).toBe('Invalid Day');
+      expect(Schedule.getDayName('invalid' as unknown as number)).toBe('Invalid Day');
+      expect(Schedule.getDayName(null as unknown as number)).toBe('Invalid Day');
+      expect(Schedule.getDayName(undefined as unknown as number)).toBe('Invalid Day');
+      expect(Schedule.getDayName({} as unknown as number)).toBe('Invalid Day');
     });
   });
 
@@ -180,7 +180,7 @@ describe('Schedule Model Unit Tests', () => {
   });
 
   describe('Instance method isOpenAt', () => {
-    let schedule: any;
+    let schedule: { isActive: boolean; startTime: string; endTime: string };
 
     beforeEach(() => {
       schedule = {

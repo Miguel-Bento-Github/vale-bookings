@@ -9,7 +9,7 @@ import * as AuthService from '../../src/services/AuthService';
 import * as BookingService from '../../src/services/BookingService';
 import * as LocationService from '../../src/services/LocationService';
 import * as UserService from '../../src/services/UserService';
-import { AppError } from '../../src/types';
+import { AppError, IUserDocument, ILocationDocument } from '../../src/types';
 
 const originalConsoleError = console.error;
 const originalConsoleLog = console.log;
@@ -148,8 +148,8 @@ describe('Error Handling Tests', () => {
   });
 
   describe('BookingService Error Handling', () => {
-    let user: any;
-    let location: any;
+    let user: IUserDocument;
+    let location: ILocationDocument;
 
     beforeEach(async () => {
       user = await UserService.createUser({
@@ -232,7 +232,7 @@ describe('Error Handling Tests', () => {
   });
 
   describe('AuthService Error Handling', () => {
-    let user: any;
+    let user: IUserDocument;
 
     beforeEach(async () => {
       user = await UserService.createUser({
@@ -258,14 +258,14 @@ describe('Error Handling Tests', () => {
       ).rejects.toThrow('Invalid credentials');
     });
 
-    it('should handle invalid JWT token', async () => {
-      await expect(() =>
+    it('should handle invalid JWT token', () => {
+      expect(() =>
         AuthService.verifyToken('invalid.jwt.token')
       ).toThrow('Invalid token');
     });
 
-    it('should handle invalid refresh token', async () => {
-      await expect(() =>
+    it('should handle invalid refresh token', () => {
+      expect(() =>
         AuthService.verifyRefreshToken('invalid_refresh_token')
       ).toThrow('Invalid refresh token');
     });
@@ -366,7 +366,7 @@ describe('Error Handling Tests', () => {
       const invalidLocation = {
         name: 'Invalid Location',
         address: '123 Test St',
-        coordinates: { latitude: 'invalid' as any, longitude: -74.0060 },
+        coordinates: { latitude: 'invalid' as unknown as number, longitude: -74.0060 },
         isActive: true
       };
 

@@ -9,7 +9,7 @@ jest.mock('../../src/models/User', () => {
   const mockUser = jest.fn().mockImplementation(() => ({
     save: jest.fn()
   }));
-  (mockUser as any).findOne = jest.fn();
+  (mockUser as unknown as { findOne: jest.Mock }).findOne = jest.fn();
   return mockUser;
 });
 
@@ -19,7 +19,7 @@ jest.mock('bcryptjs');
 
 const mockMongoose = mongoose as jest.Mocked<typeof mongoose>;
 const mockHash = hash as jest.MockedFunction<typeof hash>;
-const mockUser = User as jest.Mocked<typeof User>;
+const mockUser = User as unknown as jest.Mock & { findOne: jest.Mock };
 
 // Mock process.stdout.write
 const mockStdoutWrite = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
@@ -38,13 +38,13 @@ describe('createAdminUser script', () => {
 
   it('should create admin user successfully when none exists', async () => {
     // Mock successful database operations
-    mockMongoose.connect.mockResolvedValueOnce(undefined as any);
-    mockMongoose.disconnect.mockResolvedValueOnce(undefined as any);
-    (mockUser.findOne as jest.Mock).mockResolvedValueOnce(null);
+    mockMongoose.connect.mockResolvedValueOnce(undefined as unknown as typeof mongoose);
+    mockMongoose.disconnect.mockResolvedValueOnce(undefined as unknown as void);
+    (mockUser.findOne).mockResolvedValueOnce(null);
     (mockHash as jest.Mock).mockResolvedValueOnce('hashed_password');
 
     const mockSave = jest.fn().mockResolvedValueOnce({});
-    (mockUser as any).mockImplementationOnce(() => ({
+    (mockUser as jest.Mock).mockImplementationOnce(() => ({
       save: mockSave
     }));
 
@@ -73,13 +73,13 @@ describe('createAdminUser script', () => {
   it('should use default MongoDB URI when MONGODB_URI is not set', async () => {
     delete process.env.MONGODB_URI;
 
-    mockMongoose.connect.mockResolvedValueOnce(undefined as any);
-    mockMongoose.disconnect.mockResolvedValueOnce(undefined as any);
-    (mockUser.findOne as jest.Mock).mockResolvedValueOnce(null);
+    mockMongoose.connect.mockResolvedValueOnce(undefined as unknown as typeof mongoose);
+    mockMongoose.disconnect.mockResolvedValueOnce(undefined as unknown as void);
+    (mockUser.findOne).mockResolvedValueOnce(null);
     (mockHash as jest.Mock).mockResolvedValueOnce('hashed_password');
 
     const mockSave = jest.fn().mockResolvedValueOnce({});
-    (mockUser as any).mockImplementationOnce(() => ({
+    (mockUser as jest.Mock).mockImplementationOnce(() => ({
       save: mockSave
     }));
 
@@ -94,9 +94,9 @@ describe('createAdminUser script', () => {
       role: 'ADMIN'
     };
 
-    mockMongoose.connect.mockResolvedValueOnce(undefined as any);
-    mockMongoose.disconnect.mockResolvedValueOnce(undefined as any);
-    (mockUser.findOne as jest.Mock).mockResolvedValueOnce(existingAdmin as any);
+    mockMongoose.connect.mockResolvedValueOnce(undefined as unknown as typeof mongoose);
+    mockMongoose.disconnect.mockResolvedValueOnce(undefined as unknown as void);
+    (mockUser.findOne).mockResolvedValueOnce(existingAdmin);
 
     await createAdminUser();
 
@@ -116,7 +116,7 @@ describe('createAdminUser script', () => {
     const error = new Error('Database connection failed');
 
     mockMongoose.connect.mockRejectedValueOnce(error);
-    mockMongoose.disconnect.mockResolvedValueOnce(undefined as any);
+    mockMongoose.disconnect.mockResolvedValueOnce(undefined as unknown as void);
 
     await createAdminUser();
 
@@ -128,9 +128,9 @@ describe('createAdminUser script', () => {
   it('should handle hash error gracefully', async () => {
     const error = new Error('Hash failed');
 
-    mockMongoose.connect.mockResolvedValueOnce(undefined as any);
-    mockMongoose.disconnect.mockResolvedValueOnce(undefined as any);
-    (mockUser.findOne as jest.Mock).mockResolvedValueOnce(null);
+    mockMongoose.connect.mockResolvedValueOnce(undefined as unknown as typeof mongoose);
+    mockMongoose.disconnect.mockResolvedValueOnce(undefined as unknown as void);
+    (mockUser.findOne).mockResolvedValueOnce(null);
     (mockHash as jest.Mock).mockRejectedValueOnce(error);
 
     await createAdminUser();
@@ -145,13 +145,13 @@ describe('createAdminUser script', () => {
   it('should handle user save error gracefully', async () => {
     const error = new Error('Save failed');
 
-    mockMongoose.connect.mockResolvedValueOnce(undefined as any);
-    mockMongoose.disconnect.mockResolvedValueOnce(undefined as any);
-    (mockUser.findOne as jest.Mock).mockResolvedValueOnce(null);
+    mockMongoose.connect.mockResolvedValueOnce(undefined as unknown as typeof mongoose);
+    mockMongoose.disconnect.mockResolvedValueOnce(undefined as unknown as void);
+    (mockUser.findOne).mockResolvedValueOnce(null);
     (mockHash as jest.Mock).mockResolvedValueOnce('hashed_password');
 
     const mockSave = jest.fn().mockRejectedValueOnce(error);
-    (mockUser as any).mockImplementationOnce(() => ({
+    (mockUser as jest.Mock).mockImplementationOnce(() => ({
       save: mockSave
     }));
 
