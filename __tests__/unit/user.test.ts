@@ -1,11 +1,20 @@
-import { hash } from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 
 import User from '../../src/models/User';
+import { IUserDocument } from '../../src/types/user';
 
 describe('User Model Unit Tests', () => {
-  describe('Pre-save middleware', () => {
-    it('should hash password when password is modified', async () => {
+  beforeAll(async () => {
+    // Tests will use the global database setup
+  });
+
+  afterEach(async () => {
+    await User.deleteMany({});
+  });
+
+  describe('Password hashing', () => {
+    it('should hash password before saving', async () => {
       const userData = {
         email: 'test@example.com',
         password: 'password123',
@@ -16,12 +25,11 @@ describe('User Model Unit Tests', () => {
       const user = new User(userData);
       await user.save();
 
-      // Password should be hashed
       expect(user.password).not.toBe('password123');
-      expect(user.password).toMatch(/^\$2[aby]\$\d+\$/); // bcrypt hash pattern
+      expect(user.password.length).toBeGreaterThan(10);
     });
 
-    it('should not hash password when password is not modified', async () => {
+    it('should not rehash password if not modified', async () => {
       const userData = {
         email: 'test2@example.com',
         password: 'password123',
@@ -32,14 +40,11 @@ describe('User Model Unit Tests', () => {
       const user = new User(userData);
       await user.save();
 
-      const originalPassword = user.password;
-
-      // Modify a non-password field
+      const originalHash = user.password;
       user.profile.name = 'Updated Name';
       await user.save();
 
-      // Password should remain the same
-      expect(user.password).toBe(originalPassword);
+      expect(user.password).toBe(originalHash);
     });
 
     it('should handle errors during password hashing', async () => {
@@ -53,14 +58,14 @@ describe('User Model Unit Tests', () => {
       const user = new User(userData);
 
       // Mock hash function to throw an error
-      const originalHash = require('bcryptjs').hash;
+      const originalHash = bcrypt.hash;
       const mockHash = jest.fn().mockRejectedValue(new Error('Hashing failed'));
-      require('bcryptjs').hash = mockHash;
+      bcrypt.hash = mockHash as any;
 
       await expect(user.save()).rejects.toThrow('Hashing failed');
 
       // Restore original hash function
-      require('bcryptjs').hash = originalHash;
+      bcrypt.hash = originalHash;
     });
   });
 

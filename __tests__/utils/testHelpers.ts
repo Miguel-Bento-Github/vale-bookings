@@ -23,6 +23,15 @@ interface TestContext {
     bookingId: string;
 }
 
+interface UserData {
+    email: string;
+    password: string;
+    role: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+}
+
 // Cache for created entities to avoid recreating them
 const entityCache = {
     users: new Map<string, any>(),
@@ -30,7 +39,7 @@ const entityCache = {
     tokens: new Map<string, string>(),
 };
 
-export const createUserAndGetToken = async (app: Application, userData: any, cacheKey: string): Promise<{ userId: string; token: string }> => {
+export const createUserAndGetToken = async (app: Application, userData: UserData, cacheKey: string): Promise<{ userId: string; token: string }> => {
     // Check cache first
     if (entityCache.users.has(cacheKey) && entityCache.tokens.has(cacheKey)) {
         const cachedUser = entityCache.users.get(cacheKey);
@@ -135,7 +144,7 @@ export const clearTestCache = (): void => {
     entityCache.tokens.clear();
 };
 
-export const expectError = (response: any, statusCode: number, messageContains?: string) => {
+export const expectError = (response: request.Response, statusCode: number, messageContains?: string): void => {
     expect(response.status).toBe(statusCode);
     expect(response.body.success).toBe(false);
     if (messageContains) {
@@ -143,7 +152,7 @@ export const expectError = (response: any, statusCode: number, messageContains?:
     }
 };
 
-export const expectSuccess = (response: any, statusCode: number = 200) => {
+export const expectSuccess = (response: request.Response, statusCode: number = 200): void => {
     expect(response.status).toBe(statusCode);
     expect(response.body.success).toBe(true);
 }; 

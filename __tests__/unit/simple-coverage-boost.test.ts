@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 import Booking from '../../src/models/Booking';
 import Location from '../../src/models/Location';
 import User from '../../src/models/User';
@@ -6,19 +8,13 @@ import * as LocationService from '../../src/services/LocationService';
 import * as UserService from '../../src/services/UserService';
 import { AppError } from '../../src/types';
 
-const originalConsoleError = console.error;
-const originalConsoleLog = console.log;
-
+// Suppress console output during tests
 beforeAll(() => {
-  // Suppress console logs during tests
-  console.error = jest.fn();
-  console.log = jest.fn();
+  jest.spyOn(console, 'log').mockImplementation(() => { });
 });
 
 afterAll(() => {
-  // Restore console logs
-  console.error = originalConsoleError;
-  console.log = originalConsoleLog;
+  jest.restoreAllMocks();
 });
 
 describe('Simple Coverage Boost Tests', () => {
@@ -31,20 +27,18 @@ describe('Simple Coverage Boost Tests', () => {
   describe('Utility Functions Coverage', () => {
     it('should calculate distance correctly', async () => {
       // Create multiple test locations at known distances
-      const locations = [
-        await LocationService.createLocation({
-          name: 'NYC Location',
-          address: '123 NYC St',
-          coordinates: { latitude: 40.7128, longitude: -74.0060 },
-          isActive: true
-        }),
-        await LocationService.createLocation({
-          name: 'Nearby Location',
-          address: '456 Nearby St',
-          coordinates: { latitude: 40.7589, longitude: -73.9851 }, // ~7km away
-          isActive: true
-        })
-      ];
+      await LocationService.createLocation({
+        name: 'NYC Location',
+        address: '123 NYC St',
+        coordinates: { latitude: 40.7128, longitude: -74.0060 },
+        isActive: true
+      });
+      await LocationService.createLocation({
+        name: 'Nearby Location',
+        address: '456 Nearby St',
+        coordinates: { latitude: 40.7589, longitude: -73.9851 }, // ~7km away
+        isActive: true
+      });
 
       const locationsWithDistance = await LocationService.getLocationsWithDistance(
         40.7128, -74.0060, 50
@@ -233,7 +227,7 @@ describe('Simple Coverage Boost Tests', () => {
         isActive: true
       });
 
-      const pendingBooking = await BookingService.createBooking({
+      await BookingService.createBooking({
         userId: String(user._id),
         locationId: String(location._id),
         startTime: new Date(Date.now() + 3600000),
@@ -242,7 +236,7 @@ describe('Simple Coverage Boost Tests', () => {
         price: 25
       });
 
-      const confirmedBooking = await BookingService.createBooking({
+      await BookingService.createBooking({
         userId: String(user._id),
         locationId: String(location._id),
         startTime: new Date(Date.now() + 10800000), // 3 hours from now
@@ -278,7 +272,7 @@ describe('Simple Coverage Boost Tests', () => {
         isActive: true
       });
 
-      const futureBooking = await BookingService.createBooking({
+      await BookingService.createBooking({
         userId: String(user._id),
         locationId: String(location._id),
         startTime: new Date(Date.now() + 3600000), // 1 hour from now

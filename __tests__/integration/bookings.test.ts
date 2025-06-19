@@ -2,17 +2,14 @@ import { Application } from 'express';
 import request from 'supertest';
 
 import Booking from '../../src/models/Booking';
-import Location from '../../src/models/Location';
 import User from '../../src/models/User';
 import {
   validUser,
-  adminUser,
-  valetUser,
-  validCreateLocationRequest,
   validCreateBookingRequest,
   invalidBookingData
 } from '../fixtures';
 import { setupTestContext, expectError, expectSuccess } from '../utils/testHelpers';
+
 import createTestApp from './testApp';
 
 describe('Bookings Integration Tests', () => {
@@ -24,7 +21,7 @@ describe('Bookings Integration Tests', () => {
   let locationId: string;
   let bookingId: string;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     app = createTestApp();
   });
 
@@ -169,11 +166,6 @@ describe('Bookings Integration Tests', () => {
         .post('/api/bookings')
         .set('Authorization', `Bearer ${userToken}`)
         .send(newBookingData);
-
-      // Log response for debugging if it fails
-      if (response.status !== 201) {
-        console.log('Booking creation failed:', response.status, response.body);
-      }
 
       expect(response.status).toBe(201);
       expectSuccess(response, 201);
