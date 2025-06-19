@@ -11,18 +11,24 @@ import * as LocationService from '../../src/services/LocationService';
 import * as UserService from '../../src/services/UserService';
 import { AppError, IUserDocument, ILocationDocument } from '../../src/types';
 
+// eslint-disable-next-line no-console
 const originalConsoleError = console.error;
+// eslint-disable-next-line no-console
 const originalConsoleLog = console.log;
 
 beforeAll(() => {
   // Suppress console logs during tests
+  // eslint-disable-next-line no-console
   console.error = jest.fn();
+  // eslint-disable-next-line no-console
   console.log = jest.fn();
 });
 
 afterAll(() => {
   // Restore console logs
+  // eslint-disable-next-line no-console
   console.error = originalConsoleError;
+  // eslint-disable-next-line no-console
   console.log = originalConsoleLog;
 });
 

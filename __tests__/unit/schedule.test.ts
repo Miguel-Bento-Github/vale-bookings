@@ -100,16 +100,18 @@ describe('Schedule Model Unit Tests', () => {
         })
       });
 
-      // Temporarily replace the find method
-      const originalFind = Schedule.find;
-      Schedule.find = mockFind;
+      // Mock the model find method
+      jest.spyOn(Schedule, 'find').mockImplementation(mockFind);
 
       await Schedule.findByLocationId(locationId, true);
 
-      expect(mockFind).toHaveBeenCalledWith({ locationId, isActive: true });
+      // Check that mockFind was called exactly once
+      const calls = mockFind.mock.calls;
+      expect(calls.length).toBe(1);
+      expect(calls[0][0]).toEqual({ locationId, isActive: true });
 
       // Restore original method
-      Schedule.find = originalFind;
+      jest.restoreAllMocks();
     });
 
     it('should not include isActive filter when activeOnly is false', async () => {
@@ -122,16 +124,18 @@ describe('Schedule Model Unit Tests', () => {
         })
       });
 
-      // Temporarily replace the find method
-      const originalFind = Schedule.find;
-      Schedule.find = mockFind;
+      // Mock the model find method
+      jest.spyOn(Schedule, 'find').mockImplementation(mockFind);
 
       await Schedule.findByLocationId(locationId, false);
 
-      expect(mockFind).toHaveBeenCalledWith({ locationId });
+      // Check that mockFind was called exactly once
+      const calls = mockFind.mock.calls;
+      expect(calls.length).toBe(1);
+      expect(calls[0][0]).toEqual({ locationId });
 
       // Restore original method
-      Schedule.find = originalFind;
+      jest.restoreAllMocks();
     });
   });
 
@@ -145,16 +149,18 @@ describe('Schedule Model Unit Tests', () => {
         populate: jest.fn().mockResolvedValue(null)
       });
 
-      // Temporarily replace the findOne method
-      const originalFindOne = Schedule.findOne;
-      Schedule.findOne = mockFindOne;
+      // Mock the model findOne method
+      jest.spyOn(Schedule, 'findOne').mockImplementation(mockFindOne);
 
       await Schedule.findByLocationAndDay(locationId, dayOfWeek, true);
 
-      expect(mockFindOne).toHaveBeenCalledWith({ locationId, dayOfWeek, isActive: true });
+      // Check that mockFindOne was called exactly once
+      const calls = mockFindOne.mock.calls;
+      expect(calls.length).toBe(1);
+      expect(calls[0][0]).toEqual({ locationId, dayOfWeek, isActive: true });
 
       // Restore original method
-      Schedule.findOne = originalFindOne;
+      jest.restoreAllMocks();
     });
 
     it('should not include isActive filter when activeOnly is false', async () => {
@@ -166,16 +172,18 @@ describe('Schedule Model Unit Tests', () => {
         populate: jest.fn().mockResolvedValue(null)
       });
 
-      // Temporarily replace the findOne method
-      const originalFindOne = Schedule.findOne;
-      Schedule.findOne = mockFindOne;
+      // Mock the model findOne method
+      jest.spyOn(Schedule, 'findOne').mockImplementation(mockFindOne);
 
       await Schedule.findByLocationAndDay(locationId, dayOfWeek, false);
 
-      expect(mockFindOne).toHaveBeenCalledWith({ locationId, dayOfWeek });
+      // Check that mockFindOne was called exactly once
+      const calls = mockFindOne.mock.calls;
+      expect(calls.length).toBe(1);
+      expect(calls[0][0]).toEqual({ locationId, dayOfWeek });
 
       // Restore original method
-      Schedule.findOne = originalFindOne;
+      jest.restoreAllMocks();
     });
   });
 
