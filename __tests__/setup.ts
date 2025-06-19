@@ -85,4 +85,13 @@ process.env.MONGODB_DISABLE_LOGGING = 'true';
 // Mock Morgan to prevent HTTP logs in tests and improve performance
 jest.mock('morgan', () => {
   return () => (req: any, res: any, next: any) => next();
-}); 
+});
+
+// Mock bcrypt for faster password hashing in tests (but keep JWT working)
+jest.mock('bcryptjs', () => ({
+  hash: jest.fn(async (password: string) => `hashed_${password}`),
+  compare: jest.fn(async (password: string, hash: string) => {
+    return hash === `hashed_${password}`;
+  }),
+  genSalt: jest.fn(async () => 'mock-salt')
+})); 

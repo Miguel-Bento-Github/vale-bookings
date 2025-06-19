@@ -32,16 +32,24 @@ interface UserData {
     phone?: string;
 }
 
+// Cache for shared test data to avoid recreating for every test
+let testDataCache: TestContext | null = null;
+let cacheCreationPromise: Promise<TestContext> | null = null;
+
 export const createUserAndGetToken = async (app: Application, userData: UserData): Promise<{ userId: string; token: string }> => {
-    // Always create fresh user for parallel execution reliability
-    const user = new User(userData);
+    // Create user with unique email to avoid conflicts
+    const uniqueEmail = `${Date.now()}-${Math.random()}-${userData.email}`;
+    const user = new User({
+        ...userData,
+        email: uniqueEmail
+    });
     const savedUser = await user.save();
 
     // Get token
     const loginResponse = await request(app)
         .post('/api/auth/login')
         .send({
-            email: userData.email,
+            email: uniqueEmail,
             password: userData.password
         });
 
@@ -57,7 +65,10 @@ export const createUserAndGetToken = async (app: Application, userData: UserData
 };
 
 export const createTestLocation = async (): Promise<string> => {
-    const location = new Location(validCreateLocationRequest);
+    const location = new Location({
+        ...validCreateLocationRequest,
+        name: `Test Location ${Date.now()}` // Unique name to avoid conflicts
+    });
     const savedLocation = await location.save();
     return savedLocation._id.toString();
 };
@@ -73,7 +84,7 @@ export const createTestBooking = async (userId: string, locationId: string): Pro
     return savedBooking._id.toString();
 };
 
-export const setupTestContext = async (app: Application): Promise<TestContext> => {
+const createFreshTestContext = async (app: Application): Promise<TestContext> => {
     // Create users and get tokens in parallel for speed
     const [userResult, adminResult, valetResult] = await Promise.all([
         createUserAndGetToken(app, validUser),
@@ -115,6 +126,44 @@ export const setupTestContext = async (app: Application): Promise<TestContext> =
         locationId,
         bookingId
     };
+};
+
+export const setupTestContext = async (app: Application): Promise<TestContext> => {
+    // Use cached test data if available and still valid
+    if (testDataCache) {
+        // Verify tokens are still valid by making a quick request
+        try {
+            const response = await request(app)
+                .get('/api/bookings')
+                .set('Authorization', `Bearer ${testDataCache.userToken}`);
+
+            if (response.status === 200) {
+                return testDataCache; // Cache is still valid
+            }
+        } catch {
+            // Cache is invalid, will create fresh data
+        }
+    }
+
+    // If cache creation is already in progress, wait for it
+    if (cacheCreationPromise) {
+        testDataCache = await cacheCreationPromise;
+        cacheCreationPromise = null;
+        return testDataCache;
+    }
+
+    // Create fresh test context
+    cacheCreationPromise = createFreshTestContext(app);
+    testDataCache = await cacheCreationPromise;
+    cacheCreationPromise = null;
+
+    return testDataCache;
+};
+
+// Function to clear cache when needed (e.g., between test suites)
+export const clearTestDataCache = (): void => {
+    testDataCache = null;
+    cacheCreationPromise = null;
 };
 
 export const expectError = (response: request.Response, statusCode: number, messageContains?: string): void => {
