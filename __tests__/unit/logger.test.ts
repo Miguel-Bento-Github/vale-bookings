@@ -14,7 +14,7 @@ const mockConsoleInfo = jest.spyOn(console, 'info').mockImplementation(() => { }
 
 // Mock morgan
 jest.mock('morgan', () => {
-  const mockMorgan = jest.fn((format: string, options?: any) => {
+  const mockMorgan = jest.fn((format: string, options?: { skip?: () => boolean }) => {
     return jest.fn((req: Request, res: Response, next: () => void) => {
       if (options?.skip?.()) {
         return next();
@@ -24,7 +24,7 @@ jest.mock('morgan', () => {
   });
 
   // Mock token function
-  (mockMorgan as any).token = jest.fn();
+  (mockMorgan as jest.MockedFunction<typeof mockMorgan> & { token: jest.Mock }).token = jest.fn();
 
   return mockMorgan;
 });
@@ -242,9 +242,9 @@ describe('Logger Utils', () => {
     it('should not setup tokens in test environment', () => {
       process.env.NODE_ENV = 'test';
 
-      // Re-require the module to trigger the conditional setup
+      // Re-import the module to trigger the conditional setup
       jest.resetModules();
-      require('../../src/utils/logger');
+      void import('../../src/utils/logger');
 
       // In test environment, tokens should not be set up
       // This is implicitly tested by the fact that the module loads without errors
@@ -254,9 +254,9 @@ describe('Logger Utils', () => {
     it('should not setup tokens when coverage flag is present', () => {
       process.argv.push('--coverage');
 
-      // Re-require the module to trigger the conditional setup
+      // Re-import the module to trigger the conditional setup
       jest.resetModules();
-      require('../../src/utils/logger');
+      void import('../../src/utils/logger');
 
       // With coverage flag, tokens should not be set up
       expect(true).toBe(true);
@@ -265,9 +265,9 @@ describe('Logger Utils', () => {
     it('should not setup tokens when jest is in argv', () => {
       process.argv.push('jest');
 
-      // Re-require the module to trigger the conditional setup
+      // Re-import the module to trigger the conditional setup
       jest.resetModules();
-      require('../../src/utils/logger');
+      void import('../../src/utils/logger');
 
       // With jest in argv, tokens should not be set up
       expect(true).toBe(true);
