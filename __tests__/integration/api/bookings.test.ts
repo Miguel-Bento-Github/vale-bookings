@@ -35,6 +35,8 @@ describe('Bookings Integration Tests', () => {
     bookingId = context.bookingId;
   });
 
+
+
   describe('GET /api/bookings', () => {
     it('should get user bookings with authentication', async () => {
       const response = await request(app)
@@ -64,17 +66,18 @@ describe('Bookings Integration Tests', () => {
     });
 
     it('should return empty array for user with no bookings', async () => {
-      // Create another user with no bookings
+      // Create another user with no bookings using unique email
+      const uniqueEmail = `nobookings-${Date.now()}@example.com`;
       const newUser = new User({
         ...validUser,
-        email: 'nobookings@example.com'
+        email: uniqueEmail
       });
       await newUser.save();
 
       const loginResponse = await request(app)
         .post('/api/auth/login')
         .send({
-          email: 'nobookings@example.com',
+          email: uniqueEmail,
           password: validUser.password
         });
 
@@ -119,17 +122,18 @@ describe('Bookings Integration Tests', () => {
     });
 
     it('should fail to get booking for non-owner user', async () => {
-      // Create another user
+      // Create another user with unique email
+      const uniqueEmail = `other-get-${Date.now()}@example.com`;
       const otherUser = new User({
         ...validUser,
-        email: 'other@example.com'
+        email: uniqueEmail
       });
       await otherUser.save();
 
       const loginResponse = await request(app)
         .post('/api/auth/login')
         .send({
-          email: 'other@example.com',
+          email: uniqueEmail,
           password: validUser.password
         });
 
@@ -303,8 +307,20 @@ describe('Bookings Integration Tests', () => {
     });
 
     it('should allow admin to cancel any booking', async () => {
+      // Create a fresh booking for admin to cancel (since previous test may have cancelled it)
+      const freshBooking = new Booking({
+        userId: userId,
+        locationId: locationId,
+        startTime: new Date('2025-12-03T09:00:00Z'),
+        endTime: new Date('2025-12-03T17:00:00Z'),
+        status: 'PENDING',
+        price: 50.00,
+        notes: 'Fresh booking for admin cancel test'
+      });
+      const savedBooking = await freshBooking.save();
+
       const response = await request(app)
-        .delete(`/api/bookings/${bookingId}`)
+        .delete(`/api/bookings/${savedBooking._id}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
@@ -312,22 +328,35 @@ describe('Bookings Integration Tests', () => {
     });
 
     it('should fail for non-owner user to cancel booking', async () => {
-      // Create another user
+      // Create another user with unique email
+      const uniqueEmail = `other-${Date.now()}@example.com`;
       const otherUser = new User({
         ...validUser,
-        email: 'other@example.com'
+        email: uniqueEmail
       });
       await otherUser.save();
 
       const loginResponse = await request(app)
         .post('/api/auth/login')
         .send({
-          email: 'other@example.com',
+          email: uniqueEmail,
           password: validUser.password
         });
 
+      // Create a fresh booking for this test
+      const freshBooking = new Booking({
+        userId: userId,
+        locationId: locationId,
+        startTime: new Date('2025-12-04T09:00:00Z'),
+        endTime: new Date('2025-12-04T17:00:00Z'),
+        status: 'PENDING',
+        price: 50.00,
+        notes: 'Fresh booking for non-owner test'
+      });
+      const savedBooking = await freshBooking.save();
+
       const response = await request(app)
-        .delete(`/api/bookings/${bookingId}`)
+        .delete(`/api/bookings/${savedBooking._id}`)
         .set('Authorization', `Bearer ${loginResponse.body.data.token}`)
         .expect(403);
 
@@ -345,11 +374,20 @@ describe('Bookings Integration Tests', () => {
     });
 
     it('should fail to cancel already completed booking', async () => {
-      // Update booking status to COMPLETED
-      await Booking.findByIdAndUpdate(bookingId, { status: 'COMPLETED' });
+      // Create a fresh booking and mark it as completed
+      const completedBooking = new Booking({
+        userId: userId,
+        locationId: locationId,
+        startTime: new Date('2025-12-05T09:00:00Z'),
+        endTime: new Date('2025-12-05T17:00:00Z'),
+        status: 'COMPLETED',
+        price: 50.00,
+        notes: 'Completed booking for test'
+      });
+      const savedBooking = await completedBooking.save();
 
       const response = await request(app)
-        .delete(`/api/bookings/${bookingId}`)
+        .delete(`/api/bookings/${savedBooking._id}`)
         .set('Authorization', `Bearer ${userToken}`)
         .expect(400);
 

@@ -32,9 +32,8 @@ interface UserData {
     phone?: string;
 }
 
-// Cache for shared test data to avoid recreating for every test
-let testDataCache: TestContext | null = null;
-let cacheCreationPromise: Promise<TestContext> | null = null;
+// Simple counter for unique test data
+let testCounter = 0;
 
 export const createUserAndGetToken = async (app: Application, userData: UserData): Promise<{ userId: string; token: string }> => {
     // Create user with unique email to avoid conflicts
@@ -84,12 +83,26 @@ export const createTestBooking = async (userId: string, locationId: string): Pro
     return savedBooking._id.toString();
 };
 
-const createFreshTestContext = async (app: Application): Promise<TestContext> => {
+const createFreshTestContext = async (app: Application, uniqueId: string): Promise<TestContext> => {
+    // Create users with unique emails per test to avoid conflicts
+    const uniqueValidUser = {
+        ...validUser,
+        email: `test-${uniqueId}-${validUser.email}`
+    };
+    const uniqueAdminUser = {
+        ...adminUser,
+        email: `admin-${uniqueId}-${adminUser.email}`
+    };
+    const uniqueValetUser = {
+        ...valetUser,
+        email: `valet-${uniqueId}-${valetUser.email}`
+    };
+
     // Create users and get tokens in parallel for speed
     const [userResult, adminResult, valetResult] = await Promise.all([
-        createUserAndGetToken(app, validUser),
-        createUserAndGetToken(app, adminUser),
-        createUserAndGetToken(app, valetUser)
+        createUserAndGetToken(app, uniqueValidUser),
+        createUserAndGetToken(app, uniqueAdminUser),
+        createUserAndGetToken(app, uniqueValetUser)
     ]);
 
     // Validate user creation
@@ -129,41 +142,14 @@ const createFreshTestContext = async (app: Application): Promise<TestContext> =>
 };
 
 export const setupTestContext = async (app: Application): Promise<TestContext> => {
-    // Use cached test data if available and still valid
-    if (testDataCache) {
-        // Verify tokens are still valid by making a quick request
-        try {
-            const response = await request(app)
-                .get('/api/bookings')
-                .set('Authorization', `Bearer ${testDataCache.userToken}`);
-
-            if (response.status === 200) {
-                return testDataCache; // Cache is still valid
-            }
-        } catch {
-            // Cache is invalid, will create fresh data
-        }
-    }
-
-    // If cache creation is already in progress, wait for it
-    if (cacheCreationPromise) {
-        testDataCache = await cacheCreationPromise;
-        cacheCreationPromise = null;
-        return testDataCache;
-    }
-
-    // Create fresh test context
-    cacheCreationPromise = createFreshTestContext(app);
-    testDataCache = await cacheCreationPromise;
-    cacheCreationPromise = null;
-
-    return testDataCache;
+    // Create fresh test data for each test with unique identifiers
+    testCounter++;
+    return await createFreshTestContext(app, testCounter.toString());
 };
 
-// Function to clear cache when needed (e.g., between test suites)
+// Function to reset counter when needed
 export const clearTestDataCache = (): void => {
-    testDataCache = null;
-    cacheCreationPromise = null;
+    testCounter = 0;
 };
 
 export const expectError = (response: request.Response, statusCode: number, messageContains?: string): void => {
