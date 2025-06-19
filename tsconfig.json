@@ -16,6 +16,7 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
+    "isolatedModules": true,
     "types": ["jest", "supertest", "node"]
   },
   "include": ["src/**/*", "__tests__/**/*"],

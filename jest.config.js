@@ -36,7 +36,6 @@ module.exports = {
   // Transform and module resolution optimizations for speed
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      isolatedModules: true, // Faster compilation
       useESM: false, // Disable ESM for better performance
       tsconfig: {
         sourceMap: false, // Disable source maps for faster compilation
