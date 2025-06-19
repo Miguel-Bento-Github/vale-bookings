@@ -47,7 +47,7 @@ describe('Bookings Integration Tests', () => {
       expect(response.body.data).toEqual(expect.any(Array));
       expect(response.body.data.length).toBeGreaterThanOrEqual(1);
 
-      const booking = response.body.data.find((b: any) => b._id === bookingId);
+      const booking = response.body.data.find((b: { _id: string }) => b._id === bookingId);
       expect(booking).toMatchObject({
         _id: bookingId,
         userId: userId,
@@ -171,18 +171,6 @@ describe('Bookings Integration Tests', () => {
         .post('/api/bookings')
         .set('Authorization', `Bearer ${userToken}`)
         .send(newBookingData);
-
-      // Add debugging info if test fails
-      if (response.status !== 201) {
-        console.log('POST /api/bookings failed with:', {
-          status: response.status,
-          body: response.body,
-          userToken: userToken ? 'present' : 'missing',
-          userId,
-          locationId,
-          newBookingData
-        });
-      }
 
       expect(response.status).toBe(201);
       expectSuccess(response, 201);
