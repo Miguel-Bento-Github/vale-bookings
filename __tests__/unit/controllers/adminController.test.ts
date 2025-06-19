@@ -29,10 +29,11 @@ describe('AdminController', () => {
   describe('getAllUsers', () => {
     it('should get all users with pagination', async () => {
       const mockResult = {
-        users: [{ id: '1', email: 'user@test.com' }],
+          users: [],
         pagination: { currentPage: 1, totalPages: 1, totalItems: 1, itemsPerPage: 10 }
       };
-      mockAdminService.getAllUsers.mockResolvedValue(mockResult as any);
+        (mockAdminService.getAllUsers as jest.MockedFunction<typeof mockAdminService.getAllUsers>)
+            .mockResolvedValue(mockResult);
 
       await AdminController.getAllUsers(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -46,7 +47,8 @@ describe('AdminController', () => {
 
     it('should handle AppError', async () => {
       const appError = new AppError('Service error', 400);
-      mockAdminService.getAllUsers.mockRejectedValue(appError);
+        (mockAdminService.getAllUsers as jest.MockedFunction<typeof mockAdminService.getAllUsers>)
+            .mockRejectedValue(appError);
 
       await AdminController.getAllUsers(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -58,7 +60,8 @@ describe('AdminController', () => {
     });
 
     it('should handle generic error', async () => {
-      mockAdminService.getAllUsers.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.getAllUsers as jest.MockedFunction<typeof mockAdminService.getAllUsers>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.getAllUsers(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -74,8 +77,9 @@ describe('AdminController', () => {
     it('should update user role successfully', async () => {
       mockReq.params = { id: 'user-id' };
       mockReq.body = { role: 'VALET' };
-      const mockUser = { id: 'user-id', role: 'VALET' };
-      mockAdminService.updateUserRole.mockResolvedValue(mockUser as any);
+        const mockUser = {} as never;
+        (mockAdminService.updateUserRole as jest.MockedFunction<typeof mockAdminService.updateUserRole>)
+            .mockResolvedValue(mockUser);
 
       await AdminController.updateUserRole(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -115,7 +119,8 @@ describe('AdminController', () => {
   describe('deleteUser', () => {
     it('should delete user successfully', async () => {
       mockReq.params = { id: 'user-id' };
-      mockAdminService.deleteUser.mockResolvedValue(undefined);
+        (mockAdminService.deleteUser as jest.MockedFunction<typeof mockAdminService.deleteUser>)
+            .mockResolvedValue(undefined);
 
       await AdminController.deleteUser(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -141,8 +146,9 @@ describe('AdminController', () => {
 
   describe('getAllValets', () => {
     it('should get all valets successfully', async () => {
-      const mockValets = [{ id: '1', email: 'valet@test.com' }];
-      mockAdminService.getAllValets.mockResolvedValue(mockValets as any);
+        const mockValets = [] as never[];
+        (mockAdminService.getAllValets as jest.MockedFunction<typeof mockAdminService.getAllValets>)
+            .mockResolvedValue(mockValets);
 
       await AdminController.getAllValets(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -161,8 +167,9 @@ describe('AdminController', () => {
         password: 'password123',
         profile: { name: 'Test Valet' }
       };
-      const mockValet = { id: '1', email: 'valet@test.com' };
-      mockAdminService.createValet.mockResolvedValue(mockValet as any);
+        const mockValet = {} as never;
+        (mockAdminService.createValet as jest.MockedFunction<typeof mockAdminService.createValet>)
+            .mockResolvedValue(mockValet);
 
       await AdminController.createValet(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -190,8 +197,9 @@ describe('AdminController', () => {
     it('should update valet successfully', async () => {
       mockReq.params = { id: 'valet-id' };
       mockReq.body = { profile: { name: 'Updated Valet' } };
-      const mockValet = { id: 'valet-id', profile: { name: 'Updated Valet' } };
-      mockAdminService.updateValet.mockResolvedValue(mockValet as any);
+        const mockValet = {} as never;
+        (mockAdminService.updateValet as jest.MockedFunction<typeof mockAdminService.updateValet>)
+            .mockResolvedValue(mockValet);
 
       await AdminController.updateValet(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -231,7 +239,8 @@ describe('AdminController', () => {
   describe('deleteValet', () => {
     it('should delete valet successfully', async () => {
       mockReq.params = { id: 'valet-id' };
-      mockAdminService.deleteValet.mockResolvedValue(undefined);
+        (mockAdminService.deleteValet as jest.MockedFunction<typeof mockAdminService.deleteValet>)
+            .mockResolvedValue(undefined);
 
       await AdminController.deleteValet(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -262,8 +271,9 @@ describe('AdminController', () => {
         address: '123 Test St',
         coordinates: { latitude: 40.7128, longitude: -74.0060 }
       };
-      const mockLocation = { id: '1', name: 'Test Location' };
-      mockAdminService.createLocation.mockResolvedValue(mockLocation as any);
+        const mockLocation = {} as never;
+        (mockAdminService.createLocation as jest.MockedFunction<typeof mockAdminService.createLocation>)
+            .mockResolvedValue(mockLocation);
 
       await AdminController.createLocation(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -291,8 +301,9 @@ describe('AdminController', () => {
     it('should update location successfully', async () => {
       mockReq.params = { id: 'location-id' };
       mockReq.body = { name: 'Updated Location' };
-      const mockLocation = { id: 'location-id', name: 'Updated Location' };
-      mockAdminService.updateLocation.mockResolvedValue(mockLocation as any);
+        const mockLocation = {} as never;
+        (mockAdminService.updateLocation as jest.MockedFunction<typeof mockAdminService.updateLocation>)
+            .mockResolvedValue(mockLocation);
 
       await AdminController.updateLocation(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -332,7 +343,8 @@ describe('AdminController', () => {
   describe('deleteLocation', () => {
     it('should delete location successfully', async () => {
       mockReq.params = { id: 'location-id' };
-      mockAdminService.deleteLocation.mockResolvedValue(undefined);
+        (mockAdminService.deleteLocation as jest.MockedFunction<typeof mockAdminService.deleteLocation>)
+            .mockResolvedValue(undefined);
 
       await AdminController.deleteLocation(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -358,8 +370,9 @@ describe('AdminController', () => {
 
   describe('getAllSchedules', () => {
     it('should get all schedules successfully', async () => {
-      const mockSchedules = [{ id: '1', locationId: 'loc-1' }];
-      mockAdminService.getAllSchedules.mockResolvedValue(mockSchedules as any);
+        const mockSchedules = [] as never[];
+        (mockAdminService.getAllSchedules as jest.MockedFunction<typeof mockAdminService.getAllSchedules>)
+            .mockResolvedValue(mockSchedules);
 
       await AdminController.getAllSchedules(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -372,7 +385,8 @@ describe('AdminController', () => {
 
     it('should handle AppError in getAllSchedules', async () => {
       const appError = new AppError('Schedule error', 400);
-      mockAdminService.getAllSchedules.mockRejectedValue(appError);
+        (mockAdminService.getAllSchedules as jest.MockedFunction<typeof mockAdminService.getAllSchedules>)
+            .mockRejectedValue(appError);
 
       await AdminController.getAllSchedules(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -384,7 +398,8 @@ describe('AdminController', () => {
     });
 
     it('should handle generic error in getAllSchedules', async () => {
-      mockAdminService.getAllSchedules.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.getAllSchedules as jest.MockedFunction<typeof mockAdminService.getAllSchedules>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.getAllSchedules(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -404,8 +419,9 @@ describe('AdminController', () => {
         startTime: '09:00',
         endTime: '17:00'
       };
-      const mockSchedule = { id: '1', locationId: 'location-id' };
-      mockAdminService.createSchedule.mockResolvedValue(mockSchedule as any);
+        const mockSchedule = {} as never;
+        (mockAdminService.createSchedule as jest.MockedFunction<typeof mockAdminService.createSchedule>)
+            .mockResolvedValue(mockSchedule);
 
       await AdminController.createSchedule(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -436,7 +452,8 @@ describe('AdminController', () => {
         endTime: '17:00'
       };
       const appError = new AppError('Schedule creation failed', 400);
-      mockAdminService.createSchedule.mockRejectedValue(appError);
+        (mockAdminService.createSchedule as jest.MockedFunction<typeof mockAdminService.createSchedule>)
+            .mockRejectedValue(appError);
 
       await AdminController.createSchedule(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -454,7 +471,8 @@ describe('AdminController', () => {
         startTime: '09:00',
         endTime: '17:00'
       };
-      mockAdminService.createSchedule.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.createSchedule as jest.MockedFunction<typeof mockAdminService.createSchedule>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.createSchedule(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -470,8 +488,9 @@ describe('AdminController', () => {
     it('should update schedule successfully', async () => {
       mockReq.params = { id: 'schedule-id' };
       mockReq.body = { startTime: '08:00' };
-      const mockSchedule = { id: 'schedule-id', startTime: '08:00' };
-      mockAdminService.updateSchedule.mockResolvedValue(mockSchedule as any);
+        const mockSchedule = {} as never;
+        (mockAdminService.updateSchedule as jest.MockedFunction<typeof mockAdminService.updateSchedule>)
+            .mockResolvedValue(mockSchedule);
 
       await AdminController.updateSchedule(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -511,7 +530,8 @@ describe('AdminController', () => {
       mockReq.params = { id: 'schedule-id' };
       mockReq.body = { startTime: '08:00' };
       const appError = new AppError('Schedule update failed', 404);
-      mockAdminService.updateSchedule.mockRejectedValue(appError);
+        (mockAdminService.updateSchedule as jest.MockedFunction<typeof mockAdminService.updateSchedule>)
+            .mockRejectedValue(appError);
 
       await AdminController.updateSchedule(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -525,7 +545,8 @@ describe('AdminController', () => {
     it('should handle generic error in updateSchedule', async () => {
       mockReq.params = { id: 'schedule-id' };
       mockReq.body = { startTime: '08:00' };
-      mockAdminService.updateSchedule.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.updateSchedule as jest.MockedFunction<typeof mockAdminService.updateSchedule>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.updateSchedule(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -540,7 +561,8 @@ describe('AdminController', () => {
   describe('deleteSchedule', () => {
     it('should delete schedule successfully', async () => {
       mockReq.params = { id: 'schedule-id' };
-      mockAdminService.deleteSchedule.mockResolvedValue(undefined);
+        (mockAdminService.deleteSchedule as jest.MockedFunction<typeof mockAdminService.deleteSchedule>)
+            .mockResolvedValue(undefined);
 
       await AdminController.deleteSchedule(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -566,7 +588,8 @@ describe('AdminController', () => {
     it('should handle AppError in deleteSchedule', async () => {
       mockReq.params = { id: 'schedule-id' };
       const appError = new AppError('Schedule not found', 404);
-      mockAdminService.deleteSchedule.mockRejectedValue(appError);
+        (mockAdminService.deleteSchedule as jest.MockedFunction<typeof mockAdminService.deleteSchedule>)
+            .mockRejectedValue(appError);
 
       await AdminController.deleteSchedule(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -579,7 +602,8 @@ describe('AdminController', () => {
 
     it('should handle generic error in deleteSchedule', async () => {
       mockReq.params = { id: 'schedule-id' };
-      mockAdminService.deleteSchedule.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.deleteSchedule as jest.MockedFunction<typeof mockAdminService.deleteSchedule>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.deleteSchedule(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -601,10 +625,11 @@ describe('AdminController', () => {
         ]
       };
       const mockResult = {
-        successful: [{ id: '1' }, { id: '2' }],
+          successful: [],
         failed: []
       };
-      mockAdminService.createBulkSchedules.mockResolvedValue(mockResult as any);
+        (mockAdminService.createBulkSchedules as jest.MockedFunction<typeof mockAdminService.createBulkSchedules>)
+            .mockResolvedValue(mockResult as never);
 
       await AdminController.createBulkSchedules(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -624,10 +649,11 @@ describe('AdminController', () => {
         ]
       };
       const mockResult = {
-        successful: [{ id: '1' }],
-        failed: [{ error: 'Duplicate schedule' }]
+          successful: [],
+          failed: [{}]
       };
-      mockAdminService.createBulkSchedules.mockResolvedValue(mockResult as any);
+        (mockAdminService.createBulkSchedules as jest.MockedFunction<typeof mockAdminService.createBulkSchedules>)
+            .mockResolvedValue(mockResult as never);
 
       await AdminController.createBulkSchedules(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -705,7 +731,8 @@ describe('AdminController', () => {
         ]
       };
       const appError = new AppError('Bulk creation failed', 400);
-      mockAdminService.createBulkSchedules.mockRejectedValue(appError);
+        (mockAdminService.createBulkSchedules as jest.MockedFunction<typeof mockAdminService.createBulkSchedules>)
+            .mockRejectedValue(appError);
 
       await AdminController.createBulkSchedules(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -723,7 +750,8 @@ describe('AdminController', () => {
           { dayOfWeek: 1, startTime: '09:00', endTime: '17:00' }
         ]
       };
-      mockAdminService.createBulkSchedules.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.createBulkSchedules as jest.MockedFunction<typeof mockAdminService.createBulkSchedules>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.createBulkSchedules(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -738,8 +766,9 @@ describe('AdminController', () => {
   describe('getAllBookings', () => {
     it('should get all bookings successfully', async () => {
       mockReq.query = { status: 'PENDING', startDate: '2024-01-01', endDate: '2024-01-31' };
-      const mockBookings = [{ id: '1', status: 'PENDING' }];
-      mockAdminService.getAllBookings.mockResolvedValue(mockBookings as any);
+        const mockBookings = [] as never[];
+        (mockAdminService.getAllBookings as jest.MockedFunction<typeof mockAdminService.getAllBookings>)
+            .mockResolvedValue(mockBookings);
 
       await AdminController.getAllBookings(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -757,7 +786,8 @@ describe('AdminController', () => {
 
     it('should handle AppError in getAllBookings', async () => {
       const appError = new AppError('Booking error', 400);
-      mockAdminService.getAllBookings.mockRejectedValue(appError);
+        (mockAdminService.getAllBookings as jest.MockedFunction<typeof mockAdminService.getAllBookings>)
+            .mockRejectedValue(appError);
 
       await AdminController.getAllBookings(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -769,7 +799,8 @@ describe('AdminController', () => {
     });
 
     it('should handle generic error in getAllBookings', async () => {
-      mockAdminService.getAllBookings.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.getAllBookings as jest.MockedFunction<typeof mockAdminService.getAllBookings>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.getAllBookings(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -785,8 +816,9 @@ describe('AdminController', () => {
     it('should update booking status successfully', async () => {
       mockReq.params = { id: 'booking-id' };
       mockReq.body = { status: 'CONFIRMED' };
-      const mockBooking = { id: 'booking-id', status: 'CONFIRMED' };
-      mockAdminService.updateBookingStatus.mockResolvedValue(mockBooking as any);
+        const mockBooking = {} as never;
+        (mockAdminService.updateBookingStatus as jest.MockedFunction<typeof mockAdminService.updateBookingStatus>)
+            .mockResolvedValue(mockBooking);
 
       await AdminController.updateBookingStatus(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -826,7 +858,8 @@ describe('AdminController', () => {
       mockReq.params = { id: 'booking-id' };
       mockReq.body = { status: 'CONFIRMED' };
       const appError = new AppError('Booking not found', 404);
-      mockAdminService.updateBookingStatus.mockRejectedValue(appError);
+        (mockAdminService.updateBookingStatus as jest.MockedFunction<typeof mockAdminService.updateBookingStatus>)
+            .mockRejectedValue(appError);
 
       await AdminController.updateBookingStatus(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -840,7 +873,8 @@ describe('AdminController', () => {
     it('should handle generic error in updateBookingStatus', async () => {
       mockReq.params = { id: 'booking-id' };
       mockReq.body = { status: 'CONFIRMED' };
-      mockAdminService.updateBookingStatus.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.updateBookingStatus as jest.MockedFunction<typeof mockAdminService.updateBookingStatus>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.updateBookingStatus(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -854,8 +888,9 @@ describe('AdminController', () => {
 
   describe('getAnalyticsOverview', () => {
     it('should get analytics overview successfully', async () => {
-      const mockAnalytics = { totalBookings: 100, totalRevenue: 5000 };
-      mockAdminService.getAnalyticsOverview.mockResolvedValue(mockAnalytics as any);
+        const mockAnalytics = {} as never;
+        (mockAdminService.getAnalyticsOverview as jest.MockedFunction<typeof mockAdminService.getAnalyticsOverview>)
+            .mockResolvedValue(mockAnalytics);
 
       await AdminController.getAnalyticsOverview(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -868,7 +903,8 @@ describe('AdminController', () => {
 
     it('should handle AppError in getAnalyticsOverview', async () => {
       const appError = new AppError('Analytics error', 400);
-      mockAdminService.getAnalyticsOverview.mockRejectedValue(appError);
+        (mockAdminService.getAnalyticsOverview as jest.MockedFunction<typeof mockAdminService.getAnalyticsOverview>)
+            .mockRejectedValue(appError);
 
       await AdminController.getAnalyticsOverview(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -880,7 +916,8 @@ describe('AdminController', () => {
     });
 
     it('should handle generic error in getAnalyticsOverview', async () => {
-      mockAdminService.getAnalyticsOverview.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.getAnalyticsOverview as jest.MockedFunction<typeof mockAdminService.getAnalyticsOverview>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.getAnalyticsOverview(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -895,8 +932,9 @@ describe('AdminController', () => {
   describe('getRevenueAnalytics', () => {
     it('should get revenue analytics successfully', async () => {
       mockReq.query = { startDate: '2024-01-01', endDate: '2024-01-31' };
-      const mockRevenue = { totalRevenue: 5000, dailyRevenue: [] };
-      mockAdminService.getRevenueAnalytics.mockResolvedValue(mockRevenue as any);
+        const mockRevenue = {} as never;
+        (mockAdminService.getRevenueAnalytics as jest.MockedFunction<typeof mockAdminService.getRevenueAnalytics>)
+            .mockResolvedValue(mockRevenue);
 
       await AdminController.getRevenueAnalytics(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -909,7 +947,8 @@ describe('AdminController', () => {
 
     it('should handle AppError in getRevenueAnalytics', async () => {
       const appError = new AppError('Revenue analytics error', 400);
-      mockAdminService.getRevenueAnalytics.mockRejectedValue(appError);
+        (mockAdminService.getRevenueAnalytics as jest.MockedFunction<typeof mockAdminService.getRevenueAnalytics>)
+            .mockRejectedValue(appError);
 
       await AdminController.getRevenueAnalytics(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -921,7 +960,8 @@ describe('AdminController', () => {
     });
 
     it('should handle generic error in getRevenueAnalytics', async () => {
-      mockAdminService.getRevenueAnalytics.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.getRevenueAnalytics as jest.MockedFunction<typeof mockAdminService.getRevenueAnalytics>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.getRevenueAnalytics(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -936,8 +976,9 @@ describe('AdminController', () => {
   describe('getBookingAnalytics', () => {
     it('should get booking analytics successfully', async () => {
       mockReq.query = { startDate: '2024-01-01', endDate: '2024-01-31' };
-      const mockBookingAnalytics = { totalBookings: 100, bookingsByStatus: {} };
-      mockAdminService.getBookingAnalytics.mockResolvedValue(mockBookingAnalytics as any);
+        const mockBookingAnalytics = {} as never;
+        (mockAdminService.getBookingAnalytics as jest.MockedFunction<typeof mockAdminService.getBookingAnalytics>)
+            .mockResolvedValue(mockBookingAnalytics);
 
       await AdminController.getBookingAnalytics(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -950,7 +991,8 @@ describe('AdminController', () => {
 
     it('should handle AppError in getBookingAnalytics', async () => {
       const appError = new AppError('Booking analytics error', 400);
-      mockAdminService.getBookingAnalytics.mockRejectedValue(appError);
+        (mockAdminService.getBookingAnalytics as jest.MockedFunction<typeof mockAdminService.getBookingAnalytics>)
+            .mockRejectedValue(appError);
 
       await AdminController.getBookingAnalytics(mockReq as AuthenticatedRequest, mockRes as Response);
 
@@ -962,7 +1004,8 @@ describe('AdminController', () => {
     });
 
     it('should handle generic error in getBookingAnalytics', async () => {
-      mockAdminService.getBookingAnalytics.mockRejectedValue(new Error('Generic error'));
+        (mockAdminService.getBookingAnalytics as jest.MockedFunction<typeof mockAdminService.getBookingAnalytics>)
+            .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.getBookingAnalytics(mockReq as AuthenticatedRequest, mockRes as Response);
 
