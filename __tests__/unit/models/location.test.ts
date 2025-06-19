@@ -258,4 +258,95 @@ describe('Location Model Unit Tests', () => {
             expect(validationError).toBeUndefined();
         });
     });
+
+    describe('Static method findNearby', () => {
+        let mockFind: jest.Mock;
+
+        beforeEach(() => {
+            mockFind = jest.fn().mockReturnValue(Promise.resolve([]));
+            (Location as any).find = mockFind;
+        });
+
+        it('should call find with correct query parameters', async () => {
+            const latitude = 40.7128;
+            const longitude = -74.0060;
+            const radiusInKm = 5;
+
+            await (Location as any).findNearby(latitude, longitude, radiusInKm);
+
+            expect(mockFind).toHaveBeenCalledTimes(1);
+            const query = mockFind.mock.calls[0]?.[0];
+
+            expect(query).toHaveProperty('isActive', true);
+            expect(query['coordinates.latitude']).toBeDefined();
+            expect(query['coordinates.longitude']).toBeDefined();
+
+            // Verify latitude range
+            const latQuery = query['coordinates.latitude'];
+            expect(latQuery).toHaveProperty('$gte');
+            expect(latQuery).toHaveProperty('$lte');
+            expect(latQuery.$gte).toBeLessThan(latitude);
+            expect(latQuery.$lte).toBeGreaterThan(latitude);
+
+            // Verify longitude range
+            const lngQuery = query['coordinates.longitude'];
+            expect(lngQuery).toHaveProperty('$gte');
+            expect(lngQuery).toHaveProperty('$lte');
+            expect(lngQuery.$gte).toBeLessThan(longitude);
+            expect(lngQuery.$lte).toBeGreaterThan(longitude);
+        });
+
+        it('should use default radius of 10km when not provided', async () => {
+            const latitude = 40.7128;
+            const longitude = -74.0060;
+
+            await (Location as any).findNearby(latitude, longitude);
+
+            expect(mockFind).toHaveBeenCalledTimes(1);
+            const query = mockFind.mock.calls[0]?.[0];
+
+            // Default radius should be 10km ≈ 0.0899 degrees
+            const radiusInDegrees = 10 / 111.32;
+            const latQuery = query['coordinates.latitude'];
+            const lngQuery = query['coordinates.longitude'];
+
+            expect(latQuery.$gte).toBeCloseTo(latitude - radiusInDegrees, 4);
+            expect(latQuery.$lte).toBeCloseTo(latitude + radiusInDegrees, 4);
+            expect(lngQuery.$gte).toBeCloseTo(longitude - radiusInDegrees, 4);
+            expect(lngQuery.$lte).toBeCloseTo(longitude + radiusInDegrees, 4);
+        });
+    });
+
+    describe('Static method search', () => {
+        let mockFind: jest.Mock;
+
+        beforeEach(() => {
+            mockFind = jest.fn().mockReturnValue(Promise.resolve([]));
+            (Location as any).find = mockFind;
+        });
+
+        it('should call find with correct text search query', async () => {
+            const searchQuery = 'test location';
+
+            await (Location as any).search(searchQuery);
+
+            expect(mockFind).toHaveBeenCalledTimes(1);
+            const query = mockFind.mock.calls[0]?.[0];
+
+            expect(query).toHaveProperty('isActive', true);
+            expect(query).toHaveProperty('$text');
+            expect(query.$text).toHaveProperty('$search', searchQuery);
+        });
+
+        it('should handle empty search query', async () => {
+            await (Location as any).search('');
+
+            expect(mockFind).toHaveBeenCalledTimes(1);
+            const query = mockFind.mock.calls[0]?.[0];
+
+            expect(query).toHaveProperty('isActive', true);
+            expect(query).toHaveProperty('$text');
+            expect(query.$text).toHaveProperty('$search', '');
+        });
+    });
 });
