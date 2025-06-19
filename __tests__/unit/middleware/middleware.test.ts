@@ -8,7 +8,7 @@ import * as AuthService from '../../../src/services/AuthService';
 import { AuthenticatedRequest, AppError, UserRole } from '../../../src/types';
 
 // Mock AuthService
-jest.mock('../../src/services/AuthService');
+jest.mock('../../../src/services/AuthService');
 const mockedAuthService = AuthService as jest.Mocked<typeof AuthService>;
 
 describe('Auth Middleware', () => {

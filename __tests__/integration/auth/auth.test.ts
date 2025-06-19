@@ -9,8 +9,7 @@ import {
   invalidUserData,
   validUser
 } from '../../fixtures';
-
-import createTestApp from './testApp';
+import createTestApp from '../testApp';
 
 describe('Auth Integration Tests', () => {
   let app: Application;

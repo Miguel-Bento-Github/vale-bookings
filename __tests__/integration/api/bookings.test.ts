@@ -8,9 +8,8 @@ import {
   validCreateBookingRequest,
   invalidBookingData
 } from '../../fixtures';
-import { setupTestContext, expectError, expectSuccess } from '../utils/testHelpers';
-
-import createTestApp from './testApp';
+import { setupTestContext, expectError, expectSuccess } from '../../utils/testHelpers';
+import createTestApp from '../testApp';
 
 describe('Bookings Integration Tests', () => {
   let app: Application;

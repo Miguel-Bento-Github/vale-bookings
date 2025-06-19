@@ -7,8 +7,7 @@ import {
   validUser,
   adminUser
 } from '../../fixtures';
-
-import createTestApp from './testApp';
+import createTestApp from '../testApp';
 
 describe('Users Integration Tests', () => {
   let app: Application;

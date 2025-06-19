@@ -11,8 +11,7 @@ import {
   validCreateLocationRequest,
   validCreateScheduleRequest
 } from '../../fixtures';
-
-import createTestApp from './testApp';
+import createTestApp from '../testApp';
 
 describe('Schedules Integration Tests', () => {
   let app: Application;

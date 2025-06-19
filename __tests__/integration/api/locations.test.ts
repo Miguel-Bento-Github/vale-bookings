@@ -10,8 +10,7 @@ import {
   validCreateLocationRequest,
   invalidLocationData
 } from '../../fixtures';
-
-import createTestApp from './testApp';
+import createTestApp from '../testApp';
 
 describe('Locations Integration Tests', () => {
   let app: Application;

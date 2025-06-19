@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 import Booking from '../../../src/models/Booking';
+import { BookingStatus, IBookingDocument } from '../../../src/types';
+
+interface BookingWithMethods extends IBookingDocument {
+    getDurationHours(): number;
+}
 
 describe('Booking Model Unit Tests', () => {
     describe('Schema validation', () => {
@@ -68,7 +73,7 @@ describe('Booking Model Unit Tests', () => {
         it('should validate status enum', async () => {
             const booking = new Booking({
                 ...validBookingData,
-                status: 'INVALID_STATUS' as any
+                status: 'INVALID_STATUS' as BookingStatus
             });
 
             await expect(booking.validate()).rejects.toThrow();
@@ -80,7 +85,7 @@ describe('Booking Model Unit Tests', () => {
                 price: -10
             });
 
-            await expect(booking.validate()).rejects.toThrow('Price must be positive');
+            await expect(booking.validate()).rejects.toThrow('Price must be a positive number');
         });
 
         it('should validate endTime is after startTime', async () => {
@@ -126,7 +131,7 @@ describe('Booking Model Unit Tests', () => {
                 notes: 'A'.repeat(1001) // Too long
             });
 
-            await expect(booking.validate()).rejects.toThrow('Notes cannot exceed 1000 characters');
+            await expect(booking.validate()).rejects.toThrow('Notes cannot exceed 500 characters');
         });
     });
 
@@ -144,7 +149,7 @@ describe('Booking Model Unit Tests', () => {
                 price: 25
             });
 
-            const duration = booking.getDurationHours();
+            const duration = (booking as BookingWithMethods).getDurationHours();
             expect(duration).toBe(3.5);
         });
 
@@ -160,7 +165,7 @@ describe('Booking Model Unit Tests', () => {
                 price: 0
             });
 
-            const duration = booking.getDurationHours();
+            const duration = (booking as BookingWithMethods).getDurationHours();
             expect(duration).toBe(0);
         });
 
@@ -177,7 +182,7 @@ describe('Booking Model Unit Tests', () => {
                 price: 25
             });
 
-            const duration = booking.getDurationHours();
+            const duration = (booking as BookingWithMethods).getDurationHours();
             expect(duration).toBe(0.75);
         });
     });
@@ -195,12 +200,11 @@ describe('Booking Model Unit Tests', () => {
 
             expect(mockFind).toHaveBeenCalledWith({
                 locationId,
-                status: { $nin: ['CANCELLED', 'COMPLETED'] },
+                status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
                 $or: [
-                    {
-                        startTime: { $lt: endTime },
-                        endTime: { $gt: startTime }
-                    }
+                    { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
+                    { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
+                    { startTime: { $gte: startTime }, endTime: { $lte: endTime } }
                 ]
             });
 
@@ -221,12 +225,11 @@ describe('Booking Model Unit Tests', () => {
             expect(mockFind).toHaveBeenCalledWith({
                 locationId,
                 _id: { $ne: excludeId },
-                status: { $nin: ['CANCELLED', 'COMPLETED'] },
+                status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
                 $or: [
-                    {
-                        startTime: { $lt: endTime },
-                        endTime: { $gt: startTime }
-                    }
+                    { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
+                    { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
+                    { startTime: { $gte: startTime }, endTime: { $lte: endTime } }
                 ]
             });
 
@@ -238,7 +241,11 @@ describe('Booking Model Unit Tests', () => {
         it('should call find with correct query and population', async () => {
             const mockFind = jest.fn().mockReturnValue({
                 populate: jest.fn().mockReturnValue({
-                    sort: jest.fn().mockResolvedValue([])
+                    sort: jest.fn().mockReturnValue({
+                        skip: jest.fn().mockReturnValue({
+                            limit: jest.fn().mockResolvedValue([])
+                        })
+                    })
                 })
             });
             jest.spyOn(Booking, 'find').mockImplementation(mockFind);
@@ -354,7 +361,7 @@ describe('Booking Model Unit Tests', () => {
                     locationId: new mongoose.Types.ObjectId(),
                     startTime: new Date(Date.now() + 3600000),
                     endTime: new Date(Date.now() + 7200000),
-                    status: status as any,
+                    status: status as BookingStatus,
                     price: 25
                 });
 

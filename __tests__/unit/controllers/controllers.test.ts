@@ -53,18 +53,18 @@ import * as UserService from '../../../src/services/UserService';
 import { AppError, AuthenticatedRequest, UserRole } from '../../../src/types';
 
 // Mock all services
-jest.mock('../../src/services/AuthService');
-jest.mock('../../src/services/UserService');
-jest.mock('../../src/services/LocationService');
-jest.mock('../../src/services/BookingService');
-jest.mock('../../src/services/ScheduleService');
-jest.mock('../../src/services/AdminService');
+jest.mock('../../../src/services/AuthService');
+jest.mock('../../../src/services/UserService');
+jest.mock('../../../src/services/LocationService');
+jest.mock('../../../src/services/BookingService');
+jest.mock('../../../src/services/ScheduleService');
+jest.mock('../../../src/services/AdminService');
 
 // Mock models
-jest.mock('../../src/models/Location');
-jest.mock('../../src/models/Booking');
-jest.mock('../../src/models/User');
-jest.mock('../../src/models/Schedule');
+jest.mock('../../../src/models/Location');
+jest.mock('../../../src/models/Booking');
+jest.mock('../../../src/models/User');
+jest.mock('../../../src/models/Schedule');
 
 interface TestAuthenticatedRequest extends Request {
   user: {
