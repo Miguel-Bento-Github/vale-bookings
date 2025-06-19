@@ -30,7 +30,8 @@ module.exports = {
   watchman: false,
   silent: false,
   // Optimized coverage reporting
-  coverageReporters: ['text-summary', 'json'],
+  coverageReporters: ['text-summary', 'json', 'lcov', 'clover', 'html'],
+  coverageDirectory: 'coverage',
   watchAll: false,
   // Transform and module resolution optimizations for speed
   transform: {

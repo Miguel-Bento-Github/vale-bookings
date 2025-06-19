@@ -14,7 +14,7 @@
     "test:watch": "jest --watch",
     "test:unit": "jest --testPathPattern=unit/ --forceExit",
     "test:integration": "jest --testPathPattern=integration/ --forceExit",
-    "test:coverage": "jest --coverage --forceExit",
+    "test:coverage": "jest --coverage --forceExit --detectOpenHandles",
     "test:serial": "jest --runInBand --forceExit",
     "lint": "eslint 'src/**/*.ts' '__tests__/unit/**/*.ts' '__tests__/integration/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' '__tests__/unit/**/*.ts' '__tests__/integration/**/*.ts' --fix",

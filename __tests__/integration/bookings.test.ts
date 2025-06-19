@@ -155,6 +155,11 @@ describe('Bookings Integration Tests', () => {
 
   describe('POST /api/bookings', () => {
     it('should create a new booking successfully', async () => {
+      // Verify test context is properly set up
+      expect(userToken).toBeTruthy();
+      expect(userId).toBeTruthy();
+      expect(locationId).toBeTruthy();
+
       const newBookingData = {
         locationId: locationId,
         startTime: '2025-12-02T09:00:00Z',
@@ -166,6 +171,18 @@ describe('Bookings Integration Tests', () => {
         .post('/api/bookings')
         .set('Authorization', `Bearer ${userToken}`)
         .send(newBookingData);
+
+      // Add debugging info if test fails
+      if (response.status !== 201) {
+        console.log('POST /api/bookings failed with:', {
+          status: response.status,
+          body: response.body,
+          userToken: userToken ? 'present' : 'missing',
+          userId,
+          locationId,
+          newBookingData
+        });
+      }
 
       expect(response.status).toBe(201);
       expectSuccess(response, 201);

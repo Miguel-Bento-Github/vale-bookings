@@ -32,38 +32,10 @@ interface UserData {
     phone?: string;
 }
 
-// Cache for created entities to avoid recreating them
-const entityCache = {
-    users: new Map<string, any>(),
-    locations: new Map<string, any>(),
-    tokens: new Map<string, string>(),
-};
-
-export const createUserAndGetToken = async (app: Application, userData: UserData, cacheKey: string): Promise<{ userId: string; token: string }> => {
-    // Check cache first
-    if (entityCache.users.has(cacheKey) && entityCache.tokens.has(cacheKey)) {
-        const cachedUser = entityCache.users.get(cacheKey);
-        const cachedToken = entityCache.tokens.get(cacheKey);
-
-        if (cachedUser && cachedToken) {
-            // Check if user still exists in database, if not recreate
-            const existingUser = await User.findById(cachedUser._id);
-            if (existingUser) {
-                return {
-                    userId: cachedUser._id.toString(),
-                    token: cachedToken
-                };
-            }
-            // User was deleted, clear cache and recreate
-            entityCache.users.delete(cacheKey);
-            entityCache.tokens.delete(cacheKey);
-        }
-    }
-
-    // Create user
+export const createUserAndGetToken = async (app: Application, userData: UserData): Promise<{ userId: string; token: string }> => {
+    // Always create fresh user for parallel execution reliability
     const user = new User(userData);
     const savedUser = await user.save();
-    entityCache.users.set(cacheKey, savedUser);
 
     // Get token
     const loginResponse = await request(app)
@@ -78,24 +50,15 @@ export const createUserAndGetToken = async (app: Application, userData: UserData
         throw new Error('Failed to get authentication token');
     }
 
-    entityCache.tokens.set(cacheKey, token);
-
     return {
         userId: savedUser._id.toString(),
         token
     };
 };
 
-export const createTestLocation = async (cacheKey: string = 'default'): Promise<string> => {
-    // Check cache first
-    if (entityCache.locations.has(cacheKey)) {
-        return entityCache.locations.get(cacheKey)._id.toString();
-    }
-
+export const createTestLocation = async (): Promise<string> => {
     const location = new Location(validCreateLocationRequest);
     const savedLocation = await location.save();
-    entityCache.locations.set(cacheKey, savedLocation);
-
     return savedLocation._id.toString();
 };
 
@@ -113,16 +76,33 @@ export const createTestBooking = async (userId: string, locationId: string): Pro
 export const setupTestContext = async (app: Application): Promise<TestContext> => {
     // Create users and get tokens in parallel for speed
     const [userResult, adminResult, valetResult] = await Promise.all([
-        createUserAndGetToken(app, validUser, 'user'),
-        createUserAndGetToken(app, adminUser, 'admin'),
-        createUserAndGetToken(app, valetUser, 'valet')
+        createUserAndGetToken(app, validUser),
+        createUserAndGetToken(app, adminUser),
+        createUserAndGetToken(app, valetUser)
     ]);
+
+    // Validate user creation
+    if (!userResult.token || !userResult.userId) {
+        throw new Error('Failed to create user or get token');
+    }
+    if (!adminResult.token || !adminResult.userId) {
+        throw new Error('Failed to create admin or get token');
+    }
+    if (!valetResult.token || !valetResult.userId) {
+        throw new Error('Failed to create valet or get token');
+    }
 
     // Create location
     const locationId = await createTestLocation();
+    if (!locationId) {
+        throw new Error('Failed to create test location');
+    }
 
     // Create booking
     const bookingId = await createTestBooking(userResult.userId, locationId);
+    if (!bookingId) {
+        throw new Error('Failed to create test booking');
+    }
 
     return {
         app,
@@ -135,13 +115,6 @@ export const setupTestContext = async (app: Application): Promise<TestContext> =
         locationId,
         bookingId
     };
-};
-
-// Clear cache when needed (called by global setup)
-export const clearTestCache = (): void => {
-    entityCache.users.clear();
-    entityCache.locations.clear();
-    entityCache.tokens.clear();
 };
 
 export const expectError = (response: request.Response, statusCode: number, messageContains?: string): void => {

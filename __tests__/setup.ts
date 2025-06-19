@@ -60,9 +60,6 @@ afterEach(async () => {
         }
       })
     );
-
-    // Note: We intentionally don't clear the test helper cache here
-    // to allow user/token caching across tests for better performance
   }
 });
 
