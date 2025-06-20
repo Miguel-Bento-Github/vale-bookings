@@ -2,12 +2,12 @@ import { Response } from 'express';
 
 import { findById, updateProfile as updateUserProfile, deleteUser } from '../services/UserService';
 import { AppError, AuthenticatedRequest, IUserProfile } from '../types';
-import { validatePhoneNumber } from '../utils/validation';
 import {
   sendSuccess,
   sendError,
   withErrorHandling
 } from '../utils/responseHelpers';
+import { validatePhoneNumber } from '../utils/validation';
 import {
   validateAuthentication,
   validateRequiredString

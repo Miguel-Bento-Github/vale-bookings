@@ -2032,6 +2032,7 @@ describe('Controllers', () => {
           endTime: '19:00'
         };
         
+        (ScheduleService.getScheduleById as jest.Mock).mockResolvedValue(mockUpdatedSchedule);
         (ScheduleService.updateSchedule as jest.Mock).mockResolvedValue(mockUpdatedSchedule);
 
         const adminRequest = {
@@ -2065,7 +2066,7 @@ describe('Controllers', () => {
       });
 
       it('should return 404 for non-existent schedule', async () => {
-        (ScheduleService.updateSchedule as jest.Mock).mockResolvedValue(null);
+        (ScheduleService.getScheduleById as jest.Mock).mockResolvedValue(null);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -2096,7 +2097,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Start time must be in HH:MM format'
+          message: 'Time must be in HH:MM format'
         });
       });
 
@@ -2147,11 +2148,12 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'End time must be in HH:MM format'
+          message: 'Time must be in HH:MM format'
         });
       });
 
       it('should handle service errors', async () => {
+        (ScheduleService.getScheduleById as jest.Mock).mockResolvedValue({ _id: '507f1f77bcf86cd799439015' });
         (ScheduleService.updateSchedule as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         const adminRequest = {
@@ -2171,6 +2173,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
+        (ScheduleService.getScheduleById as jest.Mock).mockResolvedValue({ _id: '507f1f77bcf86cd799439015' });
         (ScheduleService.updateSchedule as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         const adminRequest = {
