@@ -4,30 +4,27 @@ import mongoose from 'mongoose';
 import { sendError } from './responseHelpers';
 import { validateCoordinates } from './validation';
 
-export function validateRequiredId(id: string | undefined, res: Response, entityName: string = 'ID'): boolean {
+export function validateRequiredId(id: string | undefined, res: Response, fieldName: string = 'ID'): boolean {
   if (!id || id.trim().length === 0) {
-    sendError(res, `${entityName} is required`, 400);
+    sendError(res, `${fieldName} is required`, 400);
     return false;
   }
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    sendError(res, 'Invalid ID format', 400);
+    sendError(res, `Invalid ${fieldName}`, 400);
     return false;
   }
 
   return true;
 }
 
-export function validatePaginationParams(
-  page: string | undefined,
-  limit: string | undefined
-): { page: number; limit: number } {
-  const parsedPage = page && page.length > 0 ? parseInt(page, 10) : 1;
-  const parsedLimit = limit && limit.length > 0 ? parseInt(limit, 10) : 10;
+export function validatePaginationParams(pageStr?: string, limitStr?: string): { page: number; limit: number } {
+  const page = pageStr && pageStr.trim().length > 0 ? parseInt(pageStr, 10) : 1;
+  const limit = limitStr && limitStr.trim().length > 0 ? parseInt(limitStr, 10) : 10;
 
   return {
-    page: Math.max(1, isNaN(parsedPage) ? 1 : parsedPage),
-    limit: Math.max(1, Math.min(100, isNaN(parsedLimit) ? 10 : parsedLimit))
+    page: Math.max(1, isNaN(page) ? 1 : page),
+    limit: Math.max(1, Math.min(100, isNaN(limit) ? 10 : limit))
   };
 }
 
@@ -74,26 +71,27 @@ export function validateCoordinatesFromRequest(coordinates: unknown, res: Respon
   return true;
 }
 
-export function validateLocationData(
-  name: string | undefined,
-  address: string | undefined,
-  coordinates: unknown,
-  res: Response
-): boolean {
-  if (!name || name.trim().length === 0 || !address || address.trim().length === 0) {
-    sendError(res, 'Name and address are required', 400);
-    return false;
+export function validateLocationData(data: Record<string, unknown>): string[] {
+  const errors: string[] = [];
+
+  if (!data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
+    errors.push('Name is required');
   }
 
-  if (coordinates) {
-    const coord = coordinates as { latitude: number; longitude: number };
-    if (!validateCoordinates(coord.latitude, coord.longitude)) {
-      sendError(res, 'Invalid coordinates', 400);
-      return false;
+  if (!data.address || typeof data.address !== 'string' || data.address.trim().length === 0) {
+    errors.push('Address is required');
+  }
+
+  if (typeof data.coordinates === 'object' && data.coordinates !== null) {
+    const coords = data.coordinates as Record<string, unknown>;
+    if (typeof coords.latitude !== 'number' || typeof coords.longitude !== 'number') {
+      errors.push('Coordinates must contain valid latitude and longitude numbers');
     }
+  } else {
+    errors.push('Coordinates are required');
   }
 
-  return true;
+  return errors;
 }
 
 export function parseCoordinatesFromQuery(req: Request): {
@@ -131,42 +129,54 @@ export function validateCoordinatesFromQuery(
   return true;
 }
 
-export function validateRequiredString(value: string | undefined, fieldName: string, res: Response): boolean {
+export function validateRequiredString(value: string | undefined, fieldName: string): string | null {
   if (!value || value.trim().length === 0) {
-    sendError(res, `${fieldName} is required`, 400);
-    return false;
+    return `${fieldName} is required`;
   }
-
-  return true;
+  return null;
 }
 
-export function validateUserRole(userRole: string, requiredRole: string, res: Response): boolean {
-  if (userRole !== requiredRole) {
-    sendError(res, 'Forbidden: access denied', 403);
-    return false;
+export function validateEmail(email: string): string | null {
+  if (!email || email.trim().length === 0) {
+    return 'Email is required';
   }
 
-  return true;
-}
-
-export function validateAuthentication(user: unknown, res: Response): boolean {
-  if (!user) {
-    sendError(res, 'Unauthorized', 401);
-    return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return 'Invalid email format';
   }
 
-  return true;
+  return null;
 }
 
-export function validateDateParam(dateParam: string | undefined, res: Response): Date | null {
-  if (!dateParam || dateParam.trim().length === 0) {
-    sendError(res, 'Date parameter is required', 400);
+export function validatePassword(password: string): string | null {
+  if (!password || password.trim().length === 0) {
+    return 'Password is required';
+  }
+
+  if (password.length < 6) {
+    return 'Password must be at least 6 characters long';
+  }
+
+  return null;
+}
+
+export function validateUserRole(role: string): boolean {
+  const validRoles = ['CUSTOMER', 'VALET', 'ADMIN'];
+  return validRoles.includes(role);
+}
+
+export function validateAuthentication(userId?: string): boolean {
+  return Boolean(userId && userId.trim().length > 0);
+}
+
+export function validateDateParam(dateStr?: string): Date | null {
+  if (!dateStr || dateStr.trim().length === 0) {
     return null;
   }
 
-  const date = new Date(dateParam);
+  const date = new Date(dateStr);
   if (isNaN(date.getTime())) {
-    sendError(res, 'Invalid date format', 400);
     return null;
   }
 

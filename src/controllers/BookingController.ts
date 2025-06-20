@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 
+import * as BookingService from '../services/BookingService';
 import Booking from '../models/Booking';
 import Location from '../models/Location';
-import { AuthenticatedRequest } from '../types';
+import { AuthenticatedRequest, BookingStatus } from '../types';
 import {
   standardUpdate
 } from '../utils/mongoHelpers';
@@ -14,7 +15,6 @@ import {
 } from '../utils/responseHelpers';
 import { 
   validatePaginationParams,
-  validateTimeRange,
   validateRequiredId
 } from '../utils/validationHelpers';
 
@@ -38,7 +38,7 @@ class BookingController {
     const userId = req.user?.userId;
 
     if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'User authentication required', 401);
+      return sendError(res, 'Unauthorized', 401);
     }
 
     // Basic validation that matches test expectations
@@ -99,11 +99,11 @@ class BookingController {
     const query = req.query as Record<string, unknown>;
     const filter: Record<string, unknown> = {};
 
-    if (query.status && typeof query.status === 'string' && query.status.trim().length > 0) {
+    if (typeof query.status === 'string' && query.status.trim().length > 0) {
       filter.status = query.status;
     }
 
-    if (query.locationId && typeof query.locationId === 'string' && query.locationId.trim().length > 0) {
+    if (typeof query.locationId === 'string' && query.locationId.trim().length > 0) {
       filter.locationId = query.locationId;
     }
 
@@ -131,18 +131,24 @@ class BookingController {
       return;
     }
 
-    const booking = await Booking.findById(req.params.id);
+    // Check authentication first
+    const userId = req.user?.userId;
+    if (!userId || userId.trim().length === 0) {
+      return sendError(res, 'Unauthorized', 401);
+    }
+
+    const bookingId = req.params.id;
+    if (!bookingId) {
+      return sendError(res, 'Booking ID is required', 400);
+    }
+
+    const booking = await BookingService.findById(bookingId);
 
     if (!booking) {
       return sendError(res, 'Booking not found', 404);
     }
 
     // Check ownership or admin access
-    const userId = req.user?.userId;
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'User authentication required', 401);
-    }
-
     const isOwner = booking.userId.toString() === userId;
     const isAdmin = req.user?.role === 'ADMIN';
 
@@ -161,7 +167,7 @@ class BookingController {
 
     const userId = req.user?.userId;
     if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'User authentication required', 401);
+      return sendError(res, 'Unauthorized', 401);
     }
 
     const updateData = req.body as UpdateBookingBody;
@@ -174,7 +180,7 @@ class BookingController {
     }
 
     // Check permissions for status updates
-    if (updateData.status && typeof updateData.status === 'string' && updateData.status.trim().length > 0) {
+    if (typeof updateData.status === 'string' && updateData.status.trim().length > 0) {
       // Validate status value
       const validStatuses = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
       if (!validStatuses.includes(updateData.status)) {
@@ -187,6 +193,17 @@ class BookingController {
       if (!isAdmin && !isValet) {
         return sendError(res, 'Forbidden: insufficient permissions', 403);
       }
+
+      // Use BookingService for status updates
+      const bookingId = req.params.id;
+      if (!bookingId) {
+        return sendError(res, 'Booking ID is required', 400);
+      }
+      const updatedBooking = await BookingService.updateBookingStatus(bookingId, updateData.status as BookingStatus);
+      if (!updatedBooking) {
+        return sendError(res, 'Booking not found', 404);
+      }
+      return sendSuccess(res, updatedBooking, 'Booking status updated successfully');
     }
 
     // Ensure req.params.id is defined since we validated it
@@ -207,10 +224,15 @@ class BookingController {
 
     const userId = req.user?.userId;
     if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'User authentication required', 401);
+      return sendError(res, 'Unauthorized', 401);
     }
 
-    const booking = await Booking.findById(req.params.id);
+    const bookingId = req.params.id;
+    if (!bookingId) {
+      return sendError(res, 'Booking ID is required', 400);
+    }
+
+    const booking = await BookingService.findById(bookingId);
     if (!booking) {
       return sendError(res, 'Booking not found', 404);
     }
@@ -223,43 +245,20 @@ class BookingController {
       return sendError(res, 'Forbidden: access denied', 403);
     }
 
-    // Check if booking is already completed - should not be cancelled
-    if (booking.status === 'COMPLETED') {
-      return sendError(res, 'Completed bookings cannot be cancelled', 400);
-    }
-
-    booking.status = 'CANCELLED';
-    await booking.save();
-
-    sendSuccess(res, booking, 'Booking cancelled successfully');
+    // Use BookingService for cancellation
+    const cancelledBooking = await BookingService.cancelBooking(bookingId);
+    sendSuccess(res, cancelledBooking, 'Booking cancelled successfully');
   });
 
   // Get user's bookings
   getUserBookings = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'User authentication required', 401);
+      return sendError(res, 'Unauthorized', 401);
     }
 
-    const { page, limit } = validatePaginationParams(
-      req.query.page as string,
-      req.query.limit as string
-    );
-
-    const skip = (page - 1) * limit;
-    const bookings = await Booking.find({ userId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await Booking.countDocuments({ userId });
-
-    sendSuccessWithPagination(res, bookings, {
-      page: page,
-      limit: limit,
-      total: total,
-      totalPages: Math.ceil(total / limit)
-    });
+    const bookings = await BookingService.getUserBookings(userId);
+    sendSuccess(res, bookings);
   });
 }
 

@@ -20,8 +20,7 @@ import {
 } from '../utils/responseHelpers';
 import { validateTimeFormat } from '../utils/validation';
 import { 
-  validateRequiredId,
-  validateAuthentication
+  validateRequiredId
 } from '../utils/validationHelpers';
 
 export const getLocationSchedules = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
@@ -30,54 +29,65 @@ export const getLocationSchedules = withErrorHandling(async (req: Request, res: 
   }
 
   // Check if location exists
-  const location = await getLocationById(req.params.locationId!);
+  const locationId = req.params.locationId;
+  if (!locationId) {
+    sendError(res, 'Location ID is required', 400);
+    return;
+  }
+
+  const location = await getLocationById(locationId);
   if (!location) {
     sendError(res, 'Location not found', 404);
     return;
   }
 
-  const schedules = await getSchedulesForLocation(req.params.locationId!);
+  const schedules = await getSchedulesForLocation(locationId);
   sendSuccess(res, schedules);
 });
 
 export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  if (!validateAuthentication(req.user, res)) {
+  // Check authentication and admin role
+  const userId = req.user?.userId;
+  if (!userId || userId.trim().length === 0) {
+    sendError(res, 'User authentication required', 401);
     return;
   }
 
-  if (req.user!.role !== 'ADMIN') {
+  if (req.user?.role !== 'ADMIN') {
     sendError(res, 'Forbidden: access denied', 403);
     return;
   }
 
-  const requestBody = req.body as Record<string, unknown>;
-  const { locationId, dayOfWeek, startTime, endTime } = requestBody;
+  const { locationId, dayOfWeek, startTime, endTime } = req.body;
 
-  if (
-    typeof locationId !== 'string' ||
-    typeof dayOfWeek !== 'number' ||
-    typeof startTime !== 'string' ||
-    typeof endTime !== 'string'
-  ) {
+  // Validate required fields
+  if (!locationId || dayOfWeek === undefined || !startTime || !endTime) {
     sendError(res, 'Location ID, day of week, start time, and end time are required', 400);
     return;
   }
 
-  if (dayOfWeek < 0 || dayOfWeek > 6) {
+  // Validate day of week (0-6, Sunday-Saturday)
+  if (typeof dayOfWeek !== 'number' || dayOfWeek < 0 || dayOfWeek > 6) {
     sendError(res, 'Day of week must be between 0 (Sunday) and 6 (Saturday)', 400);
     return;
   }
 
+  // Validate time format
   if (!validateTimeFormat(startTime) || !validateTimeFormat(endTime)) {
     sendError(res, 'Time must be in HH:MM format', 400);
     return;
   }
 
-  // Validate time range - end time should be after start time
-  const start = new Date(`1970-01-01T${startTime}:00`);
-  const end = new Date(`1970-01-01T${endTime}:00`);
+  // Validate time range
+  const startHour = parseInt(startTime.split(':')[0]);
+  const startMinute = parseInt(startTime.split(':')[1]);
+  const endHour = parseInt(endTime.split(':')[0]);
+  const endMinute = parseInt(endTime.split(':')[1]);
 
-  if (end <= start) {
+  const startTotalMinutes = startHour * 60 + startMinute;
+  const endTotalMinutes = endHour * 60 + endMinute;
+
+  if (endTotalMinutes <= startTotalMinutes) {
     sendError(res, 'End time must be after start time', 400);
     return;
   }
@@ -89,23 +99,19 @@ export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const schedule = await createNewSchedule({
-    locationId,
-    dayOfWeek,
-    startTime,
-    endTime,
-    isActive: true
-  });
-
+  const schedule = await createNewSchedule(req.body);
   sendSuccess(res, schedule, 'Schedule created successfully', 201);
 });
 
 export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  if (!validateAuthentication(req.user, res)) {
+  // Check authentication and admin role
+  const userId = req.user?.userId;
+  if (!userId || userId.trim().length === 0) {
+    sendError(res, 'User authentication required', 401);
     return;
   }
 
-  if (req.user!.role !== 'ADMIN') {
+  if (req.user?.role !== 'ADMIN') {
     sendError(res, 'Forbidden: access denied', 403);
     return;
   }
@@ -114,54 +120,51 @@ export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const requestBody = req.body as Record<string, unknown>;
+  const { dayOfWeek, startTime, endTime } = req.body;
 
-  // Validate dayOfWeek if provided
-  if (
-    typeof requestBody.dayOfWeek === 'number' &&
-    (requestBody.dayOfWeek < 0 || requestBody.dayOfWeek > 6)
-  ) {
+  // Validate day of week if provided
+  if (dayOfWeek !== undefined && (typeof dayOfWeek !== 'number' || dayOfWeek < 0 || dayOfWeek > 6)) {
     sendError(res, 'Day of week must be between 0 (Sunday) and 6 (Saturday)', 400);
     return;
   }
 
-  // Validate time formats if provided
-  if (
-    (typeof requestBody.startTime === 'string' && !validateTimeFormat(requestBody.startTime)) ||
-    (typeof requestBody.endTime === 'string' && !validateTimeFormat(requestBody.endTime))
-  ) {
+  // Validate time format if provided
+  if (startTime && !validateTimeFormat(startTime)) {
     sendError(res, 'Time must be in HH:MM format', 400);
     return;
   }
 
-  // Validate time range if both times are provided
-  if (typeof requestBody.startTime === 'string' && typeof requestBody.endTime === 'string') {
-    const start = new Date(`1970-01-01T${requestBody.startTime}:00`);
-    const end = new Date(`1970-01-01T${requestBody.endTime}:00`);
-
-    if (end <= start) {
-      sendError(res, 'End time must be after start time', 400);
-      return;
-    }
+  if (endTime && !validateTimeFormat(endTime)) {
+    sendError(res, 'Time must be in HH:MM format', 400);
+    return;
   }
 
   // Check if schedule exists
-  const existingSchedule = await findScheduleById(req.params.id!);
+  const scheduleId = req.params.id;
+  if (!scheduleId) {
+    sendError(res, 'Schedule ID is required', 400);
+    return;
+  }
+
+  const existingSchedule = await findScheduleById(scheduleId);
   if (!existingSchedule) {
     sendError(res, 'Schedule not found', 404);
     return;
   }
 
-  const updatedSchedule = await updateExistingSchedule(req.params.id!, requestBody);
-  sendSuccess(res, updatedSchedule, 'Schedule updated successfully');
+  const schedule = await updateExistingSchedule(scheduleId, req.body);
+  sendSuccess(res, schedule, 'Schedule updated successfully');
 });
 
 export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  if (!validateAuthentication(req.user, res)) {
+  // Check authentication and admin role
+  const userId = req.user?.userId;
+  if (!userId || userId.trim().length === 0) {
+    sendError(res, 'User authentication required', 401);
     return;
   }
 
-  if (req.user!.role !== 'ADMIN') {
+  if (req.user?.role !== 'ADMIN') {
     sendError(res, 'Forbidden: access denied', 403);
     return;
   }
@@ -171,16 +174,38 @@ export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest
   }
 
   // Check if schedule exists
-  const schedule = await findScheduleById(req.params.id!);
+  const scheduleId = req.params.id;
+  if (!scheduleId) {
+    sendError(res, 'Schedule ID is required', 400);
+    return;
+  }
+
+  const existingSchedule = await findScheduleById(scheduleId);
+  if (!existingSchedule) {
+    sendError(res, 'Schedule not found', 404);
+    return;
+  }
+
+  await deleteExistingSchedule(scheduleId);
+  sendSuccess(res, undefined, 'Schedule deleted successfully');
+});
+
+export const getScheduleById = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+  if (!validateRequiredId(req.params.id, res, 'Schedule ID')) {
+    return;
+  }
+
+  const scheduleId = req.params.id;
+  if (!scheduleId) {
+    sendError(res, 'Schedule ID is required', 400);
+    return;
+  }
+
+  const schedule = await findScheduleById(scheduleId);
   if (!schedule) {
     sendError(res, 'Schedule not found', 404);
     return;
   }
 
-  await deleteExistingSchedule(req.params.id!);
-
-  res.status(200).json({
-    success: true,
-    message: 'Schedule deleted successfully'
-  });
+  sendSuccess(res, schedule);
 }); 

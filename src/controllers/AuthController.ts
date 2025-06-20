@@ -1,5 +1,5 @@
-import bcrypt from 'bcryptjs';
 import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
 
 import User from '../models/User';
 import * as AuthService from '../services/AuthService';
@@ -10,7 +10,10 @@ import {
   sendError
 } from '../utils/responseHelpers';
 import { 
-  validateRequiredId
+  validateRequiredId,
+  validateRequiredString,
+  validateUserRole,
+  validateAuthentication
 } from '../utils/validationHelpers';
 
 interface RegisterRequestBody {
@@ -18,6 +21,7 @@ interface RegisterRequestBody {
   password: string;
   profile: {
     name: string;
+    phone?: string;
   };
   role?: string;
 }
@@ -30,6 +34,10 @@ interface LoginRequestBody {
 interface ChangePasswordRequestBody {
   currentPassword: string;
   newPassword: string;
+}
+
+interface RefreshTokenBody {
+  refreshToken: string;
 }
 
 class AuthController {
@@ -59,7 +67,7 @@ class AuthController {
     try {
       // Use AuthService as expected by tests, include role if provided
       const registerData = { email, password, profile };
-      if (role) {
+      if (role && typeof role === 'string' && role.trim().length > 0) {
         (registerData as typeof registerData & { role: string }).role = role;
       }
 
@@ -190,35 +198,23 @@ class AuthController {
     sendSuccess(res, undefined, 'Account deleted successfully');
   });
 
-  getAllUsers = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'User authentication required', 401);
-    }
-
-    if (!req.user || req.user.role !== 'ADMIN') {
-      return sendError(res, 'Access denied', 403);
-    }
-
-    const users = await User.find();
+  // Admin methods
+  getAllUsers = withErrorHandling(async (req: Request, res: Response) => {
+    const users = await User.find({}, '-password');
     sendSuccess(res, users);
   });
 
-  deleteUser = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'User authentication required', 401);
-    }
-
-    if (!req.user || req.user.role !== 'ADMIN') {
-      return sendError(res, 'Access denied', 403);
-    }
-
+  deleteUser = withErrorHandling(async (req: Request, res: Response) => {
     if (!validateRequiredId(req.params.id, res, 'User ID')) {
       return;
     }
 
-    await User.findByIdAndDelete(req.params.id);
+    const userId = req.params.id;
+    if (!userId) {
+      return sendError(res, 'User ID is required', 400);
+    }
+
+    await User.findByIdAndDelete(userId);
     sendSuccess(res, undefined, 'User deleted successfully');
   });
 }

@@ -8,16 +8,15 @@ import {
   withErrorHandling
 } from '../utils/responseHelpers';
 import { validatePhoneNumber } from '../utils/validation';
-import {
-  validateAuthentication
-} from '../utils/validationHelpers';
 
 export const getProfile = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  if (!validateAuthentication(req.user, res)) {
+  const userId = req.user?.userId;
+  if (!userId || userId.trim().length === 0) {
+    sendError(res, 'Unauthorized', 401);
     return;
   }
 
-  const user = await findById(req.user!.userId);
+  const user = await findById(userId);
 
   if (!user) {
     sendError(res, 'User not found', 401);
@@ -28,7 +27,9 @@ export const getProfile = withErrorHandling(async (req: AuthenticatedRequest, re
 });
 
 export const updateProfile = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  if (!validateAuthentication(req.user, res)) {
+  const userId = req.user?.userId;
+  if (!userId || userId.trim().length === 0) {
+    sendError(res, 'Unauthorized', 401);
     return;
   }
 
@@ -77,7 +78,7 @@ export const updateProfile = withErrorHandling(async (req: AuthenticatedRequest,
     return;
   }
 
-  const updatedUser = await updateUserProfile(req.user!.userId, {
+  const updatedUser = await updateUserProfile(userId, {
     profile: profileUpdate as IUserProfile
   });
 
@@ -90,18 +91,20 @@ export const updateProfile = withErrorHandling(async (req: AuthenticatedRequest,
 });
 
 export const deleteAccount = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  if (!validateAuthentication(req.user, res)) {
+  const userId = req.user?.userId;
+  if (!userId || userId.trim().length === 0) {
+    sendError(res, 'Unauthorized', 401);
     return;
   }
 
   // Check if user exists before deletion
-  const user = await findById(req.user!.userId);
+  const user = await findById(userId);
   if (!user) {
     sendError(res, 'User not found', 401);
     return;
   }
 
-  await deleteUser(req.user!.userId);
+  await deleteUser(userId);
 
   res.status(200).json({
     success: true,

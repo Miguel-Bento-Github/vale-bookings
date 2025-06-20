@@ -22,10 +22,7 @@ import {
   validateRequiredId,
   parseCoordinatesFromQuery,
   validateLocationData,
-  validateUserRole,
-  validateCoordinatesFromQuery,
-  validateDateParam,
-  validateRequiredString
+  validateDateParam
 } from '../utils/validationHelpers';
 
 export const getLocations = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
@@ -36,14 +33,20 @@ export const getLocations = withErrorHandling(async (req: Request, res: Response
 export const getNearbyLocations = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
   const { latitude, longitude, radius } = parseCoordinatesFromQuery(req);
 
-  if (!validateCoordinatesFromQuery(latitude, longitude, res)) {
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    sendError(res, 'Latitude and longitude are required', 400);
     return;
   }
 
-  // TypeScript now knows latitude and longitude are defined
-  const radiusInKm = radius && radius > 0 ? radius : 10;
-  const locations = await findNearby(latitude!, longitude!, radiusInKm);
+  const coordinateError = validateCoordinates(latitude, longitude);
+  if (coordinateError) {
+    sendError(res, coordinateError, 400);
+    return;
+  }
 
+  const radiusInKm = radius && radius > 0 ? radius : 10;
+
+  const locations = await findNearby(latitude, longitude, radiusInKm);
   sendSuccess(res, locations);
 });
 
@@ -54,8 +57,7 @@ export const getLocationById = withErrorHandling(async (req: Request, res: Respo
     return;
   }
 
-  // TypeScript knows id is not undefined after validation
-  const location = await findLocationById(id!);
+  const location = await findLocationById(id);
 
   if (!location) {
     sendError(res, 'Location not found', 404);
@@ -66,19 +68,15 @@ export const getLocationById = withErrorHandling(async (req: Request, res: Respo
 });
 
 export const createLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  if (!req.user || !validateUserRole(req.user.role, 'ADMIN', res)) {
+  // Check admin role
+  if (!req.user || req.user.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
     return;
   }
 
-  const { name, address, coordinates } = req.body;
-
-  if (!validateLocationData(name, address, coordinates, res)) {
-    return;
-  }
-
-  // Additional coordinate validation if provided
-  if (coordinates && !validateCoordinates(coordinates.latitude, coordinates.longitude)) {
-    sendError(res, 'Invalid coordinates', 400);
+  const validationErrors = validateLocationData(req.body);
+  if (validationErrors.length > 0) {
+    sendError(res, validationErrors[0], 400);
     return;
   }
 
@@ -87,7 +85,9 @@ export const createLocation = withErrorHandling(async (req: AuthenticatedRequest
 });
 
 export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  if (!req.user || !validateUserRole(req.user.role, 'ADMIN', res)) {
+  // Check admin role
+  if (!req.user || req.user.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
     return;
   }
 
@@ -100,12 +100,15 @@ export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest
   const { coordinates } = req.body;
 
   // Validate coordinates if provided in update
-  if (coordinates && !validateCoordinates(coordinates.latitude, coordinates.longitude)) {
-    sendError(res, 'Invalid coordinates', 400);
-    return;
+  if (coordinates && typeof coordinates === 'object' && coordinates !== null) {
+    const coordError = validateCoordinates(coordinates.latitude, coordinates.longitude);
+    if (coordError) {
+      sendError(res, coordError, 400);
+      return;
+    }
   }
 
-  const location = await updateExistingLocation(id!, req.body);
+  const location = await updateExistingLocation(id, req.body);
 
   if (!location) {
     sendError(res, 'Location not found', 404);
@@ -116,7 +119,9 @@ export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest
 });
 
 export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  if (!req.user || !validateUserRole(req.user.role, 'ADMIN', res)) {
+  // Check admin role
+  if (!req.user || req.user.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
     return;
   }
 
@@ -126,18 +131,19 @@ export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  await deleteExistingLocation(id!);
+  await deleteExistingLocation(id);
   sendSuccess(res, undefined, 'Location deleted successfully');
 });
 
 export const searchLocations = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
   const { q } = req.query;
 
-  if (!validateRequiredString(q as string, 'Search query', res)) {
+  if (!q || typeof q !== 'string' || q.trim().length === 0) {
+    sendError(res, 'Search query is required', 400);
     return;
   }
 
-  const locations = await searchLocationsService(q as string);
+  const locations = await searchLocationsService(q);
   sendSuccess(res, locations);
 });
 
@@ -149,12 +155,13 @@ export const getLocationAvailability = withErrorHandling(async (req: Request, re
     return;
   }
 
-  const parsedDate = validateDateParam(date as string, res);
+  const parsedDate = validateDateParam(date as string);
   if (!parsedDate) {
+    sendError(res, 'Valid date parameter is required', 400);
     return;
   }
 
-  const availability = await getLocationAvailabilityService(id!, parsedDate);
+  const availability = await getLocationAvailabilityService(id, parsedDate);
   sendSuccess(res, availability);
 });
 
@@ -166,12 +173,13 @@ export const getLocationTimeSlots = withErrorHandling(async (req: Request, res: 
     return;
   }
 
-  const parsedDate = validateDateParam(date as string, res);
+  const parsedDate = validateDateParam(date as string);
   if (!parsedDate) {
+    sendError(res, 'Valid date parameter is required', 400);
     return;
   }
 
-  const timeSlots = await getLocationTimeslotsService(id!, parsedDate);
+  const timeSlots = await getLocationTimeslotsService(id, parsedDate);
   sendSuccess(res, timeSlots);
 });
 
@@ -184,7 +192,7 @@ export const getRealtimeAvailability = withErrorHandling(async (req: Request, re
 
   // Mock realtime availability data
   const availability = {
-    locationId: id!,
+    locationId: id,
     timestamp: new Date(),
     availableSpots: 15,
     totalSpots: 20,
