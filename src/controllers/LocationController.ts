@@ -148,9 +148,14 @@ export const getLocationAvailability = withErrorHandling(async (req: Request, re
     return;
   }
 
-  const parsedDate = validateDateParam(date as string);
+  if (!date || typeof date !== 'string' || date.trim().length === 0) {
+    sendError(res, 'Date parameter is required', 400);
+    return;
+  }
+
+  const parsedDate = validateDateParam(date);
   if (!parsedDate) {
-    sendError(res, 'Valid date parameter is required', 400);
+    sendError(res, 'Invalid date format', 400);
     return;
   }
 
@@ -166,9 +171,14 @@ export const getLocationTimeSlots = withErrorHandling(async (req: Request, res: 
     return;
   }
 
-  const parsedDate = validateDateParam(date as string);
+  if (!date || typeof date !== 'string' || date.trim().length === 0) {
+    sendError(res, 'Date parameter is required', 400);
+    return;
+  }
+
+  const parsedDate = validateDateParam(date);
   if (!parsedDate) {
-    sendError(res, 'Valid date parameter is required', 400);
+    sendError(res, 'Invalid date format', 400);
     return;
   }
 

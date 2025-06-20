@@ -11,7 +11,7 @@ export function validateRequiredId(id: string | undefined, res: Response, fieldN
   }
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    sendError(res, `Invalid ${fieldName}`, 400);
+    sendError(res, 'Invalid ID format', 400);
     return false;
   }
 
@@ -84,7 +84,7 @@ export function validateLocationData(data: Record<string, unknown>): string[] {
   if (typeof data.coordinates === 'object' && data.coordinates !== null) {
     const coords = data.coordinates as Record<string, unknown>;
     if (typeof coords.latitude !== 'number' || typeof coords.longitude !== 'number') {
-      errors.push('Coordinates must contain valid latitude and longitude numbers');
+      errors.push('Invalid coordinates');
     } else if (!validateCoordinates(coords.latitude, coords.longitude)) {
       errors.push('Invalid coordinates');
     }
