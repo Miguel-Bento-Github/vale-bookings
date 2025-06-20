@@ -1,16 +1,18 @@
 import { Request, Response } from 'express';
+
 import { AuthenticatedRequest } from '../types';
+
 import {
-    sendSuccess,
-    sendError,
-    sendSuccessWithPagination,
-    withErrorHandling
+  sendSuccess,
+  sendError,
+  sendSuccessWithPagination,
+  withErrorHandling
 } from './responseHelpers';
 import {
-    validateRequiredId,
-    validatePaginationParams,
-    validateUserRole,
-    validateAuthentication
+  validateRequiredId,
+  validatePaginationParams,
+  validateUserRole,
+  validateAuthentication
 } from './validationHelpers';
 
 export interface CrudService<T, CreateData, UpdateData> {
@@ -27,95 +29,134 @@ export interface CrudOptions {
     entityName?: string;
 }
 
-export class BaseCrudController<T, CreateData, UpdateData> {
-    constructor(
-        private service: CrudService<T, CreateData, UpdateData>,
-        private options: CrudOptions = {}
-    ) { }
+export function createCrudController<T, CreateData, UpdateData>(
+  service: CrudService<T, CreateData, UpdateData>,
+  options: CrudOptions = {}
+) {
+  const entityName = options.entityName ?? 'Resource';
 
-    private validateAccess(req: AuthenticatedRequest, res: Response): boolean {
-        if (this.options.requireAuth && !validateAuthentication(req.user?.userId, res)) {
-            return false;
-        }
-
-        if (this.options.requiredRole && !validateUserRole(req.user?.role, this.options.requiredRole, res)) {
-            return false;
-        }
-
-        return true;
+  const getAll = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+    if (options.requireAuth === true) {
+      const authReq = req as AuthenticatedRequest;
+      if (!validateAuthentication(authReq.user, res)) {
+        return;
+      }
     }
 
-    getAll = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
-        if (!this.service.getAll) {
-            sendError(res, 'Operation not supported', 404);
-            return;
-        }
+    if (options.requiredRole && options.requiredRole.length > 0) {
+      const authReq = req as AuthenticatedRequest;
+      if (!authReq.user || !validateUserRole(authReq.user.role, options.requiredRole, res)) {
+        return;
+      }
+    }
 
-        const { page, limit } = validatePaginationParams(req.query.page as string, req.query.limit as string);
-        const items = await this.service.getAll({ page, limit });
+    if (service.getAll) {
+      const { page, limit } = validatePaginationParams(
+                req.query.page as string,
+                req.query.limit as string
+      );
 
-        sendSuccess(res, items);
-    });
+      const items = await service.getAll({ page, limit });
+      sendSuccess(res, items);
+    } else {
+      sendError(res, 'Operation not supported', 501);
+    }
+  });
 
-    getById = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
-        const { id } = req.params;
+  const getById = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
 
-        if (!validateRequiredId(id, res, `${this.options.entityName || 'Item'} ID`)) {
-            return;
-        }
+    if (!validateRequiredId(id, res, `${entityName} ID`)) {
+      return;
+    }
 
-        const item = await this.service.getById(id!);
+    const item = await service.getById(id as string);
 
-        if (!item) {
-            sendError(res, `${this.options.entityName || 'Item'} not found`, 404);
-            return;
-        }
+    if (!item) {
+      sendError(res, `${entityName} not found`, 404);
+      return;
+    }
 
-        sendSuccess(res, item);
-    });
+    sendSuccess(res, item);
+  });
 
-    create = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-        if (!this.validateAccess(req, res)) {
-            return;
-        }
+  const create = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+    if (options.requireAuth === true) {
+      const authReq = req as AuthenticatedRequest;
+      if (!validateAuthentication(authReq.user, res)) {
+        return;
+      }
+    }
 
-        const item = await this.service.create(req.body as CreateData);
-        sendSuccess(res, item, `${this.options.entityName || 'Item'} created successfully`, 201);
-    });
+    if (options.requiredRole && options.requiredRole.length > 0) {
+      const authReq = req as AuthenticatedRequest;
+      if (!authReq.user || !validateUserRole(authReq.user.role, options.requiredRole, res)) {
+        return;
+      }
+    }
 
-    update = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-        const { id } = req.params;
+    const item = await service.create(req.body as CreateData);
+    sendSuccess(res, item, `${entityName} created successfully`, 201);
+  });
 
-        if (!this.validateAccess(req, res)) {
-            return;
-        }
+  const update = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+    if (options.requireAuth === true) {
+      const authReq = req as AuthenticatedRequest;
+      if (!validateAuthentication(authReq.user, res)) {
+        return;
+      }
+    }
 
-        if (!validateRequiredId(id, res, `${this.options.entityName || 'Item'} ID`)) {
-            return;
-        }
+    if (options.requiredRole && options.requiredRole.length > 0) {
+      const authReq = req as AuthenticatedRequest;
+      if (!authReq.user || !validateUserRole(authReq.user.role, options.requiredRole, res)) {
+        return;
+      }
+    }
 
-        const item = await this.service.update(id!, req.body as UpdateData);
+    const { id } = req.params;
+    if (!validateRequiredId(id, res, `${entityName} ID`)) {
+      return;
+    }
 
-        if (!item) {
-            sendError(res, `${this.options.entityName || 'Item'} not found`, 404);
-            return;
-        }
+    const item = await service.update(id as string, req.body as UpdateData);
+    if (!item) {
+      sendError(res, `${entityName} not found`, 404);
+      return;
+    }
 
-        sendSuccess(res, item, `${this.options.entityName || 'Item'} updated successfully`);
-    });
+    sendSuccess(res, item, `${entityName} updated successfully`);
+  });
 
-    delete = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-        const { id } = req.params;
+  const deleteItem = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+    if (options.requireAuth === true) {
+      const authReq = req as AuthenticatedRequest;
+      if (!validateAuthentication(authReq.user, res)) {
+        return;
+      }
+    }
 
-        if (!this.validateAccess(req, res)) {
-            return;
-        }
+    if (options.requiredRole && options.requiredRole.length > 0) {
+      const authReq = req as AuthenticatedRequest;
+      if (!authReq.user || !validateUserRole(authReq.user.role, options.requiredRole, res)) {
+        return;
+      }
+    }
 
-        if (!validateRequiredId(id, res, `${this.options.entityName || 'Item'} ID`)) {
-            return;
-        }
+    const { id } = req.params;
+    if (!validateRequiredId(id, res, `${entityName} ID`)) {
+      return;
+    }
 
-        await this.service.delete(id!);
-        sendSuccess(res, undefined, `${this.options.entityName || 'Item'} deleted successfully`);
-    });
+    await service.delete(id as string);
+    sendSuccess(res, undefined, `${entityName} deleted successfully`);
+  });
+
+  return {
+    getAll,
+    getById,
+    create,
+    update,
+    delete: deleteItem
+  };
 } 

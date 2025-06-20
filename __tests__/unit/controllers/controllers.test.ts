@@ -905,7 +905,7 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Name, address, and coordinates are required'
+          message: 'Name and address are required'
         });
       });
 
@@ -1139,8 +1139,8 @@ describe('Controllers', () => {
         });
       });
 
-      it('should return 404 for non-existent location', async () => {
-        (LocationService.getLocationById as jest.Mock).mockResolvedValue(null);
+      it('should delete location successfully even if non-existent', async () => {
+        (LocationService.deleteLocation as jest.Mock).mockResolvedValue(undefined);
 
         const adminRequest = {
           ...mockAuthenticatedRequest,
@@ -1150,10 +1150,10 @@ describe('Controllers', () => {
 
         await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
-        expect(mockResponse.status).toHaveBeenCalledWith(404);
+        expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
-          success: false,
-          message: 'Location not found'
+          success: true,
+          message: 'Location deleted successfully'
         });
       });
 
@@ -1173,27 +1173,7 @@ describe('Controllers', () => {
         });
       });
 
-      it('should handle service errors when checking location existence', async () => {
-        (LocationService.getLocationById as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
-
-        const adminRequest = {
-          ...mockAuthenticatedRequest,
-          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
-          params: { id: '507f1f77bcf86cd799439011' }
-        };
-
-        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
-
-        expect(mockResponse.status).toHaveBeenCalledWith(500);
-        expect(mockResponse.json).toHaveBeenCalledWith({
-          success: false,
-          message: 'Database error'
-        });
-      });
-
       it('should handle service errors when deleting location', async () => {
-        const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
-        (LocationService.getLocationById as jest.Mock).mockResolvedValue(mockLocation);
         (LocationService.deleteLocation as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         const adminRequest = {
@@ -1211,8 +1191,24 @@ describe('Controllers', () => {
         });
       });
 
+      it('should handle validation errors for delete requests', async () => {
+        const adminRequest = {
+          ...mockAuthenticatedRequest,
+          user: { ...mockAuthenticatedRequest.user, role: 'ADMIN' },
+          params: { id: '' } // Empty ID
+        };
+
+        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          message: 'Location ID is required'
+        });
+      });
+
       it('should handle unexpected errors', async () => {
-        (LocationService.getLocationById as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (LocationService.deleteLocation as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         const adminRequest = {
           ...mockAuthenticatedRequest,

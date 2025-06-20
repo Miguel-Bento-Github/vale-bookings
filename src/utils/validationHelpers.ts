@@ -1,125 +1,174 @@
+import { Response, Request } from 'express';
 import mongoose from 'mongoose';
-import { Response } from 'express';
+
 import { sendError } from './responseHelpers';
 import { validateCoordinates } from './validation';
 
 export function validateRequiredId(id: string | undefined, res: Response, entityName: string = 'ID'): boolean {
-    if (!id || id.trim().length === 0) {
-        sendError(res, `${entityName} is required`, 400);
-        return false;
-    }
+  if (!id || id.trim().length === 0) {
+    sendError(res, `${entityName} is required`, 400);
+    return false;
+  }
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        sendError(res, 'Invalid ID format', 400);
-        return false;
-    }
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    sendError(res, 'Invalid ID format', 400);
+    return false;
+  }
 
-    return true;
+  return true;
 }
 
-export function validatePaginationParams(page: string | undefined, limit: string | undefined): { page: number; limit: number } {
-    const parsedPage = page ? parseInt(page, 10) : 1;
-    const parsedLimit = limit ? parseInt(limit, 10) : 10;
+export function validatePaginationParams(
+  page: string | undefined,
+  limit: string | undefined
+): { page: number; limit: number } {
+  const parsedPage = page && page.length > 0 ? parseInt(page, 10) : 1;
+  const parsedLimit = limit && limit.length > 0 ? parseInt(limit, 10) : 10;
 
-    return {
-        page: isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage,
-        limit: isNaN(parsedLimit) || parsedLimit < 1 ? 10 : Math.min(parsedLimit, 100) // Cap at 100
-    };
+  return {
+    page: Math.max(1, isNaN(parsedPage) ? 1 : parsedPage),
+    limit: Math.max(1, Math.min(100, isNaN(parsedLimit) ? 10 : parsedLimit))
+  };
 }
 
 export function validateTimeRange(startTime: string, endTime: string, res: Response): boolean {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const now = new Date();
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+  const now = new Date();
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-        sendError(res, 'Invalid date format', 400);
-        return false;
-    }
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    sendError(res, 'Invalid date format', 400);
+    return false;
+  }
 
-    if (start < now) {
-        sendError(res, 'Cannot create booking in the past', 400);
-        return false;
-    }
+  if (start < now) {
+    sendError(res, 'Cannot create booking in the past', 400);
+    return false;
+  }
 
-    if (end <= start) {
-        sendError(res, 'End time must be after start time', 400);
-        return false;
-    }
+  if (end <= start) {
+    sendError(res, 'End time must be after start time', 400);
+    return false;
+  }
 
-    return true;
+  return true;
 }
 
 export function validateCoordinatesFromRequest(coordinates: unknown, res: Response): boolean {
-    if (typeof coordinates !== 'object' || coordinates === null) {
-        sendError(res, 'Invalid coordinates format', 400);
-        return false;
-    }
+  if (typeof coordinates !== 'object' || coordinates === null) {
+    sendError(res, 'Invalid coordinates format', 400);
+    return false;
+  }
 
-    const coordsObj = coordinates as Record<string, unknown>;
-    if (typeof coordsObj.latitude !== 'number' || typeof coordsObj.longitude !== 'number') {
-        sendError(res, 'Invalid coordinates format', 400);
-        return false;
-    }
+  const coordsObj = coordinates as Record<string, unknown>;
+  if (typeof coordsObj.latitude !== 'number' || typeof coordsObj.longitude !== 'number') {
+    sendError(res, 'Invalid coordinates format', 400);
+    return false;
+  }
 
-    if (!validateCoordinates(coordsObj.latitude, coordsObj.longitude)) {
-        sendError(res, 'Invalid coordinates', 400);
-        return false;
-    }
+  if (!validateCoordinates(coordsObj.latitude, coordsObj.longitude)) {
+    sendError(res, 'Invalid coordinates', 400);
+    return false;
+  }
 
-    return true;
+  return true;
 }
 
-export function validateLocationData(body: unknown, res: Response): boolean {
-    const requestBody = body as Record<string, unknown>;
-    const { name, address, coordinates } = requestBody;
+export function validateLocationData(
+  name: string | undefined,
+  address: string | undefined,
+  coordinates: unknown,
+  res: Response
+): boolean {
+  if (!name || name.trim().length === 0 || !address || address.trim().length === 0) {
+    sendError(res, 'Name and address are required', 400);
+    return false;
+  }
 
-    if (typeof name !== 'string' || typeof address !== 'string') {
-        sendError(res, 'Name and address are required', 400);
-        return false;
+  if (coordinates) {
+    const coord = coordinates as { latitude: number; longitude: number };
+    if (!validateCoordinates(coord.latitude, coord.longitude)) {
+      sendError(res, 'Invalid coordinates', 400);
+      return false;
     }
+  }
 
-    return validateCoordinatesFromRequest(coordinates, res);
+  return true;
 }
 
-export function parseCoordinatesFromQuery(req: any): { lat: number; lng: number; radius?: number } | null {
-    const { lat, lng, latitude, longitude, radius } = req.query;
+export function parseCoordinatesFromQuery(req: Request): {
+  latitude?: number;
+  longitude?: number;
+  radius?: number
+} {
+  const { lat, lng, latitude, longitude, radius } = req.query as Record<string, string>;
 
-    // Accept both lat/lng and latitude/longitude parameter formats
-    const latParam = lat ?? latitude;
-    const lngParam = lng ?? longitude;
+  const parsedLat = lat ?? latitude;
+  const parsedLng = lng ?? longitude;
 
-    if (latParam === undefined || lngParam === undefined) {
-        return null;
-    }
-
-    const latValue = parseFloat(latParam as string);
-    const lngValue = parseFloat(lngParam as string);
-    const radiusKm = radius !== undefined ? parseFloat(radius as string) / 1000 : 10;
-
-    if (isNaN(latValue) || isNaN(lngValue)) {
-        return null;
-    }
-
-    if (radius !== undefined && (isNaN(parseFloat(radius as string)) || parseFloat(radius as string) <= 0)) {
-        return null;
-    }
-
-    return { lat: latValue, lng: lngValue, radius: radiusKm };
+  return {
+    latitude: parsedLat ? parseFloat(parsedLat) : undefined,
+    longitude: parsedLng ? parseFloat(parsedLng) : undefined,
+    radius: radius ? parseFloat(radius) : undefined
+  };
 }
 
-export function validateUserRole(userRole: string | undefined, requiredRole: string, res: Response): boolean {
-    if (userRole !== requiredRole) {
-        sendError(res, 'Forbidden: access denied', 403);
-        return false;
-    }
-    return true;
+export function validateCoordinatesFromQuery(
+  latitude: number | undefined,
+  longitude: number | undefined,
+  res: Response
+): boolean {
+  if (latitude === undefined || longitude === undefined) {
+    sendError(res, 'Latitude and longitude are required', 400);
+    return false;
+  }
+
+  if (!validateCoordinates(latitude, longitude)) {
+    sendError(res, 'Invalid coordinates', 400);
+    return false;
+  }
+
+  return true;
 }
 
-export function validateAuthentication(userId: string | undefined, res: Response): boolean {
-    if (!userId) {
-        sendError(res, 'Unauthorized', 401);
-        return false;
-    }
-    return true;
+export function validateRequiredString(value: string | undefined, fieldName: string, res: Response): boolean {
+  if (!value || value.trim().length === 0) {
+    sendError(res, `${fieldName} is required`, 400);
+    return false;
+  }
+
+  return true;
+}
+
+export function validateUserRole(userRole: string, requiredRole: string, res: Response): boolean {
+  if (userRole !== requiredRole) {
+    sendError(res, 'Forbidden: access denied', 403);
+    return false;
+  }
+
+  return true;
+}
+
+export function validateAuthentication(user: unknown, res: Response): boolean {
+  if (!user) {
+    sendError(res, 'Unauthorized', 401);
+    return false;
+  }
+
+  return true;
+}
+
+export function validateDateParam(dateParam: string | undefined, res: Response): Date | null {
+  if (!dateParam || dateParam.trim().length === 0) {
+    sendError(res, 'Date parameter is required', 400);
+    return null;
+  }
+
+  const date = new Date(dateParam);
+  if (isNaN(date.getTime())) {
+    sendError(res, 'Invalid date format', 400);
+    return null;
+  }
+
+  return date;
 } 
