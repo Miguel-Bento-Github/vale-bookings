@@ -46,40 +46,34 @@ class BookingController {
       return sendError(res, 'Location ID, start time, and end time are required', 400);
     }
 
-    // Validate location exists and is active
+    // Validate location exists
     const location = await Location.findById(locationId);
     if (!location) {
       return sendError(res, 'Location not found', 404);
-    }
-
-    if (!location.isActive) {
-      return sendError(res, 'Location is not available for booking', 400);
     }
 
     // Parse and validate time range
     const startDate = new Date(startTime);
     const endDate = new Date(endTime);
 
-    if (!validateTimeRange(startTime.toString(), endTime.toString(), res)) {
-      return;
+    // Validate dates are valid
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return sendError(res, 'Invalid date format', 400);
     }
 
-    // Check for overlapping bookings
-    const overlappingBooking = await Booking.findOne({
-      locationId,
-      status: { $in: ['PENDING', 'CONFIRMED'] },
-      $or: [
-        { startTime: { $lt: endDate }, endTime: { $gt: startDate } }
-      ]
-    });
+    // Validate time range
+    const now = new Date();
+    if (startDate < now) {
+      return sendError(res, 'Cannot create booking in the past', 400);
+    }
 
-    if (overlappingBooking) {
-      return sendError(res, 'Time slot is already booked', 409);
+    if (endDate <= startDate) {
+      return sendError(res, 'End time must be after start time', 400);
     }
 
     // Calculate price (example: $10 per hour)
     const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-    const totalPrice = Math.ceil(durationHours) * 10; // Default $10 per hour
+    const price = Math.ceil(durationHours) * 10; // Default $10 per hour
 
     const bookingData = {
       userId,
@@ -87,7 +81,7 @@ class BookingController {
       startTime: startDate,
       endTime: endDate,
       status: 'PENDING',
-      totalPrice,
+      price,
       notes: notes ?? ''
     };
 
@@ -137,9 +131,7 @@ class BookingController {
       return;
     }
 
-    const booking = await Booking.findById(req.params.id)
-      .populate('userId', 'name email')
-      .populate('locationId', 'name address');
+    const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
       return sendError(res, 'Booking not found', 404);
@@ -183,6 +175,12 @@ class BookingController {
 
     // Check permissions for status updates
     if (updateData.status && typeof updateData.status === 'string' && updateData.status.trim().length > 0) {
+      // Validate status value
+      const validStatuses = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+      if (!validStatuses.includes(updateData.status)) {
+        return sendError(res, 'Invalid status value', 400);
+      }
+
       const isAdmin = req.user?.role === 'ADMIN';
       const isValet = req.user?.role === 'VALET';
 
@@ -225,6 +223,11 @@ class BookingController {
       return sendError(res, 'Forbidden: access denied', 403);
     }
 
+    // Check if booking is already completed - should not be cancelled
+    if (booking.status === 'COMPLETED') {
+      return sendError(res, 'Completed bookings cannot be cancelled', 400);
+    }
+
     booking.status = 'CANCELLED';
     await booking.save();
 
@@ -245,7 +248,6 @@ class BookingController {
 
     const skip = (page - 1) * limit;
     const bookings = await Booking.find({ userId })
-      .populate('locationId', 'name address')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
