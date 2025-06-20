@@ -1,7 +1,7 @@
 import { Response } from 'express';
 
 import { findById, updateProfile as updateUserProfile, deleteUser } from '../services/UserService';
-import { AppError, AuthenticatedRequest, IUserProfile } from '../types';
+import { AuthenticatedRequest, IUserProfile } from '../types';
 import {
   sendSuccess,
   sendError,
@@ -9,8 +9,7 @@ import {
 } from '../utils/responseHelpers';
 import { validatePhoneNumber } from '../utils/validation';
 import {
-  validateAuthentication,
-  validateRequiredString
+  validateAuthentication
 } from '../utils/validationHelpers';
 
 export const getProfile = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {

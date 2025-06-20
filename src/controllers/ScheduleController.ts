@@ -1,26 +1,27 @@
 import { Request, Response } from 'express';
-import mongoose from 'mongoose';
 
 import { getLocationById } from '../services/LocationService';
-import {
+import { 
   getLocationSchedules as getSchedulesForLocation,
   createSchedule as createNewSchedule,
   updateSchedule as updateExistingSchedule,
   getScheduleById as findScheduleById,
   deleteSchedule as deleteExistingSchedule
 } from '../services/ScheduleService';
-import { AppError, AuthenticatedRequest } from '../types';
-import { ensureDocumentExists } from '../utils/mongoHelpers';
+import { AuthenticatedRequest } from '../types';
 import {
-  sendSuccess,
+  standardUpdate,
+  deactivateDocument
+} from '../utils/mongoHelpers';
+import {
+  sendSuccess, 
   sendError,
   withErrorHandling
 } from '../utils/responseHelpers';
 import { validateTimeFormat } from '../utils/validation';
-import {
+import { 
   validateRequiredId,
-  validateAuthentication,
-  validateUserRole
+  validateAuthentication
 } from '../utils/validationHelpers';
 
 export const getLocationSchedules = withErrorHandling(async (req: Request, res: Response): Promise<void> => {

@@ -1,12 +1,11 @@
 import bcrypt from 'bcryptjs';
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 
 import User from '../models/User';
-import { AuthenticatedRequest } from '../types';
 import * as AuthService from '../services/AuthService';
+import { AuthenticatedRequest, AppError } from '../types';
 import { 
-  withErrorHandling,
+  withErrorHandling, 
   sendSuccess, 
   sendError
 } from '../utils/responseHelpers';
@@ -41,7 +40,7 @@ class AuthController {
       return sendError(res, 'Email, password, and profile are required', 400);
     }
 
-    if (!profile.name) {
+    if (!profile?.name || profile.name.trim().length === 0) {
       return sendError(res, 'Profile name is required', 400);
     }
 
@@ -65,8 +64,8 @@ class AuthController {
         token: result.tokens.accessToken,
         refreshToken: result.tokens.refreshToken
       }, 'User registered successfully', 201);
-    } catch (error: any) {
-      if (error.message === 'Email already exists') {
+    } catch (error: unknown) {
+      if (error instanceof AppError && error.message === 'Email already exists') {
         return sendError(res, error.message, 409);
       }
       throw error; // Let withErrorHandling handle other errors
@@ -77,7 +76,7 @@ class AuthController {
     const { email, password } = req.body as LoginRequestBody;
 
     // Validation to match test expectations
-    if (!email || !password) {
+    if (!email || email.trim().length === 0 || !password || password.trim().length === 0) {
       return sendError(res, 'Email and password are required', 400);
     }
 
@@ -98,11 +97,12 @@ class AuthController {
   });
 
   me = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
-    if (!req.user?.userId) {
+    const userId = req.user?.userId;
+    if (!userId || userId.trim().length === 0) {
       return sendError(res, 'User authentication required', 401);
     }
 
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(userId);
     if (!user) {
       return sendError(res, 'User not found', 401);
     }
@@ -111,13 +111,14 @@ class AuthController {
   });
 
   changePassword = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
-    if (!req.user?.userId) {
+    const userId = req.user?.userId;
+    if (!userId || userId.trim().length === 0) {
       return sendError(res, 'User authentication required', 401);
     }
 
     const { currentPassword, newPassword } = req.body as ChangePasswordRequestBody;
 
-    const user = await User.findById(req.user.userId).select('+password');
+    const user = await User.findById(userId).select('+password');
     if (!user) {
       return sendError(res, 'User not found', 401);
     }
@@ -137,20 +138,22 @@ class AuthController {
   });
 
   deleteAccount = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
-    if (!req.user?.userId) {
+    const userId = req.user?.userId;
+    if (!userId || userId.trim().length === 0) {
       return sendError(res, 'User authentication required', 401);
     }
 
-    await User.findByIdAndDelete(req.user.userId);
+    await User.findByIdAndDelete(userId);
     sendSuccess(res, undefined, 'Account deleted successfully');
   });
 
   getAllUsers = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
-    if (!req.user?.userId) {
+    const userId = req.user?.userId;
+    if (!userId || userId.trim().length === 0) {
       return sendError(res, 'User authentication required', 401);
     }
 
-    if (req.user.role !== 'ADMIN') {
+    if (!req.user || req.user.role !== 'ADMIN') {
       return sendError(res, 'Access denied', 403);
     }
 
@@ -159,11 +162,12 @@ class AuthController {
   });
 
   deleteUser = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
-    if (!req.user?.userId) {
+    const userId = req.user?.userId;
+    if (!userId || userId.trim().length === 0) {
       return sendError(res, 'User authentication required', 401);
     }
 
-    if (req.user.role !== 'ADMIN') {
+    if (!req.user || req.user.role !== 'ADMIN') {
       return sendError(res, 'Access denied', 403);
     }
 

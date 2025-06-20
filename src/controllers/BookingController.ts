@@ -1,11 +1,9 @@
 import { Request, Response } from 'express';
-import mongoose from 'mongoose';
 
 import Booking from '../models/Booking';
 import Location from '../models/Location';
 import { AuthenticatedRequest } from '../types';
 import {
-  handleDuplicateKeyError,
   standardUpdate
 } from '../utils/mongoHelpers';
 import { 
@@ -20,13 +18,26 @@ import {
   validateRequiredId
 } from '../utils/validationHelpers';
 
+interface CreateBookingBody {
+  locationId: string;
+  startTime: string | Date;
+  endTime: string | Date;
+  notes?: string;
+}
+
+interface UpdateBookingBody {
+  status?: string;
+  notes?: string;
+  [key: string]: unknown;
+}
+
 class BookingController {
   // Create booking
   create = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
-    const { locationId, startTime, endTime, notes } = req.body;
+    const { locationId, startTime, endTime, notes } = req.body as CreateBookingBody;
     const userId = req.user?.userId;
 
-    if (!userId) {
+    if (!userId || userId.trim().length === 0) {
       return sendError(res, 'User authentication required', 401);
     }
 
@@ -42,95 +53,70 @@ class BookingController {
     }
 
     if (!location.isActive) {
-      return sendError(res, 'Location is not available', 400);
+      return sendError(res, 'Location is not available for booking', 400);
     }
 
+    // Parse and validate time range
     const startDate = new Date(startTime);
     const endDate = new Date(endTime);
 
+    if (!validateTimeRange(startTime.toString(), endTime.toString(), res)) {
+      return;
+    }
+
     // Check for overlapping bookings
-    const overlappingBookings = await Booking.find({
+    const overlappingBooking = await Booking.findOne({
       locationId,
-      status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
+      status: { $in: ['PENDING', 'CONFIRMED'] },
       $or: [
         { startTime: { $lt: endDate }, endTime: { $gt: startDate } }
       ]
     });
 
-    if (overlappingBookings.length > 0) {
-      return sendError(res, 'Time slot not available', 409);
+    if (overlappingBooking) {
+      return sendError(res, 'Time slot is already booked', 409);
     }
 
-    // Calculate price (basic calculation - $10 per hour)
+    // Calculate price (example: $10 per hour)
     const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-    const price = Math.round(durationHours * 10 * 100) / 100; // Round to 2 decimal places
+    const totalPrice = Math.ceil(durationHours) * 10; // Default $10 per hour
 
     const bookingData = {
       userId,
       locationId,
       startTime: startDate,
       endTime: endDate,
-      status: 'PENDING' as const,
-      price,
-      notes: notes || undefined
+      status: 'PENDING',
+      totalPrice,
+      notes: notes ?? ''
     };
 
-    // Use Booking.create to match test expectations
     const booking = await Booking.create(bookingData);
-
     sendSuccess(res, booking, 'Booking created successfully', 201);
   });
 
-  // Get all bookings (with pagination and filters)
+  // Get all bookings with pagination
   getAll = withErrorHandling(async (req: Request, res: Response) => {
     const { page, limit } = validatePaginationParams(
       req.query.page as string,
       req.query.limit as string
     );
-    const { status, locationId, userId, startDate, endDate } = req.query;
 
+    const query = req.query as Record<string, unknown>;
     const filter: Record<string, unknown> = {};
 
-    if (typeof status === 'string' && status.length > 0) {
-      filter.status = status;
+    if (query.status && typeof query.status === 'string' && query.status.trim().length > 0) {
+      filter.status = query.status;
     }
 
-    if (typeof locationId === 'string' && locationId.length > 0) {
-      if (!mongoose.Types.ObjectId.isValid(locationId)) {
-        return sendError(res, 'Invalid location ID format', 400);
-      }
-      filter.locationId = locationId;
-    }
-
-    if (typeof userId === 'string' && userId.length > 0) {
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        return sendError(res, 'Invalid user ID format', 400);
-      }
-      filter.userId = userId;
-    }
-
-    // Date range filtering
-    if ((typeof startDate === 'string' && startDate.length > 0) ||
-      (typeof endDate === 'string' && endDate.length > 0)) {
-      filter.startTime = {};
-      if (typeof startDate === 'string' && startDate.length > 0) {
-        const start = new Date(startDate);
-        if (!isNaN(start.getTime())) {
-          (filter.startTime as Record<string, unknown>).$gte = start;
-        }
-      }
-      if (typeof endDate === 'string' && endDate.length > 0) {
-        const end = new Date(endDate);
-        if (!isNaN(end.getTime())) {
-          (filter.startTime as Record<string, unknown>).$lte = end;
-        }
-      }
+    if (query.locationId && typeof query.locationId === 'string' && query.locationId.trim().length > 0) {
+      filter.locationId = query.locationId;
     }
 
     const skip = (page - 1) * limit;
     const bookings = await Booking.find(filter)
+      .populate('userId', 'name email')
       .populate('locationId', 'name address')
-      .populate('userId', 'profile.name email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -146,20 +132,33 @@ class BookingController {
   });
 
   // Get booking by ID
-  getById = withErrorHandling(async (req: Request, res: Response) => {
+  getById = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
     if (!validateRequiredId(req.params.id, res, 'Booking ID')) {
       return;
     }
 
     const booking = await Booking.findById(req.params.id)
-      .populate('locationId', 'name address coordinates')
-      .populate('userId', 'profile.name email');
+      .populate('userId', 'name email')
+      .populate('locationId', 'name address');
 
     if (!booking) {
       return sendError(res, 'Booking not found', 404);
     }
 
-    sendSuccess(res, booking, 'Booking retrieved successfully');
+    // Check ownership or admin access
+    const userId = req.user?.userId;
+    if (!userId || userId.trim().length === 0) {
+      return sendError(res, 'User authentication required', 401);
+    }
+
+    const isOwner = booking.userId.toString() === userId;
+    const isAdmin = req.user?.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      return sendError(res, 'Forbidden: access denied', 403);
+    }
+
+    sendSuccess(res, booking);
   });
 
   // Update booking
@@ -168,60 +167,48 @@ class BookingController {
       return;
     }
 
-    const { startTime, endTime, status, notes } = req.body;
     const userId = req.user?.userId;
-
-    if (!userId) {
+    if (!userId || userId.trim().length === 0) {
       return sendError(res, 'User authentication required', 401);
     }
 
-    const booking = await Booking.findById(req.params.id);
-    if (!booking) {
-      return sendError(res, 'Booking not found', 404);
+    const updateData = req.body as UpdateBookingBody;
+    const allowedUpdates = ['status', 'notes'];
+    const updates = Object.keys(updateData);
+    const isValidOperation = updates.every(update => allowedUpdates.includes(update));
+
+    if (!isValidOperation) {
+      return sendError(res, 'Invalid updates', 400);
     }
 
-    // Check if user owns the booking or is admin
-    const user = await mongoose.model('User').findById(userId);
-    if (!user) {
-      return sendError(res, 'User not found', 401);
-    }
+    // Check permissions for status updates
+    if (updateData.status && typeof updateData.status === 'string' && updateData.status.trim().length > 0) {
+      const isAdmin = req.user?.role === 'ADMIN';
+      const isValet = req.user?.role === 'VALET';
 
-    const isOwner = booking.userId.toString() === userId;
-    const isAdmin = (user as { role: string }).role === 'ADMIN';
-
-    if (!isOwner && !isAdmin) {
-      return sendError(res, 'Not authorized to update this booking', 403);
-    }
-
-    // Validate time range if provided
-    if ((typeof startTime === 'string' && startTime.length > 0) ||
-      (typeof endTime === 'string' && endTime.length > 0)) {
-      const newStartTime = startTime || booking.startTime.toISOString();
-      const newEndTime = endTime || booking.endTime.toISOString();
-
-      if (!validateTimeRange(newStartTime, newEndTime, res)) {
-        return;
+      if (!isAdmin && !isValet) {
+        return sendError(res, 'Forbidden: insufficient permissions', 403);
       }
     }
 
-    const updateData: Record<string, unknown> = {};
-    if (typeof startTime === 'string' && startTime.length > 0) updateData.startTime = new Date(startTime);
-    if (typeof endTime === 'string' && endTime.length > 0) updateData.endTime = new Date(endTime);
-    if (typeof status === 'string' && status.length > 0) updateData.status = status;
-    if (typeof notes === 'string') updateData.notes = notes.length > 0 ? notes : undefined;
+    // Ensure req.params.id is defined since we validated it
+    const bookingId = req.params.id;
+    if (!bookingId || bookingId.trim().length === 0) {
+      return sendError(res, 'Booking ID is required', 400);
+    }
 
-    const updatedBooking = await standardUpdate(Booking, req.params.id!, updateData);
+    const updatedBooking = await standardUpdate(Booking, bookingId, updateData);
     sendSuccess(res, updatedBooking, 'Booking updated successfully');
   });
 
-  // Delete booking
+  // Delete booking (soft delete by changing status to CANCELLED)
   delete = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
     if (!validateRequiredId(req.params.id, res, 'Booking ID')) {
       return;
     }
 
     const userId = req.user?.userId;
-    if (!userId) {
+    if (!userId || userId.trim().length === 0) {
       return sendError(res, 'User authentication required', 401);
     }
 
@@ -230,27 +217,24 @@ class BookingController {
       return sendError(res, 'Booking not found', 404);
     }
 
-    // Check if user owns the booking or is admin
-    const user = await mongoose.model('User').findById(userId);
-    if (!user) {
-      return sendError(res, 'User not found', 401);
-    }
-
+    // Check ownership or admin access
     const isOwner = booking.userId.toString() === userId;
-    const isAdmin = (user as { role: string }).role === 'ADMIN';
+    const isAdmin = req.user?.role === 'ADMIN';
 
     if (!isOwner && !isAdmin) {
-      return sendError(res, 'Not authorized to delete this booking', 403);
+      return sendError(res, 'Forbidden: access denied', 403);
     }
 
-    await Booking.findByIdAndDelete(req.params.id);
-    sendSuccess(res, null, 'Booking deleted successfully');
+    booking.status = 'CANCELLED';
+    await booking.save();
+
+    sendSuccess(res, booking, 'Booking cancelled successfully');
   });
 
   // Get user's bookings
   getUserBookings = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    if (!userId) {
+    if (!userId || userId.trim().length === 0) {
       return sendError(res, 'User authentication required', 401);
     }
 
@@ -258,21 +242,15 @@ class BookingController {
       req.query.page as string,
       req.query.limit as string
     );
-    const { status } = req.query;
-
-    const filter: Record<string, unknown> = { userId };
-    if (typeof status === 'string' && status.length > 0) {
-      filter.status = status;
-    }
 
     const skip = (page - 1) * limit;
-    const bookings = await Booking.find(filter)
-      .populate('locationId', 'name address coordinates')
+    const bookings = await Booking.find({ userId })
+      .populate('locationId', 'name address')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Booking.countDocuments(filter);
+    const total = await Booking.countDocuments({ userId });
 
     sendSuccessWithPagination(res, bookings, {
       page: page,
