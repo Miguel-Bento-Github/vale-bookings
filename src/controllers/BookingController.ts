@@ -9,6 +9,20 @@ import {
   cancelBooking as cancelExistingBooking
 } from '../services/BookingService';
 import { AppError, AuthenticatedRequest, BookingStatus } from '../types';
+import {
+  sendSuccess,
+  sendError,
+  withErrorHandling
+} from '../utils/responseHelpers';
+import {
+  validateRequiredId,
+  validatePaginationParams,
+  validateTimeRange,
+  validateAuthentication,
+  validateUserRole,
+  validateRequiredString
+} from '../utils/validationHelpers';
+import { ensureDocumentExists } from '../utils/mongoHelpers';
 
 // Type definitions for request bodies
 interface CreateBookingRequestBody {
@@ -44,367 +58,179 @@ function isUpdateBookingStatusRequestBody(body: unknown): body is UpdateBookingS
   );
 }
 
-export async function getUserBookings(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    let userId = req.user?.userId;
+export const getUserBookings = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!validateAuthentication(req.user, res)) {
+    return;
+  }
 
-    // If userId is provided as a parameter, use that instead (for admin access)
-    if (req.params?.userId !== undefined && req.params.userId !== null && req.params.userId.trim().length > 0) {
-      // Check if current user is admin or accessing their own bookings
-      if (req.user?.role !== 'ADMIN' && req.params.userId !== userId) {
-        res.status(403).json({
-          success: false,
-          message: 'Forbidden: access denied'
-        });
-        return;
+  let userId = req.user!.userId;
+
+  // If userId is provided as a parameter, use that instead (for admin access)
+  if (req.params?.userId && req.params.userId.trim().length > 0) {
+  // Check if current user is admin or accessing their own bookings
+    if (req.user!.role !== 'ADMIN' && req.params.userId !== userId) {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+    userId = req.params.userId;
+  }
+
+  const { page, limit } = validatePaginationParams(req.query.page as string, req.query.limit as string);
+  const bookings = await getBookingsForUser(userId, page, limit);
+
+  sendSuccess(res, bookings);
+});
+
+export const getBookingById = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!validateAuthentication(req.user, res)) {
+    return;
+  }
+
+  if (!validateRequiredId(req.params.id, res, 'Booking ID')) {
+    return;
+  }
+
+  const booking = await findBookingById(req.params.id!);
+
+  if (!booking) {
+    sendError(res, 'Booking not found', 404);
+    return;
+  }
+
+  // Check if user owns the booking or is admin
+  if (String(booking.userId) !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
+  sendSuccess(res, booking);
+});
+
+export const createBooking = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!validateAuthentication(req.user, res)) {
+    return;
+  }
+
+  if (!isCreateBookingRequestBody(req.body)) {
+    sendError(res, 'Location ID, start time, and end time are required', 400);
+    return;
+  }
+
+  const { locationId, startTime, endTime, notes } = req.body;
+
+  // Validate location ID
+  if (!validateRequiredId(locationId, res, 'Location ID')) {
+    return;
+  }
+
+  // Validate time range
+  if (!validateTimeRange(startTime, endTime, res)) {
+    return;
+  }
+
+  // Check if location exists and is active
+  const location = await Location.findById(locationId);
+  if (!location) {
+    sendError(res, 'Location not found', 404);
+    return;
+  }
+
+  if (!location.isActive) {
+    sendError(res, 'Location is not active', 400);
+    return;
+  }
+
+  // Check for overlapping bookings
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+
+  const overlappingBookings = await Booking.find({
+    locationId,
+    status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
+    $or: [
+      {
+        startTime: { $lt: end },
+        endTime: { $gt: start }
       }
-      userId = req.params.userId;
-    }
+    ]
+  });
 
-    if (userId === undefined || userId === null) {
-      res.status(401).json({
-        success: false,
-        message: 'Unauthorized'
-      });
-      return;
-    }
-
-    const pageQuery = req.query?.page;
-    const limitQuery = req.query?.limit;
-
-    const page = typeof pageQuery === 'string' ? parseInt(pageQuery, 10) : 1;
-    const limit = typeof limitQuery === 'string' ? parseInt(limitQuery, 10) : 10;
-
-    const bookings = await getBookingsForUser(userId, page, limit);
-
-    res.status(200).json({
-      success: true,
-      data: bookings
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (overlappingBookings.length > 0) {
+    sendError(res, 'Time slot is not available', 400);
+    return;
   }
-}
 
-export async function getBookingById(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const userId = req.user?.userId;
-    const { id } = req.params;
+  // Calculate price based on duration (example: $10 per hour)
+  const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+  const price = Math.max(hours * 10, 10); // Minimum $10
 
-    if (userId === undefined || userId === null) {
-      res.status(401).json({
-        success: false,
-        message: 'Unauthorized'
-      });
-      return;
-    }
+  // Create booking
+  const booking = await Booking.create({
+    userId: req.user!.userId,
+    locationId,
+    startTime: start,
+    endTime: end,
+    price,
+    notes: notes || '',
+    status: 'PENDING'
+  });
 
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Booking ID is required'
-      });
-      return;
-    }
+  sendSuccess(res, booking, 'Booking created successfully', 201);
+});
 
-    const booking = await findBookingById(id);
-
-    if (booking === null || booking === undefined) {
-      res.status(404).json({
-        success: false,
-        message: 'Booking not found'
-      });
-      return;
-    }
-
-    // Check if user owns the booking or is admin
-    if (String(booking.userId) !== userId && req.user?.role !== 'ADMIN') {
-      res.status(403).json({
-        success: false,
-        message: 'Forbidden: access denied'
-      });
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      data: booking
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+export const updateBookingStatus = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!validateAuthentication(req.user, res)) {
+    return;
   }
-}
 
-export async function createBooking(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const userId = req.user?.userId;
-
-    if (userId === undefined || userId === null) {
-      res.status(401).json({
-        success: false,
-        message: 'Unauthorized'
-      });
-      return;
-    }
-
-    if (!isCreateBookingRequestBody(req.body)) {
-      res.status(400).json({
-        success: false,
-        message: 'Location ID, start time, and end time are required'
-      });
-      return;
-    }
-
-    const { locationId, startTime, endTime, notes } = req.body;
-
-    // Validate dates
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const now = new Date();
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid date format'
-      });
-      return;
-    }
-
-    if (start < now) {
-      res.status(400).json({
-        success: false,
-        message: 'Cannot create booking in the past'
-      });
-      return;
-    }
-
-    if (end <= start) {
-      res.status(400).json({
-        success: false,
-        message: 'End time must be after start time'
-      });
-      return;
-    }
-
-    // Check if location exists and is active
-    const location = await Location.findById(locationId);
-    if (location === null || location === undefined) {
-      res.status(404).json({
-        success: false,
-        message: 'Location not found'
-      });
-      return;
-    }
-
-    if (location.isActive !== true) {
-      res.status(400).json({
-        success: false,
-        message: 'Location is not active'
-      });
-      return;
-    }
-
-    // Check for overlapping bookings
-    const overlappingBookings = await Booking.find({
-      locationId,
-      status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
-      $or: [
-        {
-          startTime: { $lt: end },
-          endTime: { $gt: start }
-        }
-      ]
-    });
-
-    if (overlappingBookings.length > 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Time slot is not available'
-      });
-      return;
-    }
-
-    // Calculate price based on duration (example: $10 per hour)
-    const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    const price = Math.max(hours * 10, 10); // Minimum $10
-
-    const booking = await Booking.create({
-      userId,
-      locationId,
-      startTime: start,
-      endTime: end,
-      price,
-      notes: notes ?? ''
-    });
-
-    res.status(201).json({
-      success: true,
-      data: booking
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  // Only admins and valets can update booking status
+  if (req.user!.role !== 'ADMIN' && req.user!.role !== 'VALET') {
+    sendError(res, 'Forbidden: insufficient permissions', 403);
+    return;
   }
-}
 
-export async function updateBookingStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const userId = req.user?.userId;
-    const userRole = req.user?.role;
-    const { id } = req.params;
-
-    if (userId === undefined || userId === null) {
-      res.status(401).json({
-        success: false,
-        message: 'Unauthorized'
-      });
-      return;
-    }
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Booking ID is required'
-      });
-      return;
-    }
-
-    if (!isUpdateBookingStatusRequestBody(req.body)) {
-      res.status(400).json({
-        success: false,
-        message: 'Valid status is required'
-      });
-      return;
-    }
-
-    const { status } = req.body;
-
-    // Check if user has permission to update booking status
-    if (userRole !== 'ADMIN' && userRole !== 'VALET') {
-      res.status(403).json({
-        success: false,
-        message: 'Forbidden: insufficient permissions'
-      });
-      return;
-    }
-
-    const booking = await updateStatus(id, status);
-
-    if (booking === null || booking === undefined) {
-      res.status(404).json({
-        success: false,
-        message: 'Booking not found'
-      });
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      data: booking
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (!validateRequiredId(req.params.id, res, 'Booking ID')) {
+    return;
   }
-}
 
-export async function cancelBooking(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const userId = req.user?.userId;
-    const userRole = req.user?.role;
-    const { id } = req.params;
-
-    if (userId === undefined || userId === null) {
-      res.status(401).json({
-        success: false,
-        message: 'Unauthorized'
-      });
-      return;
-    }
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Booking ID is required'
-      });
-      return;
-    }
-
-    // Get booking to check ownership
-    const booking = await findBookingById(id);
-
-    if (booking === null || booking === undefined) {
-      res.status(404).json({
-        success: false,
-        message: 'Booking not found'
-      });
-      return;
-    }
-
-    // Check if user owns the booking or is admin
-    if (String(booking.userId) !== userId && userRole !== 'ADMIN') {
-      res.status(403).json({
-        success: false,
-        message: 'Forbidden: access denied'
-      });
-      return;
-    }
-
-    const cancelledBooking = await cancelExistingBooking(id);
-
-    res.status(200).json({
-      success: true,
-      data: cancelledBooking
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (!isUpdateBookingStatusRequestBody(req.body)) {
+    sendError(res, 'Valid status is required', 400);
+    return;
   }
-}
+
+  const { status } = req.body;
+  const booking = await updateStatus(req.params.id!, status);
+
+  if (!booking) {
+    sendError(res, 'Booking not found', 404);
+    return;
+  }
+
+  sendSuccess(res, booking, 'Booking status updated successfully');
+});
+
+export const cancelBooking = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!validateAuthentication(req.user, res)) {
+    return;
+  }
+
+  if (!validateRequiredId(req.params.id, res, 'Booking ID')) {
+    return;
+  }
+
+  const booking = await findBookingById(req.params.id!);
+
+  if (!booking) {
+    sendError(res, 'Booking not found', 404);
+    return;
+  }
+
+  // Check if user owns the booking or is admin
+  if (String(booking.userId) !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
+  const cancelledBooking = await cancelExistingBooking(req.params.id!);
+  sendSuccess(res, cancelledBooking, 'Booking cancelled successfully');
+});

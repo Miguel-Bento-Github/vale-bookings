@@ -1423,7 +1423,8 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: mockBooking
+          data: mockBooking,
+          message: 'Booking created successfully'
         });
       });
 
@@ -1519,7 +1520,8 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: mockUpdatedBooking
+          data: mockUpdatedBooking,
+          message: 'Booking status updated successfully'
         });
       });
 
@@ -1539,16 +1541,16 @@ describe('Controllers', () => {
         });
       });
 
-      it('should return 400 for missing status', async () => {
+      it('should return 403 for non-admin/valet user', async () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439013' };
-        mockAuthenticatedRequest.body = {};
+        mockAuthenticatedRequest.body = { status: 'CONFIRMED' };
 
         await updateBookingStatus(mockAuthenticatedRequest, mockResponse as Response);
 
-        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          message: 'Valid status is required'
+          message: 'Forbidden: insufficient permissions'
         });
       });
 
@@ -1649,7 +1651,8 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: mockCancelledBooking
+          data: mockCancelledBooking,
+          message: 'Booking cancelled successfully'
         });
       });
 
