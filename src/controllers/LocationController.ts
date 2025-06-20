@@ -22,7 +22,8 @@ import {
   validateRequiredId,
   parseCoordinatesFromQuery,
   validateLocationData,
-  validateDateParam
+  validateDateParam,
+  validateCoordinatesFromQuery
 } from '../utils/validationHelpers';
 
 export const getLocations = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
@@ -33,20 +34,13 @@ export const getLocations = withErrorHandling(async (req: Request, res: Response
 export const getNearbyLocations = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
   const { latitude, longitude, radius } = parseCoordinatesFromQuery(req);
 
-  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-    sendError(res, 'Latitude and longitude are required', 400);
-    return;
-  }
-
-  const coordinateError = validateCoordinates(latitude, longitude);
-  if (coordinateError) {
-    sendError(res, coordinateError, 400);
+  if (!validateCoordinatesFromQuery(latitude, longitude, res)) {
     return;
   }
 
   const radiusInKm = radius && radius > 0 ? radius : 10;
 
-  const locations = await findNearby(latitude, longitude, radiusInKm);
+  const locations = await findNearby(latitude!, longitude!, radiusInKm);
   sendSuccess(res, locations);
 });
 
@@ -101,9 +95,8 @@ export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest
 
   // Validate coordinates if provided in update
   if (coordinates && typeof coordinates === 'object' && coordinates !== null) {
-    const coordError = validateCoordinates(coordinates.latitude, coordinates.longitude);
-    if (coordError) {
-      sendError(res, coordError, 400);
+    if (!validateCoordinates(coordinates.latitude, coordinates.longitude)) {
+      sendError(res, 'Invalid coordinates', 400);
       return;
     }
   }

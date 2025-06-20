@@ -74,18 +74,19 @@ export function validateCoordinatesFromRequest(coordinates: unknown, res: Respon
 export function validateLocationData(data: Record<string, unknown>): string[] {
   const errors: string[] = [];
 
-  if (!data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
-    errors.push('Name is required');
-  }
+  const hasName = data.name && typeof data.name === 'string' && data.name.trim().length > 0;
+  const hasAddress = data.address && typeof data.address === 'string' && data.address.trim().length > 0;
 
-  if (!data.address || typeof data.address !== 'string' || data.address.trim().length === 0) {
-    errors.push('Address is required');
+  if (!hasName || !hasAddress) {
+    errors.push('Name and address are required');
   }
 
   if (typeof data.coordinates === 'object' && data.coordinates !== null) {
     const coords = data.coordinates as Record<string, unknown>;
     if (typeof coords.latitude !== 'number' || typeof coords.longitude !== 'number') {
       errors.push('Coordinates must contain valid latitude and longitude numbers');
+    } else if (!validateCoordinates(coords.latitude, coords.longitude)) {
+      errors.push('Invalid coordinates');
     }
   } else {
     errors.push('Coordinates are required');
