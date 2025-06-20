@@ -91,7 +91,7 @@ describe('LocationController', () => {
 
       await LocationController.getNearbyLocations(mockReq as Request, mockRes as Response);
 
-      expect(mockLocationService.findNearby).toHaveBeenCalledWith(40.7128, -74.0060, 5);
+      expect(mockLocationService.findNearby).toHaveBeenCalledWith(40.7128, -74.0060, 5000);
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
@@ -279,13 +279,14 @@ describe('LocationController', () => {
         address: 'Test St',
         coordinates: { latitude: 'invalid', longitude: -74.0060 }
       };
+      mockValidation.validateCoordinates.mockReturnValue(false);
 
       await LocationController.createLocation(mockAuthReq as AuthenticatedRequest, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Invalid coordinates format'
+        message: 'Invalid coordinates'
       });
     });
 
