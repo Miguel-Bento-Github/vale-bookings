@@ -229,11 +229,9 @@ export default new AuthController();
 const authController = new AuthController();
 export const register = authController.register;
 export const login = authController.login;
+export const refreshToken = authController.refreshToken;
 export const me = authController.me;
 export const changePassword = authController.changePassword;
 export const deleteAccount = authController.deleteAccount;
 export const getAllUsers = authController.getAllUsers;
-export const deleteUser = authController.deleteUser;
-
-// Alias for test compatibility
-export const refreshToken = login; // placeholder - this method needs to be implemented 
+export const deleteUser = authController.deleteUser; 
