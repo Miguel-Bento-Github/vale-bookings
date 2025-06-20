@@ -7,662 +7,261 @@ import {
   getLocationById as findLocationById,
   createLocation as createNewLocation,
   updateLocation as updateExistingLocation,
-  deleteLocation as deleteExistingLocation
+  deleteLocation as deleteExistingLocation,
+  searchLocations as searchLocationsService,
+  getLocationAvailability as getLocationAvailabilityService,
+  getLocationTimeslots as getLocationTimeslotsService
 } from '../services/LocationService';
 import { AppError, AuthenticatedRequest } from '../types';
 import { validateCoordinates } from '../utils/validation';
+import {
+  sendSuccess,
+  sendError,
+  withErrorHandling
+} from '../utils/responseHelpers';
+import {
+  validateRequiredId,
+  parseCoordinatesFromQuery,
+  validateLocationData,
+  validateUserRole
+} from '../utils/validationHelpers';
 
-export async function getLocations(req: Request, res: Response): Promise<void> {
-  try {
-    const locations = await getAllLocations();
+export const getLocations = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+  const locations = await getAllLocations();
+  sendSuccess(res, locations);
+});
 
-    res.status(200).json({
-      success: true,
-      data: locations
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+export const getNearbyLocations = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+  const coords = parseCoordinatesFromQuery(req);
+
+  if (!coords) {
+    sendError(res, 'Latitude and longitude are required', 400);
+    return;
   }
+
+  if (!validateCoordinates(coords.lat, coords.lng)) {
+    sendError(res, 'Invalid coordinates', 400);
+    return;
+  }
+
+  if (coords.radius !== undefined && coords.radius <= 0) {
+    sendError(res, 'Invalid radius parameter', 400);
+    return;
+  }
+
+  const locations = await findNearby(coords.lat, coords.lng, coords.radius);
+  sendSuccess(res, locations);
+});
+
+export const getLocationById = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  if (!validateRequiredId(id, res, 'Location ID')) {
+    return;
+  }
+
+  const location = await findLocationById(id!);
+
+  if (!location) {
+    sendError(res, 'Location not found', 404);
+    return;
+  }
+
+  sendSuccess(res, location);
+});
+
+export const createLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!validateUserRole(req.user?.role, 'ADMIN', res)) {
+    return;
+  }
+
+  if (!validateLocationData(req.body, res)) {
+    return;
+  }
+
+  const requestBody = req.body as Record<string, unknown>;
+  const { name, address, coordinates } = requestBody;
+  const coordsObj = coordinates as Record<string, unknown>;
+
+  const location = await createNewLocation({
+    name: name as string,
+    address: address as string,
+    coordinates: {
+      latitude: coordsObj.latitude as number,
+      longitude: coordsObj.longitude as number
+    },
+    isActive: true
+  });
+
+  sendSuccess(res, location, 'Location created successfully', 201);
+});
+
+export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  if (!validateUserRole(req.user?.role, 'ADMIN', res)) {
+    return;
+  }
+
+  if (!validateRequiredId(id, res, 'Location ID')) {
+    return;
+  }
+
+  const requestBody = req.body as Record<string, unknown>;
+  const updateData: Record<string, unknown> = {};
+
+  // Validate and add fields if provided
+  if (requestBody.name !== undefined) {
+    if (typeof requestBody.name !== 'string') {
+      sendError(res, 'Invalid name format', 400);
+      return;
+    }
+    updateData.name = requestBody.name;
+  }
+
+  if (requestBody.address !== undefined) {
+    if (typeof requestBody.address !== 'string') {
+      sendError(res, 'Invalid address format', 400);
+      return;
+    }
+    updateData.address = requestBody.address;
+  }
+
+  if (requestBody.coordinates !== undefined) {
+    if (!validateCoordinatesFromRequest(requestBody.coordinates, res)) {
+      return;
+    }
+    updateData.coordinates = requestBody.coordinates;
+  }
+
+  if (requestBody.isActive !== undefined) {
+    if (typeof requestBody.isActive !== 'boolean') {
+      sendError(res, 'Invalid isActive format', 400);
+      return;
+    }
+    updateData.isActive = requestBody.isActive;
+  }
+
+  const location = await updateExistingLocation(id!, updateData);
+
+  if (!location) {
+    sendError(res, 'Location not found', 404);
+    return;
+  }
+
+  sendSuccess(res, location, 'Location updated successfully');
+});
+
+export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  if (!validateUserRole(req.user?.role, 'ADMIN', res)) {
+    return;
+  }
+
+  if (!validateRequiredId(id, res, 'Location ID')) {
+    return;
+  }
+
+  await deleteExistingLocation(id!);
+  sendSuccess(res, undefined, 'Location deleted successfully');
+});
+
+export const searchLocations = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+  const { q: query } = req.query;
+
+  if (typeof query !== 'string' || query.trim().length === 0) {
+    sendError(res, 'Search query is required', 400);
+    return;
+  }
+
+  const locations = await searchLocationsService(query);
+  sendSuccess(res, locations);
+});
+
+export const getLocationAvailability = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { date } = req.query;
+
+  if (!validateRequiredId(id, res, 'Location ID')) {
+    return;
+  }
+
+  if (typeof date !== 'string') {
+    sendError(res, 'Date parameter is required', 400);
+    return;
+  }
+
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    sendError(res, 'Invalid date format', 400);
+    return;
+  }
+
+  const availability = await getLocationAvailabilityService(id!, dateObj);
+  sendSuccess(res, availability);
+});
+
+export const getLocationTimeSlots = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { date } = req.query;
+
+  if (!validateRequiredId(id, res, 'Location ID')) {
+    return;
+  }
+
+  if (typeof date !== 'string') {
+    sendError(res, 'Date parameter is required', 400);
+    return;
+  }
+
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    sendError(res, 'Invalid date format', 400);
+    return;
+  }
+
+  const timeSlots = await getLocationTimeslotsService(id!, dateObj);
+  sendSuccess(res, timeSlots);
+});
+
+// Helper function for coordinate validation (keeping this here as it's specific to location logic)
+function validateCoordinatesFromRequest(coordinates: unknown, res: Response): boolean {
+  if (typeof coordinates !== 'object' || coordinates === null) {
+    sendError(res, 'Invalid coordinates format', 400);
+    return false;
+  }
+
+  const coordsObj = coordinates as Record<string, unknown>;
+  if (typeof coordsObj.latitude !== 'number' || typeof coordsObj.longitude !== 'number') {
+    sendError(res, 'Invalid coordinates format', 400);
+    return false;
+  }
+
+  if (!validateCoordinates(coordsObj.latitude, coordsObj.longitude)) {
+    sendError(res, 'Invalid coordinates', 400);
+    return false;
+  }
+
+  return true;
 }
 
-export async function getNearbyLocations(req: Request, res: Response): Promise<void> {
-  try {
-    const { lat, lng, latitude, longitude, radius } = req.query;
+// Additional functions that were in the original file but need to be maintained
+export const getRealtimeAvailability = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
 
-    // Accept both lat/lng and latitude/longitude parameter formats
-    const latParam = lat ?? latitude;
-    const lngParam = lng ?? longitude;
-
-    if (latParam === undefined || lngParam === undefined) {
-      res.status(400).json({
-        success: false,
-        message: 'Latitude and longitude are required'
-      });
-      return;
-    }
-
-    const latValue = parseFloat(latParam as string);
-    const lngValue = parseFloat(lngParam as string);
-    const radiusKm = radius !== undefined ? parseFloat(radius as string) / 1000 : 10;
-
-    if (!validateCoordinates(latValue, lngValue)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid coordinates'
-      });
-      return;
-    }
-
-    // Validate radius parameter
-    if (radius !== undefined && (isNaN(parseFloat(radius as string)) || parseFloat(radius as string) <= 0)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid radius parameter'
-      });
-      return;
-    }
-
-    const locations = await findNearby(latValue, lngValue, radiusKm);
-
-    res.status(200).json({
-      success: true,
-      data: locations
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (!validateRequiredId(id, res, 'Location ID')) {
+    return;
   }
-}
 
-export async function getLocationById(req: Request, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Location ID is required'
-      });
-      return;
-    }
-
-    // Validate MongoDB ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid ID format'
-      });
-      return;
-    }
-
-    const location = await findLocationById(id);
-
-    if (!location) {
-      res.status(404).json({
-        success: false,
-        message: 'Location not found'
-      });
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      data: location
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  }
-}
-
-export async function createLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const userRole = req.user?.role;
-
-    if (userRole !== 'ADMIN') {
-      res.status(403).json({
-        success: false,
-        message: 'Forbidden: access denied'
-      });
-      return;
-    }
-
-    const requestBody = req.body as Record<string, unknown>;
-    const name = requestBody.name;
-    const address = requestBody.address;
-    const coordinates = requestBody.coordinates;
-
-    if (
-      typeof name !== 'string' ||
-      typeof address !== 'string' ||
-      typeof coordinates !== 'object' ||
-      coordinates === null
-    ) {
-      res.status(400).json({
-        success: false,
-        message: 'Name, address, and coordinates are required'
-      });
-      return;
-    }
-
-    const coordsObj = coordinates as Record<string, unknown>;
-    if (typeof coordsObj.latitude !== 'number' || typeof coordsObj.longitude !== 'number') {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid coordinates format'
-      });
-      return;
-    }
-
-    if (!validateCoordinates(coordsObj.latitude, coordsObj.longitude)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid coordinates'
-      });
-      return;
-    }
-
-    const location = await createNewLocation({
-      name,
-      address,
-      coordinates: {
-        latitude: coordsObj.latitude,
-        longitude: coordsObj.longitude
-      },
-      isActive: true
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Location created successfully',
-      data: location
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  }
-}
-
-export async function updateLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const userRole = req.user?.role;
-
-    if (userRole !== 'ADMIN') {
-      res.status(403).json({
-        success: false,
-        message: 'Forbidden: access denied'
-      });
-      return;
-    }
-
-    const { id } = req.params;
-    const requestBody = req.body as Record<string, unknown>;
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Location ID is required'
-      });
-      return;
-    }
-
-    // Validate coordinates if provided
-    if (typeof requestBody.coordinates === 'object' && requestBody.coordinates !== null) {
-      const coordinates = requestBody.coordinates as Record<string, unknown>;
-      if (
-        typeof coordinates.latitude === 'number' &&
-        typeof coordinates.longitude === 'number' &&
-        !validateCoordinates(coordinates.latitude, coordinates.longitude)
-      ) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid coordinates'
-        });
-        return;
-      }
-    }
-
-    // Build update data with proper typing
-    const updateData: Record<string, unknown> = {};
-    if (typeof requestBody.name === 'string') {
-      updateData.name = requestBody.name;
-    }
-    if (typeof requestBody.address === 'string') {
-      updateData.address = requestBody.address;
-    }
-    if (typeof requestBody.coordinates === 'object' && requestBody.coordinates !== null) {
-      updateData.coordinates = requestBody.coordinates;
-    }
-    if (typeof requestBody.isActive === 'boolean') {
-      updateData.isActive = requestBody.isActive;
-    }
-
-    const location = await updateExistingLocation(id, updateData);
-
-    if (!location) {
-      res.status(404).json({
-        success: false,
-        message: 'Location not found'
-      });
-      return;
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Location updated successfully',
-      data: location
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  }
-}
-
-export async function deleteLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const userRole = req.user?.role;
-
-    if (userRole !== 'ADMIN') {
-      res.status(403).json({
-        success: false,
-        message: 'Forbidden: access denied'
-      });
-      return;
-    }
-
-    const { id } = req.params;
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Location ID is required'
-      });
-      return;
-    }
-
-    // Check if location exists before deletion
-    const location = await findLocationById(id);
-
-    if (!location) {
-      res.status(404).json({
-        success: false,
-        message: 'Location not found'
-      });
-      return;
-    }
-
-    // Actually delete the location
-    await deleteExistingLocation(id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Location deleted successfully'
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  }
-}
-
-export async function searchLocations(req: Request, res: Response): Promise<void> {
-  try {
-    const { q, lat, lng, radius, minPrice, maxPrice } = req.query;
-
-    // Require search query parameter
-    if (typeof q !== 'string') {
-      res.status(400).json({
-        success: false,
-        message: 'Search query parameter (q) is required'
-      });
-      return;
-    }
-
-    // Build search criteria
-    const searchCriteria: Record<string, unknown> = {
-      isActive: true
-    };
-
-    // Text search
-    if (typeof q === 'string') {
-      searchCriteria.$or = [
-        { name: { $regex: q, $options: 'i' } },
-        { address: { $regex: q, $options: 'i' } }
-      ];
-    }
-
-    // Price range filter
-    if (typeof minPrice === 'string' || typeof maxPrice === 'string') {
-      const priceFilter: Record<string, number> = {};
-      if (typeof minPrice === 'string') {
-        priceFilter.$gte = parseFloat(minPrice);
-      }
-      if (typeof maxPrice === 'string') {
-        priceFilter.$lte = parseFloat(maxPrice);
-      }
-      searchCriteria['pricing.hourlyRate'] = priceFilter;
-    }
-
-    // Get locations based on criteria
-    let locations;
-    if (typeof lat === 'string' && typeof lng === 'string' && typeof radius === 'string') {
-      const latitude = parseFloat(lat);
-      const longitude = parseFloat(lng);
-      const radiusKm = parseFloat(radius);
-
-      if (!validateCoordinates(latitude, longitude)) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid coordinates'
-        });
-        return;
-      }
-
-      locations = await findNearby(latitude, longitude, radiusKm);
-    } else {
-      // Use LocationService to search with criteria
-      locations = await getAllLocations();
-    }
-
-    res.status(200).json({
-      success: true,
-      data: locations
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  }
-}
-
-export async function getLocationAvailability(req: Request, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
-    const { date } = req.query;
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Location ID is required'
-      });
-      return;
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid ID format'
-      });
-      return;
-    }
-
-    // Validate date parameter if provided
-    if (date === undefined || date === null || typeof date !== 'string' || date.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid date format'
-      });
-      return;
-    }
-
-    // Validate date format
-    if (isNaN(Date.parse(date))) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid date format'
-      });
-      return;
-    }
-
-    const location = await findLocationById(id);
-    if (!location) {
-      res.status(404).json({
-        success: false,
-        message: 'Location not found'
-      });
-      return;
-    }
-
-    // For now, return mock availability data
-    // In a real implementation, this would check actual bookings
-    const targetDate = date ? new Date(date) : new Date();
-    const totalSpots = 20;
-    const availableSpots = Math.floor(Math.random() * 20);
-    const availability = {
-      date: targetDate,
-      total: totalSpots,
-      available: availableSpots,
-      hourlyAvailability: Array.from({ length: 24 }, (_, hour) => ({
-        hour,
-        available: Math.floor(Math.random() * 5),
-        total: 5
-      }))
-    };
-
-    res.status(200).json({
-      success: true,
-      data: availability
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  }
-}
-
-export async function getLocationTimeSlots(req: Request, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
-    const { date } = req.query;
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Location ID is required'
-      });
-      return;
-    }
-
-    if (typeof date !== 'string' || date.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Date parameter is required'
-      });
-      return;
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid ID format'
-      });
-      return;
-    }
-
-    // Validate date parameter
-    if (isNaN(Date.parse(date))) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid date format'
-      });
-      return;
-    }
-
-    const location = await findLocationById(id);
-    if (!location) {
-      res.status(404).json({
-        success: false,
-        message: 'Location not found'
-      });
-      return;
-    }
-
-    const targetDate = date ? new Date(date) : new Date();
-
-    // Generate mock time slots for the day
-    const timeSlots = [];
-    for (let hour = 8; hour < 20; hour++) {
-      const startTime = new Date(targetDate);
-      startTime.setHours(hour, 0, 0, 0);
-
-      const endTime = new Date(startTime);
-      endTime.setHours(hour + 2, 0, 0, 0);
-
-      timeSlots.push({
-        id: `${id}-${hour}`,
-        startTime,
-        endTime,
-        available: Math.floor(Math.random() * 5),
-        totalSpots: 5,
-        price: 15 + Math.floor(Math.random() * 10)
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: timeSlots
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  }
-}
-
-export async function getRealtimeAvailability(req: Request, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Location ID is required'
-      });
-      return;
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid ID format'
-      });
-      return;
-    }
-
-    const location = await findLocationById(id);
-    if (!location) {
-      res.status(404).json({
-        success: false,
-        message: 'Location not found'
-      });
-      return;
-    }
-
-    // Mock real-time availability
-    const currentAvailable = Math.floor(Math.random() * 20);
-    const totalSpots = 20;
-    const realtimeData = {
-      locationId: id,
-      total: totalSpots,
-      available: currentAvailable,
-      lastUpdated: new Date(),
-      trend: Math.random() > 0.5 ? 'increasing' : 'decreasing',
-      nextUpdate: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
-    };
-
-    res.status(200).json({
-      success: true,
-      data: realtimeData
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  }
-} 
+  // TODO: Implement real-time availability logic
+  const realtimeData = {
+    locationId: id,
+    timestamp: new Date(),
+    availableSpots: 5,
+    totalSpots: 20,
+    occupancyRate: 0.75
+  };
+
+  sendSuccess(res, realtimeData);
+}); 
