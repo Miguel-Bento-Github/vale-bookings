@@ -15,7 +15,7 @@ import {
   sendError,
   withErrorHandling
 } from '../utils/responseHelpers';
-// No validation helper imports needed anymore as we handle validation inline
+import { validateBookingStatus } from '../utils/validationHelpers';
 
 // Type definitions for request bodies
 interface UpdateUserRoleRequestBody {
@@ -80,9 +80,7 @@ function isUpdateBookingStatusRequestBody(body: unknown): body is UpdateBookingS
     typeof body === 'object' &&
     body !== null &&
     typeof (body as Record<string, unknown>).status === 'string' &&
-    ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(
-      (body as Record<string, unknown>).status as string
-    )
+    validateBookingStatus((body as Record<string, unknown>).status as string)
   );
 }
 

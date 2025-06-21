@@ -192,6 +192,11 @@ export function validateUserAuthentication(userId: string | undefined, res: Resp
   return true;
 }
 
+export function validateBookingStatus(status: string): boolean {
+  const validStatuses = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+  return validStatuses.includes(status);
+}
+
 export function validateDateParam(dateStr?: string): Date | null {
   if (dateStr === undefined || dateStr.trim().length === 0) {
     return null;

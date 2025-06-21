@@ -15,7 +15,8 @@ import {
 } from '../utils/responseHelpers';
 import { 
   validatePaginationParams,
-  validateRequiredId
+  validateRequiredId,
+  validateBookingStatus
 } from '../utils/validationHelpers';
 
 interface CreateBookingBody {
@@ -194,8 +195,7 @@ class BookingController {
     // Check permissions for status updates
     if (typeof updateData.status === 'string' && updateData.status.trim().length > 0) {
       // Validate status value
-      const validStatuses = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
-      if (!validStatuses.includes(updateData.status)) {
+      if (!validateBookingStatus(updateData.status)) {
         sendError(res, 'Invalid status value', 400);
         return;
       }
