@@ -11,7 +11,7 @@ import {
   getLocationAvailability as getLocationAvailabilityService,
   getLocationTimeslots as getLocationTimeslotsService
 } from '../services/LocationService';
-import { AuthenticatedRequest } from '../types';
+import { AuthenticatedRequest, ILocation } from '../types';
 import {
   sendSuccess,
   sendError,
@@ -77,7 +77,14 @@ export const createLocation = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const location = await createNewLocation(requestBody);
+  // After validation, we can safely construct the ILocation object
+  const locationData: ILocation = {
+    name: requestBody.name as string,
+    address: requestBody.address as string,
+    coordinates: requestBody.coordinates as ILocation['coordinates'],
+    isActive: requestBody.isActive as boolean ?? true
+  };
+  const location = await createNewLocation(locationData);
   sendSuccess(res, location, 'Location created successfully', 201);
 });
 
