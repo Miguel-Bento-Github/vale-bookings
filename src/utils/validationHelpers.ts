@@ -182,4 +182,43 @@ export function validateDateParam(dateStr?: string): Date | null {
   }
 
   return date;
+}
+
+export function validateBulkRequestBody<T>(
+  body: Record<string, unknown>,
+  validator: (item: unknown) => item is T,
+  locationIdRequired: boolean = true
+): { isValid: boolean; error?: string; data?: { locationId: string; items: T[] } } {
+  if (locationIdRequired && typeof body.locationId !== 'string') {
+    return { isValid: false, error: 'Location ID is required' };
+  }
+
+  if (!Array.isArray(body.schedules) || body.schedules.length === 0) {
+    return { isValid: false, error: 'Schedules array is required and cannot be empty' };
+  }
+
+  const validatedItems: T[] = [];
+  for (const item of body.schedules) {
+    if (typeof item !== 'object' || item === null) {
+      return { isValid: false, error: 'Invalid item format in bulk request' };
+    }
+
+    const itemWithLocation = locationIdRequired ? {
+      ...(item as Record<string, unknown>),
+      locationId: body.locationId
+    } : item;
+
+    if (!validator(itemWithLocation)) {
+      return { isValid: false, error: 'Invalid item data in bulk request' };
+    }
+    validatedItems.push(itemWithLocation);
+  }
+
+  return {
+    isValid: true,
+    data: {
+      locationId: body.locationId as string,
+      items: validatedItems
+    }
+  };
 } 
