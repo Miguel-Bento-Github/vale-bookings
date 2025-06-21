@@ -6,17 +6,14 @@ import {
   IScheduleModel,
   AppError
 } from '../types';
+import { createWithDuplicateHandling } from '../utils/mongoHelpers';
 
 export async function createSchedule(scheduleData: ISchedule): Promise<IScheduleDocument> {
-  try {
-    const schedule = new Schedule(scheduleData);
-    return await schedule.save();
-  } catch (error: unknown) {
-    if (error instanceof Error && 'code' in error && error.code === 11000) {
-      throw new AppError('Schedule already exists for this location and day', 409);
-    }
-    throw error;
-  }
+  return await createWithDuplicateHandling(
+    Schedule,
+    scheduleData,
+    'Schedule already exists for this location and day'
+  );
 }
 
 export async function getScheduleById(scheduleId: string): Promise<IScheduleDocument | null> {

@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 
 import AdminService from '../services/AdminService';
 import {
@@ -11,6 +11,16 @@ import {
   ICreateScheduleRequest,
   IUpdateScheduleRequest
 } from '../types';
+import {
+  sendSuccess,
+  sendError,
+  sendSuccessWithPagination,
+  withErrorHandling
+} from '../utils/responseHelpers';
+import {
+  validateRequiredId,
+  validatePaginationParams
+} from '../utils/validationHelpers';
 
 // Type definitions for request bodies
 interface UpdateUserRoleRequestBody {
@@ -138,175 +148,74 @@ function isUpdateScheduleRequestBody(body: unknown): body is IUpdateScheduleRequ
 }
 
 // User Management
-export async function getAllUsers(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const result = await AdminService.getAllUsers({ page, limit });
+export const getAllUsers = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const result = await AdminService.getAllUsers({ page, limit });
 
-    res.status(200).json({
-      success: true,
-      data: result.users,
-      pagination: result.pagination
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  res.status(200).json({
+    success: true,
+    data: result.users,
+    pagination: result.pagination
+  });
+});
+
+export const updateUserRole = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  if (id === undefined || id === null || id.trim().length === 0) {
+    sendError(res, 'User ID is required', 400);
+    return;
   }
-}
 
-export async function updateUserRole(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-      return;
-    }
-
-    if (!isUpdateUserRoleRequestBody(req.body)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid role'
-      });
-      return;
-    }
-
-    const { role } = req.body;
-    const user = await AdminService.updateUserRole(id, role);
-
-    res.status(200).json({
-      success: true,
-      data: user
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (!isUpdateUserRoleRequestBody(req.body)) {
+    sendError(res, 'Invalid role', 400);
+    return;
   }
-}
 
-export async function deleteUser(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
-    const currentUserId = req.user?.userId;
+  const { role } = req.body;
+  const user = await AdminService.updateUserRole(id, role);
+  sendSuccess(res, user);
+});
 
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'User ID is required'
-      });
-      return;
-    }
+export const deleteUser = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const currentUserId = req.user?.userId;
 
-    if (id === currentUserId) {
-      res.status(400).json({
-        success: false,
-        message: 'Cannot delete your own account'
-      });
-      return;
-    }
-
-    await AdminService.deleteUser(id);
-
-    res.status(200).json({
-      success: true,
-      message: 'User deleted successfully'
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (id === undefined || id === null || id.trim().length === 0) {
+    sendError(res, 'User ID is required', 400);
+    return;
   }
-}
+
+  if (id === currentUserId) {
+    sendError(res, 'Cannot delete your own account', 400);
+    return;
+  }
+
+  await AdminService.deleteUser(id);
+  sendSuccess(res, undefined, 'User deleted successfully');
+});
 
 // Valet Management
-export async function getAllValets(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const valets = await AdminService.getAllValets();
+export const getAllValets = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const valets = await AdminService.getAllValets();
+  sendSuccess(res, valets);
+});
 
-    res.status(200).json({
-      success: true,
-      data: valets
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+export const createValet = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!isCreateValetRequestBody(req.body)) {
+    sendError(res, 'Invalid valet data', 400);
+    return;
   }
-}
 
-export async function createValet(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    if (!isCreateValetRequestBody(req.body)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid valet data'
-      });
-      return;
-    }
+  const valetData = {
+    ...req.body,
+    role: 'VALET' as const
+  };
 
-    const valetData = {
-      ...req.body,
-      role: 'VALET' as const
-    };
-
-    const valet = await AdminService.createValet(valetData);
-
-    res.status(201).json({
-      success: true,
-      data: valet
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  }
-}
+  const valet = await AdminService.createValet(valetData);
+  sendSuccess(res, valet, undefined, 201);
+});
 
 export async function updateValet(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
