@@ -441,7 +441,7 @@ export const updateBookingStatus = async (bookingId: string, status: BookingStat
     CANCELLED: []
   };
 
-  const allowedStatuses = validTransitions[booking.status as BookingStatus];
+  const allowedStatuses = validTransitions[booking.status];
   if (!allowedStatuses.includes(status)) {
     throw new AppError(
       `Cannot transition from ${booking.status} to ${status}`,
