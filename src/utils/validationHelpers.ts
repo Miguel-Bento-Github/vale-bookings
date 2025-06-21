@@ -2,7 +2,11 @@ import { Response, Request } from 'express';
 import mongoose from 'mongoose';
 
 import { sendError } from './responseHelpers';
-import { validateCoordinates } from './validation';
+import {
+  validateCoordinates,
+  validateEmail as validateEmailCore,
+  validatePassword as validatePasswordCore
+} from './validation';
 
 export function validateRequiredId(id: string | undefined, res: Response, fieldName: string = 'ID'): boolean {
   if (id === undefined || id.trim().length === 0) {
@@ -142,8 +146,8 @@ export function validateEmail(email: string): string | null {
     return 'Email is required';
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  // Use the core validation function from validation.ts
+  if (!validateEmailCore(email)) {
     return 'Invalid email format';
   }
 
@@ -155,7 +159,8 @@ export function validatePassword(password: string): string | null {
     return 'Password is required';
   }
 
-  if (password.length < 6) {
+  // Use the core validation function from validation.ts
+  if (!validatePasswordCore(password)) {
     return 'Password must be at least 6 characters long';
   }
 
@@ -169,6 +174,22 @@ export function validateUserRole(role: string): boolean {
 
 export function validateAuthentication(userId?: string): boolean {
   return Boolean(userId !== undefined && userId.trim().length > 0);
+}
+
+export function validateAdminRole(user: { role: string } | undefined, res: Response): boolean {
+  if (!user || user.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return false;
+  }
+  return true;
+}
+
+export function validateUserAuthentication(userId: string | undefined, res: Response): boolean {
+  if (userId === undefined || userId.trim().length === 0) {
+    sendError(res, 'User authentication required', 401);
+    return false;
+  }
+  return true;
 }
 
 export function validateDateParam(dateStr?: string): Date | null {

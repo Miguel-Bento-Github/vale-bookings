@@ -17,7 +17,9 @@ import {
 } from '../utils/responseHelpers';
 import { validateTimeFormat } from '../utils/validation';
 import { 
-  validateRequiredId
+  validateRequiredId,
+  validateAdminRole,
+  validateUserAuthentication
 } from '../utils/validationHelpers';
 
 export const getSchedulesByLocation = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
@@ -41,13 +43,11 @@ export const getSchedulesByLocation = withErrorHandling(async (req: Request, res
 export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check authentication and admin role
   const userId = req.user?.userId;
-  if (userId === undefined || userId.trim().length === 0) {
-    sendError(res, 'User authentication required', 401);
+  if (!validateUserAuthentication(userId, res)) {
     return;
   }
 
-  if (req.user?.role !== 'ADMIN') {
-    sendError(res, 'Forbidden: access denied', 403);
+  if (!validateAdminRole(req.user, res)) {
     return;
   }
 
@@ -122,13 +122,11 @@ export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest
 export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check authentication and admin role
   const userId = req.user?.userId;
-  if (userId === undefined || userId.trim().length === 0) {
-    sendError(res, 'User authentication required', 401);
+  if (!validateUserAuthentication(userId, res)) {
     return;
   }
 
-  if (req.user?.role !== 'ADMIN') {
-    sendError(res, 'Forbidden: access denied', 403);
+  if (!validateAdminRole(req.user, res)) {
     return;
   }
 
@@ -174,13 +172,11 @@ export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest
 export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check authentication and admin role
   const userId = req.user?.userId;
-  if (userId === undefined || userId.trim().length === 0) {
-    sendError(res, 'User authentication required', 401);
+  if (!validateUserAuthentication(userId, res)) {
     return;
   }
 
-  if (req.user?.role !== 'ADMIN') {
-    sendError(res, 'Forbidden: access denied', 403);
+  if (!validateAdminRole(req.user, res)) {
     return;
   }
 

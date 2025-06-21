@@ -23,7 +23,8 @@ import {
   parseCoordinatesFromQuery,
   validateLocationData,
   validateDateParam,
-  validateCoordinatesFromQuery
+  validateCoordinatesFromQuery,
+  validateAdminRole
 } from '../utils/validationHelpers';
 
 export const getLocations = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
@@ -64,8 +65,7 @@ export const getLocationById = withErrorHandling(async (req: Request, res: Respo
 
 export const createLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check admin role
-  if (!req.user || req.user.role !== 'ADMIN') {
-    sendError(res, 'Forbidden: access denied', 403);
+  if (!validateAdminRole(req.user, res)) {
     return;
   }
 
@@ -90,8 +90,7 @@ export const createLocation = withErrorHandling(async (req: AuthenticatedRequest
 
 export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check admin role
-  if (!req.user || req.user.role !== 'ADMIN') {
-    sendError(res, 'Forbidden: access denied', 403);
+  if (!validateAdminRole(req.user, res)) {
     return;
   }
 
@@ -131,8 +130,7 @@ export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest
 
 export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check admin role
-  if (!req.user || req.user.role !== 'ADMIN') {
-    sendError(res, 'Forbidden: access denied', 403);
+  if (!validateAdminRole(req.user, res)) {
     return;
   }
 
