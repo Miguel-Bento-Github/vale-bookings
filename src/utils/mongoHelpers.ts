@@ -1,8 +1,8 @@
 import { Model, Document } from 'mongoose';
 
+import { ERROR_MESSAGES } from '../constants';
 import { AppError } from '../types';
 
-import { ERROR_MESSAGES } from './validationHelpers';
 
 /**
  * Handles MongoDB duplicate key errors (code 11000) and throws appropriate AppError

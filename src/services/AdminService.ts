@@ -1,3 +1,4 @@
+import { ERROR_MESSAGES } from '../constants';
 import Booking from '../models/Booking';
 import Location from '../models/Location';
 import Schedule from '../models/Schedule';
@@ -26,7 +27,6 @@ import {
   safeDelete,
   checkDocumentExists
 } from '../utils/mongoHelpers';
-import { ERROR_MESSAGES } from '../utils/validationHelpers';
 
 interface IUserWithStatistics extends IUserDocument {
   statistics?: {

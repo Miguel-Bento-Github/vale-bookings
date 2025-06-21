@@ -1,3 +1,4 @@
+import { ERROR_MESSAGES } from '../constants';
 import Schedule from '../models/Schedule';
 import {
   ISchedule,
@@ -12,7 +13,6 @@ import {
   safeDelete,
   deactivateDocument
 } from '../utils/mongoHelpers';
-import { ERROR_MESSAGES } from '../utils/validationHelpers';
 
 export async function createSchedule(scheduleData: ISchedule): Promise<IScheduleDocument> {
   return await createWithDuplicateHandling(

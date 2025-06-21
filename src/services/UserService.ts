@@ -1,7 +1,7 @@
+import { ERROR_MESSAGES } from '../constants';
 import User from '../models/User';
 import { IUser, IUserDocument } from '../types';
 import { createWithDuplicateHandling } from '../utils/mongoHelpers';
-import { ERROR_MESSAGES } from '../utils/validationHelpers';
 
 export async function createUser(userData: IUser): Promise<IUserDocument> {
   return await createWithDuplicateHandling(

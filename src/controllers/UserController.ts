@@ -1,5 +1,6 @@
 import { Response } from 'express';
 
+import { ERROR_MESSAGES } from '../constants';
 import { findById, updateProfile as updateUserProfile, deleteUser } from '../services/UserService';
 import { AuthenticatedRequest, IUserProfile } from '../types';
 import {
@@ -8,7 +9,6 @@ import {
   withErrorHandling
 } from '../utils/responseHelpers';
 import { validatePhoneNumber } from '../utils/validation';
-import { ERROR_MESSAGES } from '../utils/validationHelpers';
 
 export const getProfile = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.user?.userId;

@@ -1,6 +1,8 @@
 import { Response, Request } from 'express';
 import mongoose from 'mongoose';
 
+import { ERROR_MESSAGES, BOOKING_STATUSES, USER_ROLES, PAGINATION_DEFAULTS } from '../constants';
+
 import { sendError } from './responseHelpers';
 import {
   validateCoordinates,
@@ -8,52 +10,8 @@ import {
   validatePassword as validatePasswordCore
 } from './validation';
 
-// Common error message constants
-export const ERROR_MESSAGES = {
-  // Not found errors
-  USER_NOT_FOUND: 'User not found',
-  LOCATION_NOT_FOUND: 'Location not found',
-  BOOKING_NOT_FOUND: 'Booking not found',
-  SCHEDULE_NOT_FOUND: 'Schedule not found',
-  VALET_NOT_FOUND: 'Valet not found',
-  DOCUMENT_NOT_FOUND: 'Document not found',
-  ROUTE_NOT_FOUND: 'Route not found',
-
-  // Required field errors
-  USER_ID_REQUIRED: 'User ID is required',
-  LOCATION_ID_REQUIRED: 'Location ID is required',
-  BOOKING_ID_REQUIRED: 'Booking ID is required',
-  SCHEDULE_ID_REQUIRED: 'Schedule ID is required',
-  VALET_ID_REQUIRED: 'Valet ID is required',
-  EMAIL_REQUIRED: 'Email is required',
-  PASSWORD_REQUIRED: 'Password is required',
-  PROFILE_NAME_REQUIRED: 'Profile name is required',
-  PROFILE_DATA_REQUIRED: 'Profile data is required',
-  SEARCH_QUERY_REQUIRED: 'Search query is required',
-  DATE_PARAMETER_REQUIRED: 'Date parameter is required',
-  REFRESH_TOKEN_REQUIRED: 'Refresh token is required',
-
-  // Format errors
-  INVALID_EMAIL_FORMAT: 'Invalid email format',
-  INVALID_DATE_FORMAT: 'Invalid date format',
-  INVALID_TIME_FORMAT: 'Invalid time format',
-  INVALID_ID_FORMAT: 'Invalid ID format',
-  INVALID_COORDINATES_FORMAT: 'Invalid coordinates format',
-  INVALID_PHONE_FORMAT: 'Invalid phone number format',
-
-  // Already exists errors
-  EMAIL_ALREADY_EXISTS: 'Email already exists',
-  USER_ALREADY_EXISTS: 'User with this email already exists',
-  LOCATION_ALREADY_EXISTS: 'Location already exists',
-  SCHEDULE_ALREADY_EXISTS: 'Schedule already exists for this location and day',
-
-  // Authentication/authorization errors
-  USER_AUTH_REQUIRED: 'User authentication required',
-  FORBIDDEN_ACCESS_DENIED: 'Forbidden: access denied',
-
-  // Other common errors
-  INVALID_JSON_PAYLOAD: 'Invalid JSON payload'
-} as const;
+// Re-export for backward compatibility
+export { ERROR_MESSAGES };
 
 export function validateRequiredId(id: string | undefined, res: Response, fieldName: string = 'ID'): boolean {
   if (id === undefined || id.trim().length === 0) {
@@ -70,12 +28,15 @@ export function validateRequiredId(id: string | undefined, res: Response, fieldN
 }
 
 export function validatePaginationParams(pageStr?: string, limitStr?: string): { page: number; limit: number } {
-  const page = (pageStr !== undefined && pageStr.trim().length > 0) ? parseInt(pageStr, 10) : 1;
-  const limit = (limitStr !== undefined && limitStr.trim().length > 0) ? parseInt(limitStr, 10) : 10;
+  const page = (pageStr !== undefined && pageStr.trim().length > 0) ?
+    parseInt(pageStr, 10) : PAGINATION_DEFAULTS.PAGE;
+  const limit = (limitStr !== undefined && limitStr.trim().length > 0) ?
+    parseInt(limitStr, 10) : PAGINATION_DEFAULTS.LIMIT;
 
   return {
-    page: Math.max(1, isNaN(page) ? 1 : page),
-    limit: Math.max(1, Math.min(100, isNaN(limit) ? 10 : limit))
+    page: Math.max(1, isNaN(page) ? PAGINATION_DEFAULTS.PAGE : page),
+    limit: Math.max(1, Math.min(PAGINATION_DEFAULTS.MAX_LIMIT,
+      isNaN(limit) ? PAGINATION_DEFAULTS.LIMIT : limit))
   };
 }
 
@@ -215,8 +176,7 @@ export function validatePassword(password: string): string | null {
 }
 
 export function validateUserRole(role: string): boolean {
-  const validRoles = ['CUSTOMER', 'VALET', 'ADMIN'];
-  return validRoles.includes(role);
+  return USER_ROLES.includes(role as typeof USER_ROLES[number]);
 }
 
 export function validateAuthentication(userId?: string): boolean {
@@ -240,8 +200,7 @@ export function validateUserAuthentication(userId: string | undefined, res: Resp
 }
 
 export function validateBookingStatus(status: string): boolean {
-  const validStatuses = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
-  return validStatuses.includes(status);
+  return BOOKING_STATUSES.includes(status as typeof BOOKING_STATUSES[number]);
 }
 
 export function validateDateParam(dateStr?: string): Date | null {

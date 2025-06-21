@@ -1,6 +1,7 @@
 import { compare, hash } from 'bcryptjs';
 import { Request, Response } from 'express';
 
+import { ERROR_MESSAGES } from '../constants';
 import User from '../models/User';
 import * as AuthService from '../services/AuthService';
 import { AuthenticatedRequest, AppError } from '../types';
@@ -10,8 +11,7 @@ import {
   sendError
 } from '../utils/responseHelpers';
 import { 
-  validateRequiredId,
-  ERROR_MESSAGES
+  validateRequiredId
 } from '../utils/validationHelpers';
 
 interface RegisterRequestBody {
