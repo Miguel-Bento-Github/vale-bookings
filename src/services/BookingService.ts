@@ -2,7 +2,7 @@ import Booking from '../models/Booking';
 import { IBooking, IBookingDocument, IUpdateBookingRequest, BookingStatus, IBookingModel , AppError } from '../types';
 import { standardUpdate, ensureDocumentExists, safeDelete } from '../utils/mongoHelpers';
 
-import webSocketService from './WebSocketService';
+import { webSocketService } from './WebSocketService';
 
 export async function createBooking(bookingData: IBooking): Promise<IBookingDocument> {
   // Check for overlapping bookings

@@ -1,6 +1,6 @@
 import { Server as HTTPServer } from 'http';
 
-import jwt from 'jsonwebtoken';
+import { verify } from 'jsonwebtoken';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 
 import { logInfo, logError } from '../utils/logger';
@@ -84,7 +84,7 @@ class WebSocketService {
           return next(new Error('JWT secret not configured'));
         }
 
-        const decoded = jwt.verify(token, jwtSecret) as SocketAuthPayload;
+        const decoded = verify(token, jwtSecret) as SocketAuthPayload;
         (socket as AuthenticatedSocket).userId = decoded.userId;
         (socket as AuthenticatedSocket).userRole = decoded.role;
         next();

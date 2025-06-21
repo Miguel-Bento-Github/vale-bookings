@@ -11,7 +11,7 @@ import bookingRoutes from './routes/bookings';
 import locationRoutes from './routes/locations';
 import scheduleRoutes from './routes/schedules';
 import userRoutes from './routes/users';
-import webSocketService from './services/WebSocketService';
+import { webSocketService } from './services/WebSocketService';
 import { AppError } from './types';
 import { createPrettyLogger, responseTimeMiddleware, logError } from './utils/logger';
 import { sendError } from './utils/responseHelpers';
