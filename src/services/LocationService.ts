@@ -129,8 +129,6 @@ export async function getLocationsByCoordinates(
   });
 }
 
-// Phase 3: New Location Discovery Methods
-
 export async function getLocationAvailability(
   locationId: string,
   date: Date
