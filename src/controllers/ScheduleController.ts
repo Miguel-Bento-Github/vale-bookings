@@ -25,20 +25,16 @@ export const getSchedulesByLocation = withErrorHandling(async (req: Request, res
     return;
   }
 
-  // Check if location exists
-  const locationId = req.params.locationId;
-  if (locationId === undefined) {
-    sendError(res, 'Location ID is required', 400);
-    return;
-  }
+  // After validateRequiredId passes, locationId is guaranteed to be defined
+  const locationId = req.params.locationId as string;
 
-  const location = await getLocationById(locationId as string);
+  const location = await getLocationById(locationId);
   if (location === null) {
     sendError(res, 'Location not found', 404);
     return;
   }
 
-  const schedules = await getSchedulesForLocation(locationId as string);
+  const schedules = await getSchedulesForLocation(locationId);
   sendSuccess(res, schedules);
 });
 
@@ -89,10 +85,11 @@ export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const startHour = parseInt(startParts[0], 10);
-  const startMinute = parseInt(startParts[1], 10);
-  const endHour = parseInt(endParts[0], 10);
-  const endMinute = parseInt(endParts[1], 10);
+  // After validation, we know these exist
+  const startHour = parseInt(startParts[0] as string, 10);
+  const startMinute = parseInt(startParts[1] as string, 10);
+  const endHour = parseInt(endParts[0] as string, 10);
+  const endMinute = parseInt(endParts[1] as string, 10);
 
   const startTotalMinutes = startHour * 60 + startMinute;
   const endTotalMinutes = endHour * 60 + endMinute;
@@ -103,13 +100,22 @@ export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest
   }
 
   // Check if location exists
-  const location = await getLocationById(locationId as string);
+  const location = await getLocationById(locationId);
   if (location === null) {
     sendError(res, 'Location not found', 404);
     return;
   }
 
-  const schedule = await createNewSchedule(req.body);
+  // Create properly typed schedule object
+  const scheduleData = {
+    locationId,
+    dayOfWeek,
+    startTime,
+    endTime,
+    isActive: true
+  };
+
+  const schedule = await createNewSchedule(scheduleData);
   sendSuccess(res, schedule, 'Schedule created successfully', 201);
 });
 
@@ -129,6 +135,9 @@ export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest
   if (!validateRequiredId(req.params.id, res, 'Schedule ID')) {
     return;
   }
+
+  // After validateRequiredId passes, scheduleId is guaranteed to be defined
+  const scheduleId = req.params.id as string;
 
   // Type the request body safely
   const requestBody = req.body as Record<string, unknown>;
@@ -152,19 +161,13 @@ export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest
   }
 
   // Check if schedule exists
-  const scheduleId = req.params.id;
-  if (scheduleId === undefined) {
-    sendError(res, 'Schedule ID is required', 400);
-    return;
-  }
-
-  const existingSchedule = await findScheduleById(scheduleId as string);
+  const existingSchedule = await findScheduleById(scheduleId);
   if (existingSchedule === null) {
     sendError(res, 'Schedule not found', 404);
     return;
   }
 
-  const schedule = await updateExistingSchedule(scheduleId as string, req.body);
+  const schedule = await updateExistingSchedule(scheduleId, requestBody);
   sendSuccess(res, schedule, 'Schedule updated successfully');
 });
 
@@ -185,20 +188,16 @@ export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  // Check if schedule exists
-  const scheduleId = req.params.id;
-  if (scheduleId === undefined) {
-    sendError(res, 'Schedule ID is required', 400);
-    return;
-  }
+  // After validateRequiredId passes, scheduleId is guaranteed to be defined
+  const scheduleId = req.params.id as string;
 
-  const existingSchedule = await findScheduleById(scheduleId as string);
+  const existingSchedule = await findScheduleById(scheduleId);
   if (existingSchedule === null) {
     sendError(res, 'Schedule not found', 404);
     return;
   }
 
-  await deleteExistingSchedule(scheduleId as string);
+  await deleteExistingSchedule(scheduleId);
   sendSuccess(res, undefined, 'Schedule deleted successfully');
 });
 
@@ -207,13 +206,10 @@ export const getScheduleById = withErrorHandling(async (req: Request, res: Respo
     return;
   }
 
-  const scheduleId = req.params.id;
-  if (scheduleId === undefined) {
-    sendError(res, 'Schedule ID is required', 400);
-    return;
-  }
+  // After validateRequiredId passes, scheduleId is guaranteed to be defined
+  const scheduleId = req.params.id as string;
 
-  const schedule = await findScheduleById(scheduleId as string);
+  const schedule = await findScheduleById(scheduleId);
   if (schedule === null) {
     sendError(res, 'Schedule not found', 404);
     return;

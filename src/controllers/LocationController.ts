@@ -93,12 +93,20 @@ export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const { coordinates } = req.body;
+  // Type the request body safely
+  const requestBody = req.body as Record<string, unknown>;
+  const { coordinates } = requestBody;
 
   // Validate coordinates if provided in update
-  if (coordinates && typeof coordinates === 'object' && coordinates !== null) {
-    if (!validateCoordinates(coordinates.latitude, coordinates.longitude)) {
-      sendError(res, 'Invalid coordinates', 400);
+  if (coordinates !== undefined && typeof coordinates === 'object' && coordinates !== null) {
+    const coordsObj = coordinates as Record<string, unknown>;
+    if (typeof coordsObj.latitude === 'number' && typeof coordsObj.longitude === 'number') {
+      if (!validateCoordinates(coordsObj.latitude, coordsObj.longitude)) {
+        sendError(res, 'Invalid coordinates', 400);
+        return;
+      }
+    } else {
+      sendError(res, 'Invalid coordinates format', 400);
       return;
     }
   }
