@@ -5,7 +5,7 @@ import { sendError } from './responseHelpers';
 import { validateCoordinates } from './validation';
 
 export function validateRequiredId(id: string | undefined, res: Response, fieldName: string = 'ID'): boolean {
-  if (!id || id.trim().length === 0) {
+  if (id === undefined || id.trim().length === 0) {
     sendError(res, `${fieldName} is required`, 400);
     return false;
   }
@@ -19,8 +19,8 @@ export function validateRequiredId(id: string | undefined, res: Response, fieldN
 }
 
 export function validatePaginationParams(pageStr?: string, limitStr?: string): { page: number; limit: number } {
-  const page = pageStr && pageStr.trim().length > 0 ? parseInt(pageStr, 10) : 1;
-  const limit = limitStr && limitStr.trim().length > 0 ? parseInt(limitStr, 10) : 10;
+  const page = (pageStr !== undefined && pageStr.trim().length > 0) ? parseInt(pageStr, 10) : 1;
+  const limit = (limitStr !== undefined && limitStr.trim().length > 0) ? parseInt(limitStr, 10) : 10;
 
   return {
     page: Math.max(1, isNaN(page) ? 1 : page),
@@ -74,8 +74,8 @@ export function validateCoordinatesFromRequest(coordinates: unknown, res: Respon
 export function validateLocationData(data: Record<string, unknown>): string[] {
   const errors: string[] = [];
 
-  const hasName = data.name && typeof data.name === 'string' && data.name.trim().length > 0;
-  const hasAddress = data.address && typeof data.address === 'string' && data.address.trim().length > 0;
+  const hasName = (data.name !== undefined && typeof data.name === 'string' && data.name.trim().length > 0);
+  const hasAddress = (data.address !== undefined && typeof data.address === 'string' && data.address.trim().length > 0);
 
   if (!hasName || !hasAddress) {
     errors.push('Name and address are required');
@@ -106,9 +106,9 @@ export function parseCoordinatesFromQuery(req: Request): {
   const parsedLng = lng ?? longitude;
 
   return {
-    latitude: parsedLat ? parseFloat(parsedLat) : undefined,
-    longitude: parsedLng ? parseFloat(parsedLng) : undefined,
-    radius: radius ? parseFloat(radius) : undefined
+    latitude: (parsedLat !== undefined) ? parseFloat(parsedLat) : undefined,
+    longitude: (parsedLng !== undefined) ? parseFloat(parsedLng) : undefined,
+    radius: (radius !== undefined) ? parseFloat(radius) : undefined
   };
 }
 
@@ -131,14 +131,14 @@ export function validateCoordinatesFromQuery(
 }
 
 export function validateRequiredString(value: string | undefined, fieldName: string): string | null {
-  if (!value || value.trim().length === 0) {
+  if (value === undefined || value.trim().length === 0) {
     return `${fieldName} is required`;
   }
   return null;
 }
 
 export function validateEmail(email: string): string | null {
-  if (!email || email.trim().length === 0) {
+  if (email === undefined || email.trim().length === 0) {
     return 'Email is required';
   }
 
@@ -151,7 +151,7 @@ export function validateEmail(email: string): string | null {
 }
 
 export function validatePassword(password: string): string | null {
-  if (!password || password.trim().length === 0) {
+  if (password === undefined || password.trim().length === 0) {
     return 'Password is required';
   }
 
@@ -168,11 +168,11 @@ export function validateUserRole(role: string): boolean {
 }
 
 export function validateAuthentication(userId?: string): boolean {
-  return Boolean(userId && userId.trim().length > 0);
+  return Boolean(userId !== undefined && userId.trim().length > 0);
 }
 
 export function validateDateParam(dateStr?: string): Date | null {
-  if (!dateStr || dateStr.trim().length === 0) {
+  if (dateStr === undefined || dateStr.trim().length === 0) {
     return null;
   }
 

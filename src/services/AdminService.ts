@@ -19,6 +19,13 @@ import {
   IRevenueMatchStage,
   IDateRangeQuery
 } from '../types';
+import {
+  standardUpdate,
+  createWithDuplicateHandling,
+  ensureDocumentExists,
+  safeDelete,
+  checkDocumentExists
+} from '../utils/mongoHelpers';
 
 interface IUserWithStatistics extends IUserDocument {
   statistics?: {
@@ -92,25 +99,20 @@ class AdminService {
   }
 
   async updateUserRole(userId: string, role: UserRole): Promise<IUserDocument> {
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { role },
-      { new: true, runValidators: true }
-    ).select('-password');
+    const user = await standardUpdate(User, userId, { role } as Partial<IUserDocument>);
 
     if (!user) {
       throw new AppError('User not found', 404);
     }
 
-    return user;
+    // Remove password from response
+    const userObj = user.toObject() as Record<string, unknown>;
+    delete userObj.password;
+    return userObj as unknown as IUserDocument;
   }
 
   async deleteUser(userId: string): Promise<void> {
-    const user = await User.findById(userId);
-    
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
+    await ensureDocumentExists(User, userId, 'User not found');
 
     // Check if user has active bookings
     const activeBookings = await Booking.countDocuments({
@@ -122,7 +124,7 @@ class AdminService {
       throw new AppError('Cannot delete user with active bookings', 400);
     }
 
-    await User.findByIdAndDelete(userId);
+    await safeDelete(User, userId, 'User not found');
   }
 
   // Valet Management
@@ -185,14 +187,17 @@ class AdminService {
     profile: { name: string; phone?: string };
     role: UserRole;
   }): Promise<IUserDocument> {
-    // Check if email already exists
-    const existingUser = await User.findOne({ email: valetData.email });
-    if (existingUser) {
-      throw new AppError('Email already exists', 400);
-    }
+    await checkDocumentExists(
+      User,
+      { email: valetData.email },
+      'Email already exists'
+    );
 
-    const valet = await User.create(valetData);
-    return valet;
+    return await createWithDuplicateHandling(
+      User,
+      valetData,
+      'Email already exists'
+    );
   }
 
   async updateValet(valetId: string, updateData: {
@@ -229,12 +234,11 @@ class AdminService {
       throw new AppError('Invalid coordinates', 400);
     }
 
-    const location = await Location.create({
-      ...locationData,
-      isActive: true
-    });
-
-    return location;
+    return await createWithDuplicateHandling(
+      Location,
+      { ...locationData, isActive: true },
+      'Location already exists'
+    );
   }
 
   async updateLocation(locationId: string, updateData: IUpdateLocationRequest): Promise<ILocationDocument> {
@@ -246,11 +250,7 @@ class AdminService {
       }
     }
 
-    const location = await Location.findByIdAndUpdate(
-      locationId,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const location = await standardUpdate(Location, locationId, updateData as Partial<ILocationDocument>);
 
     if (!location) {
       throw new AppError('Location not found', 404);
@@ -260,11 +260,7 @@ class AdminService {
   }
 
   async deleteLocation(locationId: string): Promise<void> {
-    const location = await Location.findById(locationId);
-    
-    if (!location) {
-      throw new AppError('Location not found', 404);
-    }
+    await ensureDocumentExists(Location, locationId, 'Location not found');
 
     // Check if location has active bookings
     const activeBookings = await Booking.countDocuments({
@@ -276,7 +272,7 @@ class AdminService {
       throw new AppError('Cannot delete location with active bookings', 400);
     }
 
-    await Location.findByIdAndDelete(locationId);
+    await safeDelete(Location, locationId, 'Location not found');
   }
 
   // Schedule Management
@@ -289,30 +285,21 @@ class AdminService {
   }
 
   async createSchedule(scheduleData: ICreateScheduleRequest): Promise<IScheduleDocument> {
-    // Check for duplicate schedule
-    const existingSchedule = await Schedule.findOne({
-      locationId: scheduleData.locationId,
-      dayOfWeek: scheduleData.dayOfWeek
-    });
+    await checkDocumentExists(
+      Schedule,
+      { locationId: scheduleData.locationId, dayOfWeek: scheduleData.dayOfWeek },
+      'Schedule already exists for this location and day'
+    );
 
-    if (existingSchedule) {
-      throw new AppError('Schedule already exists for this location and day', 400);
-    }
-
-    const schedule = await Schedule.create({
-      ...scheduleData,
-      isActive: true
-    });
-
-    return schedule;
+    return await createWithDuplicateHandling(
+      Schedule,
+      { ...scheduleData, isActive: true },
+      'Schedule already exists for this location and day'
+    );
   }
 
   async updateSchedule(scheduleId: string, updateData: IUpdateScheduleRequest): Promise<IScheduleDocument> {
-    const schedule = await Schedule.findByIdAndUpdate(
-      scheduleId,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const schedule = await standardUpdate(Schedule, scheduleId, updateData as Partial<IScheduleDocument>);
 
     if (!schedule) {
       throw new AppError('Schedule not found', 404);
@@ -322,11 +309,7 @@ class AdminService {
   }
 
   async deleteSchedule(scheduleId: string): Promise<void> {
-    const schedule = await Schedule.findByIdAndDelete(scheduleId);
-    
-    if (!schedule) {
-      throw new AppError('Schedule not found', 404);
-    }
+    await safeDelete(Schedule, scheduleId, 'Schedule not found');
   }
 
   async createBulkSchedules(
@@ -416,11 +399,7 @@ class AdminService {
   }
 
   async updateBookingStatus(bookingId: string, status: BookingStatus): Promise<IBookingDocument> {
-    const booking = await Booking.findById(bookingId);
-    
-    if (!booking) {
-      throw new AppError('Booking not found', 404);
-    }
+    const booking = await ensureDocumentExists(Booking, bookingId, 'Booking not found');
 
     // Validate status transitions
     const validTransitions: Record<BookingStatus, BookingStatus[]> = {
@@ -435,11 +414,7 @@ class AdminService {
       throw new AppError(`Cannot change status from ${booking.status} to ${status}`, 400);
     }
 
-    const updatedBooking = await Booking.findByIdAndUpdate(
-      bookingId,
-      { status },
-      { new: true, runValidators: true }
-    );
+    const updatedBooking = await standardUpdate(Booking, bookingId, { status } as Partial<IBookingDocument>);
 
     if (!updatedBooking) {
       throw new AppError('Failed to update booking', 500);

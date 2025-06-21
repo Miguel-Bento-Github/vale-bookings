@@ -1,5 +1,5 @@
 import User from '../models/User';
-import { IUser, IUserDocument , AppError } from '../types';
+import { IUser, IUserDocument } from '../types';
 import { createWithDuplicateHandling } from '../utils/mongoHelpers';
 
 export async function createUser(userData: IUser): Promise<IUserDocument> {

@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { Request, Response } from 'express';
 
 import User from '../models/User';
 import * as AuthService from '../services/AuthService';
@@ -10,10 +10,7 @@ import {
   sendError
 } from '../utils/responseHelpers';
 import { 
-  validateRequiredId,
-  validateRequiredString,
-  validateUserRole,
-  validateAuthentication
+  validateRequiredId
 } from '../utils/validationHelpers';
 
 interface RegisterRequestBody {
@@ -36,32 +33,34 @@ interface ChangePasswordRequestBody {
   newPassword: string;
 }
 
-interface RefreshTokenBody {
-  refreshToken: string;
-}
+// RefreshTokenBody interface removed as it's not used
 
 class AuthController {
-  register = withErrorHandling(async (req: Request, res: Response) => {
+  register = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
     const { email, password, profile, role } = req.body as RegisterRequestBody;
 
     // Validation to match test expectations
     if (!email || !password || !profile) {
-      return sendError(res, 'Email, password, and profile are required', 400);
+      sendError(res, 'Email, password, and profile are required', 400);
+      return;
     }
 
     if (!profile?.name || profile.name.trim().length === 0) {
-      return sendError(res, 'Profile name is required', 400);
+      sendError(res, 'Profile name is required', 400);
+      return;
     }
 
     // Enhanced email format validation for test requirements
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email) || email.length > 64 || email.includes(' ')) {
-      return sendError(res, 'Invalid email format', 400);
+      sendError(res, 'Invalid email format', 400);
+      return;
     }
 
     // Password length validation
     if (password.length < 6) {
-      return sendError(res, 'password must be at least 6 characters long', 400);
+      sendError(res, 'password must be at least 6 characters long', 400);
+      return;
     }
 
     try {
@@ -80,7 +79,8 @@ class AuthController {
       }, 'User registered successfully', 201);
     } catch (error: unknown) {
       if (error instanceof AppError && error.message === 'Email already exists') {
-        return sendError(res, error.message, 409);
+        sendError(res, error.message, 409);
+        return;
       }
       throw error; // Let withErrorHandling handle other errors
     }

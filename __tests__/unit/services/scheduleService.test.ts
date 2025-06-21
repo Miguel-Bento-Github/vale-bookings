@@ -271,8 +271,8 @@ describe('ScheduleService', () => {
 
       expect(MockedSchedule.findByIdAndUpdate).toHaveBeenCalledWith(
         '507f1f77bcf86cd799439015',
-        { isActive: false },
-        { new: true }
+        { $set: { isActive: false } },
+        { new: true, runValidators: true }
       );
       expect(result).toEqual(deactivatedSchedule);
     });

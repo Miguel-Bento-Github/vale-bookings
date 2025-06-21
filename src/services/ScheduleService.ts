@@ -6,7 +6,12 @@ import {
   IScheduleModel,
   AppError
 } from '../types';
-import { createWithDuplicateHandling } from '../utils/mongoHelpers';
+import {
+  createWithDuplicateHandling,
+  standardUpdate,
+  safeDelete,
+  deactivateDocument
+} from '../utils/mongoHelpers';
 
 export async function createSchedule(scheduleData: ISchedule): Promise<IScheduleDocument> {
   return await createWithDuplicateHandling(
@@ -28,15 +33,11 @@ export async function updateSchedule(
   scheduleId: string,
   updateData: Partial<ISchedule>
 ): Promise<IScheduleDocument | null> {
-  return await Schedule.findByIdAndUpdate(
-    scheduleId,
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
+  return await standardUpdate(Schedule, scheduleId, updateData as Partial<IScheduleDocument>);
 }
 
 export async function deleteSchedule(scheduleId: string): Promise<void> {
-  await Schedule.findByIdAndDelete(scheduleId);
+  await safeDelete(Schedule, scheduleId, 'Schedule not found');
 }
 
 export async function getAllSchedules(): Promise<IScheduleDocument[]> {
@@ -82,11 +83,7 @@ export async function getWeeklySchedule(locationId: string): Promise<IScheduleDo
 }
 
 export async function deactivateSchedule(scheduleId: string): Promise<IScheduleDocument | null> {
-  return await Schedule.findByIdAndUpdate(
-    scheduleId,
-    { isActive: false },
-    { new: true }
-  );
+  return await deactivateDocument(Schedule, scheduleId);
 }
 
 export async function isLocationOpen(

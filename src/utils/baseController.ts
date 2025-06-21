@@ -5,7 +5,6 @@ import { AuthenticatedRequest } from '../types';
 import {
   sendSuccess,
   sendError,
-  sendSuccessWithPagination,
   withErrorHandling
 } from './responseHelpers';
 import {
@@ -32,20 +31,28 @@ export interface CrudOptions {
 export function createCrudController<T, CreateData, UpdateData>(
   service: CrudService<T, CreateData, UpdateData>,
   options: CrudOptions = {}
-) {
+): {
+    getAll: (req: Request, res: Response) => Promise<void>;
+    getById: (req: Request, res: Response) => Promise<void>;
+    create: (req: Request, res: Response) => Promise<void>;
+    update: (req: Request, res: Response) => Promise<void>;
+    delete: (req: Request, res: Response) => Promise<void>;
+} {
   const entityName = options.entityName ?? 'Resource';
 
   const getAll = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
     if (options.requireAuth === true) {
       const authReq = req as AuthenticatedRequest;
-      if (!validateAuthentication(authReq.user, res)) {
+      if (!validateAuthentication(authReq.user?.userId)) {
+        sendError(res, 'Authentication required', 401);
         return;
       }
     }
 
     if (options.requiredRole && options.requiredRole.length > 0) {
       const authReq = req as AuthenticatedRequest;
-      if (!authReq.user || !validateUserRole(authReq.user.role, options.requiredRole, res)) {
+      if (!authReq.user || !validateUserRole(authReq.user.role)) {
+        sendError(res, 'Insufficient permissions', 403);
         return;
       }
     }
@@ -83,14 +90,16 @@ export function createCrudController<T, CreateData, UpdateData>(
   const create = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
     if (options.requireAuth === true) {
       const authReq = req as AuthenticatedRequest;
-      if (!validateAuthentication(authReq.user, res)) {
+      if (!validateAuthentication(authReq.user?.userId)) {
+        sendError(res, 'Authentication required', 401);
         return;
       }
     }
 
     if (options.requiredRole && options.requiredRole.length > 0) {
       const authReq = req as AuthenticatedRequest;
-      if (!authReq.user || !validateUserRole(authReq.user.role, options.requiredRole, res)) {
+      if (!authReq.user || !validateUserRole(authReq.user.role)) {
+        sendError(res, 'Insufficient permissions', 403);
         return;
       }
     }
@@ -102,14 +111,16 @@ export function createCrudController<T, CreateData, UpdateData>(
   const update = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
     if (options.requireAuth === true) {
       const authReq = req as AuthenticatedRequest;
-      if (!validateAuthentication(authReq.user, res)) {
+      if (!validateAuthentication(authReq.user?.userId)) {
+        sendError(res, 'Authentication required', 401);
         return;
       }
     }
 
     if (options.requiredRole && options.requiredRole.length > 0) {
       const authReq = req as AuthenticatedRequest;
-      if (!authReq.user || !validateUserRole(authReq.user.role, options.requiredRole, res)) {
+      if (!authReq.user || !validateUserRole(authReq.user.role)) {
+        sendError(res, 'Insufficient permissions', 403);
         return;
       }
     }
@@ -131,14 +142,16 @@ export function createCrudController<T, CreateData, UpdateData>(
   const deleteItem = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
     if (options.requireAuth === true) {
       const authReq = req as AuthenticatedRequest;
-      if (!validateAuthentication(authReq.user, res)) {
+      if (!validateAuthentication(authReq.user?.userId)) {
+        sendError(res, 'Authentication required', 401);
         return;
       }
     }
 
     if (options.requiredRole && options.requiredRole.length > 0) {
       const authReq = req as AuthenticatedRequest;
-      if (!authReq.user || !validateUserRole(authReq.user.role, options.requiredRole, res)) {
+      if (!authReq.user || !validateUserRole(authReq.user.role)) {
+        sendError(res, 'Insufficient permissions', 403);
         return;
       }
     }

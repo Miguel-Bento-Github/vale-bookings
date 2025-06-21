@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 
-import * as BookingService from '../services/BookingService';
 import Booking from '../models/Booking';
 import Location from '../models/Location';
+import * as BookingService from '../services/BookingService';
 import { AuthenticatedRequest, BookingStatus } from '../types';
 import {
   standardUpdate

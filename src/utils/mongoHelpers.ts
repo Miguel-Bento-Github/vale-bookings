@@ -29,23 +29,33 @@ export async function createWithDuplicateHandling<T extends Document>(
 }
 
 /**
- * Standard update operation with common options
+ * Generic update operation with standard options
  */
 export async function standardUpdate<T extends Document>(
   ModelClass: Model<T>,
   id: string,
-  updateData: Record<string, unknown>,
-  options: {
-        new?: boolean;
-        runValidators?: boolean;
-        upsert?: boolean;
-    } = { new: true, runValidators: true }
+  updateData: Partial<T>,
+  options: { new?: boolean; runValidators?: boolean } = {}
 ): Promise<T | null> {
+  const defaultOptions = { new: true, runValidators: true, ...options };
   return await ModelClass.findByIdAndUpdate(
     id,
     { $set: updateData },
-    options
+    defaultOptions
   );
+}
+
+/**
+ * Generic update operation with custom update object (for complex updates)
+ */
+export async function customUpdate<T extends Document>(
+  ModelClass: Model<T>,
+  id: string,
+  updateObject: Record<string, unknown>,
+  options: { new?: boolean; runValidators?: boolean } = {}
+): Promise<T | null> {
+  const defaultOptions = { new: true, runValidators: true, ...options };
+  return await ModelClass.findByIdAndUpdate(id, updateObject, defaultOptions);
 }
 
 /**
@@ -55,35 +65,109 @@ export async function deactivateDocument<T extends Document>(
   ModelClass: Model<T>,
   id: string
 ): Promise<T | null> {
-  return await standardUpdate(ModelClass, id, { isActive: false });
+  return await standardUpdate(ModelClass, id, { isActive: false } as unknown as Partial<T>);
 }
 
 /**
- * Checks if a document exists, throws 404 if not found
+ * Standard activation pattern
+ */
+export async function activateDocument<T extends Document>(
+  ModelClass: Model<T>,
+  id: string
+): Promise<T | null> {
+  return await standardUpdate(ModelClass, id, { isActive: true } as unknown as Partial<T>);
+}
+
+/**
+ * Ensures document exists before proceeding
  */
 export async function ensureDocumentExists<T extends Document>(
   ModelClass: Model<T>,
   id: string,
-  entityName: string
+  errorMessage: string = 'Document not found'
 ): Promise<T> {
   const document = await ModelClass.findById(id);
   if (!document) {
-    throw new AppError(`${entityName} not found`, 404);
+    throw new AppError(errorMessage, 404);
   }
   return document;
 }
 
 /**
- * Count documents matching condition with error handling
+ * Safe document count with error handling
  */
 export async function safeCountDocuments<T extends Document>(
   ModelClass: Model<T>,
-  condition: Record<string, unknown>
+  filter: Record<string, unknown> = {}
 ): Promise<number> {
   try {
-    return await ModelClass.countDocuments(condition);
-  } catch {
-    throw new AppError('Failed to count documents', 500);
+    return await ModelClass.countDocuments(filter);
+  } catch (error) {
+    console.error('Error counting documents:', error);
+    return 0;
+  }
+}
+
+/**
+ * Generic existence check helper
+ */
+export async function checkDocumentExists<T extends Document>(
+  ModelClass: Model<T>,
+  filter: Record<string, unknown>,
+  errorMessage: string
+): Promise<void> {
+  const existing = await ModelClass.findOne(filter);
+  if (existing) {
+    throw new AppError(errorMessage, 409);
+  }
+}
+
+/**
+ * Simple find with pagination (without complex populate typing)
+ */
+export async function findWithPagination<T extends Document>(
+  ModelClass: Model<T>,
+  filter: Record<string, unknown> = {},
+  page: number = 1,
+  limit: number = 10,
+  sort?: Record<string, 1 | -1>
+): Promise<{ documents: T[]; totalCount: number; pagination: { page: number; limit: number; totalPages: number } }> {
+  const validPage = Math.max(1, page);
+  const validLimit = Math.min(100, Math.max(1, limit));
+  const skip = (validPage - 1) * validLimit;
+
+  const queryOptions = { skip, limit: validLimit };
+  if (sort) {
+    Object.assign(queryOptions, { sort });
+  }
+
+  const [documents, totalCount] = await Promise.all([
+    ModelClass.find(filter, null, queryOptions).exec(),
+    ModelClass.countDocuments(filter)
+  ]);
+
+  return {
+    documents,
+    totalCount,
+    pagination: {
+      page: validPage,
+      limit: validLimit,
+      totalPages: Math.ceil(totalCount / validLimit)
+    }
+  };
+}
+
+/**
+ * Safe delete operation with existence check
+ */
+export async function safeDelete<T extends Document>(
+  ModelClass: Model<T>,
+  id: string,
+  errorMessage: string = 'Document not found'
+): Promise<void> {
+  const result = await ModelClass.findByIdAndDelete(id);
+  if (!result) {
+    throw new AppError(errorMessage, 404);
   }
 }
 

@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 
 import { verifyToken } from '../services/AuthService';
 import { AppError, AuthenticatedRequest, UserRole } from '../types';
+import { sendError } from '../utils/responseHelpers';
 
 export const authenticate = (
   req: AuthenticatedRequest,
@@ -12,20 +13,14 @@ export const authenticate = (
     const authHeader = req.headers.authorization;
 
     if (authHeader?.startsWith('Bearer ') !== true) {
-      res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      sendError(res, 'Authentication required', 401);
       return;
     }
 
     const token = authHeader.substring(7).trim();
     
     if (token.length === 0) {
-      res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      sendError(res, 'Authentication required', 401);
       return;
     }
 
@@ -40,15 +35,9 @@ export const authenticate = (
     next();
   } catch (error) {
     if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
+      sendError(res, error.message, error.statusCode);
     } else {
-      res.status(401).json({
-        success: false,
-        message: 'Invalid token'
-      });
+      sendError(res, 'Invalid token', 401);
     }
   }
 };
@@ -56,18 +45,12 @@ export const authenticate = (
 export const authorize = (roles: UserRole[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (req.user === undefined || req.user === null) {
-      res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      sendError(res, 'Authentication required', 401);
       return;
     }
 
     if (!roles.includes(req.user.role)) {
-      res.status(403).json({
-        success: false,
-        message: 'Forbidden: access denied'
-      });
+      sendError(res, 'Forbidden: access denied', 403);
       return;
     }
 

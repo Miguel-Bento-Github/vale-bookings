@@ -263,7 +263,7 @@ describe('Admin API Integration Tests', () => {
             password: 'password123',
             profile: { name: 'Duplicate Valet' }
           })
-          .expect(400);
+          .expect(409);
       });
     });
 
@@ -452,7 +452,7 @@ describe('Admin API Integration Tests', () => {
           .post('/api/admin/schedules')
           .set('Authorization', `Bearer ${adminToken}`)
           .send(scheduleData)
-          .expect(400);
+          .expect(409);
       });
     });
 

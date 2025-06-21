@@ -175,8 +175,8 @@ describe('BookingService', () => {
 
       expect(MockedBooking.findByIdAndUpdate).toHaveBeenCalledWith(
         '507f1f77bcf86cd799439015',
-        { status: 'CONFIRMED' },
-        { new: true }
+        { $set: { status: 'CONFIRMED' } },
+        { new: true, runValidators: true }
       );
       expect(result).toEqual(updatedBooking);
     });

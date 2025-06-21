@@ -8,6 +8,13 @@ import {
   ITimeSlot,
   AppError
 } from '../types';
+import {
+  createWithDuplicateHandling,
+  standardUpdate,
+  ensureDocumentExists,
+  safeDelete,
+  deactivateDocument
+} from '../utils/mongoHelpers';
 
 export async function getAllLocations(): Promise<ILocationDocument[]> {
   return await Location.find({ isActive: true });
@@ -18,43 +25,23 @@ export async function getLocationById(locationId: string): Promise<ILocationDocu
 }
 
 export async function createLocation(locationData: ILocation): Promise<ILocationDocument> {
-  try {
-    const location = new Location(locationData);
-    return await location.save();
-  } catch (error: unknown) {
-    if (error instanceof Error && 'code' in error && error.code === 11000) {
-      // Check if it's the name+address duplicate constraint
-      const mongoError = error as { keyPattern?: Record<string, unknown>; keyValue?: Record<string, unknown> };
-      if (mongoError.keyPattern && 'name' in mongoError.keyPattern && 'address' in mongoError.keyPattern) {
-        throw new AppError(
-          `A location with the name "${locationData.name}" already exists at address "${locationData.address}". ` +
-          'Multiple establishments can exist at the same address but must have different names.',
-          409
-        );
-      }
-      throw new AppError('Location already exists', 409);
-    }
-    throw error;
-  }
+  return await createWithDuplicateHandling(
+    Location,
+    locationData,
+    `A location with the name "${locationData.name}" already exists at address "${locationData.address}". ` +
+    'Multiple establishments can exist at the same address but must have different names.'
+  );
 }
 
 export async function updateLocation(
   locationId: string,
   updateData: Partial<ILocation>
 ): Promise<ILocationDocument | null> {
-  return await Location.findByIdAndUpdate(
-    locationId,
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
+  return await standardUpdate(Location, locationId, updateData as Partial<ILocationDocument>);
 }
 
 export async function deleteLocation(locationId: string): Promise<void> {
-  const location = await Location.findById(locationId);
-
-  if (!location) {
-    throw new AppError('Location not found', 404);
-  }
+  await ensureDocumentExists(Location, locationId, 'Location not found');
 
   // Check if location has active bookings
   const { default: Booking } = await import('../models/Booking');
@@ -67,7 +54,7 @@ export async function deleteLocation(locationId: string): Promise<void> {
     throw new AppError('Cannot delete location with active bookings', 400);
   }
 
-  await Location.findByIdAndDelete(locationId);
+  await safeDelete(Location, locationId, 'Location not found');
 }
 
 export async function getNearbyLocations(
@@ -90,11 +77,7 @@ export async function getNearbyLocations(
 }
 
 export async function deactivateLocation(locationId: string): Promise<ILocationDocument | null> {
-  return await Location.findByIdAndUpdate(
-    locationId,
-    { isActive: false },
-    { new: true }
-  );
+  return await deactivateDocument(Location, locationId);
 }
 
 export async function findNearby(

@@ -1,5 +1,6 @@
 import Booking from '../models/Booking';
 import { IBooking, IBookingDocument, IUpdateBookingRequest, BookingStatus, IBookingModel , AppError } from '../types';
+import { standardUpdate, ensureDocumentExists, safeDelete } from '../utils/mongoHelpers';
 
 export async function createBooking(bookingData: IBooking): Promise<IBookingDocument> {
   // Check for overlapping bookings
@@ -49,11 +50,7 @@ export async function updateBooking(
   bookingId: string,
   updateData: IUpdateBookingRequest
 ): Promise<IBookingDocument | null> {
-  const booking = await Booking.findById(bookingId);
-
-  if (!booking) {
-    throw new AppError('Booking not found', 404);
-  }
+  const booking = await ensureDocumentExists(Booking, bookingId, 'Booking not found');
 
   // If updating time, check for overlaps
   if (updateData.startTime !== undefined || updateData.endTime !== undefined) {
@@ -72,30 +69,18 @@ export async function updateBooking(
     }
   }
 
-  return await Booking.findByIdAndUpdate(
-    bookingId,
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
+  return await standardUpdate(Booking, bookingId, updateData as Partial<IBookingDocument>);
 }
 
 export async function updateBookingStatus(
   bookingId: string,
   status: BookingStatus
 ): Promise<IBookingDocument | null> {
-  return await Booking.findByIdAndUpdate(
-    bookingId,
-    { status },
-    { new: true }
-  );
+  return await standardUpdate(Booking, bookingId, { status } as Partial<IBookingDocument>);
 }
 
 export async function cancelBooking(bookingId: string): Promise<IBookingDocument | null> {
-  const booking = await Booking.findById(bookingId);
-
-  if (!booking) {
-    throw new AppError('Booking not found', 404);
-  }
+  const booking = await ensureDocumentExists(Booking, bookingId, 'Booking not found');
 
   // Prevent cancellation of completed or already cancelled bookings
   if (booking.status === 'COMPLETED') {
@@ -110,7 +95,7 @@ export async function cancelBooking(bookingId: string): Promise<IBookingDocument
 }
 
 export async function deleteBooking(bookingId: string): Promise<void> {
-  await Booking.findByIdAndDelete(bookingId);
+  await safeDelete(Booking, bookingId, 'Booking not found');
 }
 
 export async function checkOverlappingBookings(

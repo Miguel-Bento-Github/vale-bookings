@@ -1,11 +1,10 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 
 import AdminService from '../services/AdminService';
 import {
   AuthenticatedRequest,
   UserRole,
   BookingStatus,
-  AppError,
   ICreateLocationRequest,
   IUpdateLocationRequest,
   ICreateScheduleRequest,
@@ -14,13 +13,9 @@ import {
 import {
   sendSuccess,
   sendError,
-  sendSuccessWithPagination,
   withErrorHandling
 } from '../utils/responseHelpers';
-import {
-  validateRequiredId,
-  validatePaginationParams
-} from '../utils/validationHelpers';
+// No validation helper imports needed anymore as we handle validation inline
 
 // Type definitions for request bodies
 interface UpdateUserRoleRequestBody {

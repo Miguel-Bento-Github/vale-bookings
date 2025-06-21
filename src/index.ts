@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import routes from './routes';
 import { AppError } from './types';
 import { createPrettyLogger, responseTimeMiddleware, logInfo, logSuccess, logError } from './utils/logger';
+import { sendError } from './utils/responseHelpers';
 
 
 config();
@@ -45,10 +46,7 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
 
     // If content-type is explicitly set to something other than JSON, reject it
     if (contentType?.includes('text/plain') === true) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid JSON payload'
-      });
+      sendError(res, 'Invalid JSON payload', 400);
       return;
     }
   }
@@ -62,10 +60,7 @@ app.use(json({
     try {
       JSON.parse(buf.toString());
     } catch {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid JSON payload'
-      });
+      sendError(res, 'Invalid JSON payload', 400);
       throw new Error('Invalid JSON');
     }
   }
@@ -83,25 +78,16 @@ app.use('/api', routes);
 // Error handling middleware
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      success: false,
-      message: err.message
-    });
+    sendError(res, err.message, err.statusCode);
   } else {
     logError('Unhandled error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    sendError(res, 'Internal server error', 500);
   }
 });
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found'
-  });
+  sendError(res, 'Route not found', 404);
 });
 
 // Database connection and server start
