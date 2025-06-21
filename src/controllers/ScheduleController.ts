@@ -27,25 +27,25 @@ export const getSchedulesByLocation = withErrorHandling(async (req: Request, res
 
   // Check if location exists
   const locationId = req.params.locationId;
-  if (!locationId) {
+  if (locationId === undefined) {
     sendError(res, 'Location ID is required', 400);
     return;
   }
 
-  const location = await getLocationById(locationId);
+  const location = await getLocationById(locationId as string);
   if (location === null) {
     sendError(res, 'Location not found', 404);
     return;
   }
 
-  const schedules = await getSchedulesForLocation(locationId);
+  const schedules = await getSchedulesForLocation(locationId as string);
   sendSuccess(res, schedules);
 });
 
 export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check authentication and admin role
   const userId = req.user?.userId;
-  if (!userId || userId.trim().length === 0) {
+  if (userId === undefined || userId.trim().length === 0) {
     sendError(res, 'User authentication required', 401);
     return;
   }
@@ -103,20 +103,20 @@ export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest
   }
 
   // Check if location exists
-  const location = await getLocationById(locationId);
+  const location = await getLocationById(locationId as string);
   if (location === null) {
     sendError(res, 'Location not found', 404);
     return;
   }
 
-  const schedule = await createNewSchedule(requestBody);
+  const schedule = await createNewSchedule(req.body);
   sendSuccess(res, schedule, 'Schedule created successfully', 201);
 });
 
 export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check authentication and admin role
   const userId = req.user?.userId;
-  if (!userId || userId.trim().length === 0) {
+  if (userId === undefined || userId.trim().length === 0) {
     sendError(res, 'User authentication required', 401);
     return;
   }
@@ -153,25 +153,25 @@ export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest
 
   // Check if schedule exists
   const scheduleId = req.params.id;
-  if (!scheduleId) {
+  if (scheduleId === undefined) {
     sendError(res, 'Schedule ID is required', 400);
     return;
   }
 
-  const existingSchedule = await findScheduleById(scheduleId);
+  const existingSchedule = await findScheduleById(scheduleId as string);
   if (existingSchedule === null) {
     sendError(res, 'Schedule not found', 404);
     return;
   }
 
-  const schedule = await updateExistingSchedule(scheduleId as string, requestBody);
+  const schedule = await updateExistingSchedule(scheduleId as string, req.body);
   sendSuccess(res, schedule, 'Schedule updated successfully');
 });
 
 export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check authentication and admin role
   const userId = req.user?.userId;
-  if (!userId || userId.trim().length === 0) {
+  if (userId === undefined || userId.trim().length === 0) {
     sendError(res, 'User authentication required', 401);
     return;
   }
@@ -187,12 +187,12 @@ export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest
 
   // Check if schedule exists
   const scheduleId = req.params.id;
-  if (!scheduleId) {
+  if (scheduleId === undefined) {
     sendError(res, 'Schedule ID is required', 400);
     return;
   }
 
-  const existingSchedule = await findScheduleById(scheduleId);
+  const existingSchedule = await findScheduleById(scheduleId as string);
   if (existingSchedule === null) {
     sendError(res, 'Schedule not found', 404);
     return;
@@ -208,7 +208,7 @@ export const getScheduleById = withErrorHandling(async (req: Request, res: Respo
   }
 
   const scheduleId = req.params.id;
-  if (!scheduleId) {
+  if (scheduleId === undefined) {
     sendError(res, 'Schedule ID is required', 400);
     return;
   }

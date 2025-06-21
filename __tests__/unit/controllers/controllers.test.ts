@@ -36,7 +36,7 @@ import {
   deleteLocation
 } from '../../../src/controllers/LocationController';
 import {
-  getLocationSchedules,
+  getSchedulesByLocation,
   createSchedule,
   updateSchedule,
   deleteSchedule
@@ -1736,7 +1736,7 @@ describe('Controllers', () => {
 
   describe('ScheduleController', () => {
 
-    describe('getLocationSchedules', () => {
+    describe('getSchedulesByLocation', () => {
       it('should get location schedules successfully', async () => {
         const mockLocation = { _id: '507f1f77bcf86cd799439011', name: 'Test Location' };
         const mockSchedules = [
@@ -1754,7 +1754,7 @@ describe('Controllers', () => {
 
         mockRequest.params = { locationId: '507f1f77bcf86cd799439011' };
 
-        await getLocationSchedules(mockRequest as Request, mockResponse as Response);
+        await getSchedulesByLocation(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1766,7 +1766,7 @@ describe('Controllers', () => {
       it('should return 400 for missing location ID', async () => {
         mockRequest.params = {};
 
-        await getLocationSchedules(mockRequest as Request, mockResponse as Response);
+        await getSchedulesByLocation(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1780,7 +1780,7 @@ describe('Controllers', () => {
 
         mockRequest.params = { locationId: '507f1f77bcf86cd799439016' };
 
-        await getLocationSchedules(mockRequest as Request, mockResponse as Response);
+        await getSchedulesByLocation(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1794,7 +1794,7 @@ describe('Controllers', () => {
 
         mockRequest.params = { locationId: '507f1f77bcf86cd799439011' };
 
-        await getLocationSchedules(mockRequest as Request, mockResponse as Response);
+        await getSchedulesByLocation(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1808,7 +1808,7 @@ describe('Controllers', () => {
 
         mockRequest.params = { locationId: '507f1f77bcf86cd799439011' };
 
-        await getLocationSchedules(mockRequest as Request, mockResponse as Response);
+        await getSchedulesByLocation(mockRequest as Request, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({

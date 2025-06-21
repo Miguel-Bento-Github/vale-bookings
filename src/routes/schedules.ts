@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import {
-  getLocationSchedules,
+  getSchedulesByLocation,
   createSchedule,
   updateSchedule,
   deleteSchedule
@@ -11,7 +11,7 @@ import { authenticate, authorize } from '../middleware/auth';
 const router = Router();
 
 router.get('/location/:locationId', (req, res, next) => {
-  getLocationSchedules(req, res).catch(next);
+  getSchedulesByLocation(req, res).catch(next);
 });
 router.post('/', authenticate, authorize(['ADMIN']), (req, res, next) => {
   createSchedule(req, res).catch(next);
