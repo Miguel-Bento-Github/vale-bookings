@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import { Request, Response } from 'express';
 
 import User from '../models/User';
@@ -40,12 +40,12 @@ class AuthController {
     const { email, password, profile, role } = req.body as RegisterRequestBody;
 
     // Validation to match test expectations
-    if (!email || !password || !profile) {
+    if (email === undefined || password === undefined || profile === undefined) {
       sendError(res, 'Email, password, and profile are required', 400);
       return;
     }
 
-    if (!profile?.name || profile.name.trim().length === 0) {
+    if (profile?.name === undefined || profile.name.trim().length === 0) {
       sendError(res, 'Profile name is required', 400);
       return;
     }
@@ -66,7 +66,7 @@ class AuthController {
     try {
       // Use AuthService as expected by tests, include role if provided
       const registerData = { email, password, profile };
-      if (role && typeof role === 'string' && role.trim().length > 0) {
+      if (role !== undefined && typeof role === 'string' && role.trim().length > 0) {
         (registerData as typeof registerData & { role: string }).role = role;
       }
 
@@ -90,14 +90,16 @@ class AuthController {
     const { email, password } = req.body as LoginRequestBody;
 
     // Validation to match test expectations
-    if (!email || email.trim().length === 0 || !password || password.trim().length === 0) {
-      return sendError(res, 'Email and password are required', 400);
+    if (email === undefined || email.trim().length === 0 || password === undefined || password.trim().length === 0) {
+      sendError(res, 'Email and password are required', 400);
+      return;
     }
 
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return sendError(res, 'Invalid email format', 400);
+      sendError(res, 'Invalid email format', 400);
+      return;
     }
 
     // Use AuthService as expected by tests
@@ -115,7 +117,8 @@ class AuthController {
 
     // More permissive validation - only check if completely missing
     if (refreshToken === undefined || refreshToken === null) {
-      return sendError(res, 'Refresh token is required', 400);
+      sendError(res, 'Refresh token is required', 400);
+      return;
     }
 
     try {
@@ -129,10 +132,12 @@ class AuthController {
     } catch (error: unknown) {
       if (error instanceof AppError) {
         if (error.message.includes('Invalid refresh token')) {
-          return sendError(res, 'Invalid refresh token', 401);
+          sendError(res, 'Invalid refresh token', 401);
+          return;
         }
         if (error.message.includes('User not found')) {
-          return sendError(res, 'Invalid refresh token', 401);
+          sendError(res, 'Invalid refresh token', 401);
+          return;
         }
       }
       throw error; // Let withErrorHandling handle other errors
@@ -141,13 +146,15 @@ class AuthController {
 
   me = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'User authentication required', 401);
+    if (userId === undefined || userId.trim().length === 0) {
+      sendError(res, 'User authentication required', 401);
+      return;
     }
 
     const user = await User.findById(userId);
-    if (!user) {
-      return sendError(res, 'User not found', 401);
+    if (user === null) {
+      sendError(res, 'User not found', 401);
+      return;
     }
 
     // Return user in the expected format for tests
@@ -163,25 +170,28 @@ class AuthController {
 
   changePassword = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'User authentication required', 401);
+    if (userId === undefined || userId.trim().length === 0) {
+      sendError(res, 'User authentication required', 401);
+      return;
     }
 
     const { currentPassword, newPassword } = req.body as ChangePasswordRequestBody;
 
     const user = await User.findById(userId).select('+password');
-    if (!user) {
-      return sendError(res, 'User not found', 401);
+    if (user === null) {
+      sendError(res, 'User not found', 401);
+      return;
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    const isCurrentPasswordValid = await compare(currentPassword, user.password);
     if (!isCurrentPasswordValid) {
-      return sendError(res, 'Current password is incorrect', 400);
+      sendError(res, 'Current password is incorrect', 400);
+      return;
     }
 
     // Hash new password
-    const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+    const hashedNewPassword = await hash(newPassword, 12);
     user.password = hashedNewPassword;
     await user.save();
 
@@ -190,8 +200,9 @@ class AuthController {
 
   deleteAccount = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'User authentication required', 401);
+    if (userId === undefined || userId.trim().length === 0) {
+      sendError(res, 'User authentication required', 401);
+      return;
     }
 
     await User.findByIdAndDelete(userId);
@@ -210,8 +221,9 @@ class AuthController {
     }
 
     const userId = req.params.id;
-    if (!userId) {
-      return sendError(res, 'User ID is required', 400);
+    if (userId === undefined) {
+      sendError(res, 'User ID is required', 400);
+      return;
     }
 
     await User.findByIdAndDelete(userId);

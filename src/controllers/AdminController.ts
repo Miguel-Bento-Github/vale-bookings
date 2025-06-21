@@ -326,54 +326,55 @@ export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest
   sendSuccess(res, undefined, 'Schedule deleted successfully');
 });
 
-export const createBulkSchedules = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const bodyObj = req.body as Record<string, unknown>;
+export const createBulkSchedules = withErrorHandling(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const bodyObj = req.body as Record<string, unknown>;
 
-  if (
-    typeof bodyObj.locationId !== 'string' ||
+    if (
+      typeof bodyObj.locationId !== 'string' ||
     !Array.isArray(bodyObj.schedules) ||
     bodyObj.schedules.length === 0
-  ) {
-    sendError(res, 'Invalid bulk schedule data', 400);
-    return;
-  }
-
-  // Validate each schedule in the array
-  const schedules = bodyObj.schedules as unknown[];
-  const validatedScheduleData: ICreateScheduleRequest[] = [];
-
-  for (const schedule of schedules) {
-    if (typeof schedule !== 'object' || schedule === null) {
-      sendError(res, 'Invalid schedule data in bulk request', 400);
+    ) {
+      sendError(res, 'Invalid bulk schedule data', 400);
       return;
     }
 
-    const scheduleWithLocation = {
-      ...(schedule as Record<string, unknown>),
-      locationId: bodyObj.locationId
-    };
+    // Validate each schedule in the array
+    const schedules = bodyObj.schedules as unknown[];
+    const validatedScheduleData: ICreateScheduleRequest[] = [];
 
-    if (!isCreateScheduleRequestBody(scheduleWithLocation)) {
-      sendError(res, 'Invalid schedule data in bulk request', 400);
-      return;
+    for (const schedule of schedules) {
+      if (typeof schedule !== 'object' || schedule === null) {
+        sendError(res, 'Invalid schedule data in bulk request', 400);
+        return;
+      }
+
+      const scheduleWithLocation = {
+        ...(schedule as Record<string, unknown>),
+        locationId: bodyObj.locationId
+      };
+
+      if (!isCreateScheduleRequestBody(scheduleWithLocation)) {
+        sendError(res, 'Invalid schedule data in bulk request', 400);
+        return;
+      }
+      validatedScheduleData.push(scheduleWithLocation);
     }
-    validatedScheduleData.push(scheduleWithLocation);
-  }
 
-  const { locationId } = bodyObj;
-  const validatedSchedules = validatedScheduleData;
+    const { locationId } = bodyObj;
+    const validatedSchedules = validatedScheduleData;
 
-  const result = await AdminService.createBulkSchedules(locationId, validatedSchedules);
+    const result = await AdminService.createBulkSchedules(locationId, validatedSchedules);
 
-  if (result.failed.length > 0) {
-    res.status(207).json({
-      success: true,
-      data: result
-    });
-  } else {
-    sendSuccess(res, result.successful, undefined, 201);
-  }
-});
+    if (result.failed.length > 0) {
+      res.status(207).json({
+        success: true,
+        data: result
+      });
+    } else {
+      sendSuccess(res, result.successful, undefined, 201);
+    }
+  });
 
 // Booking Oversight
 export const getAllBookings = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -387,41 +388,45 @@ export const getAllBookings = withErrorHandling(async (req: AuthenticatedRequest
   sendSuccess(res, bookings);
 });
 
-export const updateBookingStatus = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const { id } = req.params;
+export const updateBookingStatus = withErrorHandling(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { id } = req.params;
 
-  if (id === undefined || id === null || id.trim().length === 0) {
-    sendError(res, 'Booking ID is required', 400);
-    return;
-  }
+    if (id === undefined || id === null || id.trim().length === 0) {
+      sendError(res, 'Booking ID is required', 400);
+      return;
+    }
 
-  if (!isUpdateBookingStatusRequestBody(req.body)) {
-    sendError(res, 'Invalid booking status', 400);
-    return;
-  }
+    if (!isUpdateBookingStatusRequestBody(req.body)) {
+      sendError(res, 'Invalid booking status', 400);
+      return;
+    }
 
-  const { status } = req.body;
-  const booking = await AdminService.updateBookingStatus(id, status);
-  sendSuccess(res, booking);
-});
+    const { status } = req.body;
+    const booking = await AdminService.updateBookingStatus(id, status);
+    sendSuccess(res, booking);
+  });
 
 // Analytics
-export const getAnalyticsOverview = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const analytics = await AdminService.getAnalyticsOverview();
-  sendSuccess(res, analytics);
-});
+export const getAnalyticsOverview = withErrorHandling(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const analytics = await AdminService.getAnalyticsOverview();
+    sendSuccess(res, analytics);
+  });
 
-export const getRevenueAnalytics = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const filters = {
-    startDate: req.query.startDate as string,
-    endDate: req.query.endDate as string
-  };
+export const getRevenueAnalytics = withErrorHandling(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const filters = {
+      startDate: req.query.startDate as string,
+      endDate: req.query.endDate as string
+    };
 
-  const analytics = await AdminService.getRevenueAnalytics(filters);
-  sendSuccess(res, analytics);
-});
+    const analytics = await AdminService.getRevenueAnalytics(filters);
+    sendSuccess(res, analytics);
+  });
 
-export const getBookingAnalytics = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const analytics = await AdminService.getBookingAnalytics();
-  sendSuccess(res, analytics);
-}); 
+export const getBookingAnalytics = withErrorHandling(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const analytics = await AdminService.getBookingAnalytics();
+    sendSuccess(res, analytics);
+  }); 

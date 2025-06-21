@@ -49,9 +49,9 @@ export function createCrudController<T, CreateData, UpdateData>(
       }
     }
 
-    if (options.requiredRole && options.requiredRole.length > 0) {
+    if (options.requiredRole !== undefined && options.requiredRole.length > 0) {
       const authReq = req as AuthenticatedRequest;
-      if (!authReq.user || !validateUserRole(authReq.user.role)) {
+      if (authReq.user === undefined || !validateUserRole(authReq.user.role)) {
         sendError(res, 'Insufficient permissions', 403);
         return;
       }
@@ -79,7 +79,7 @@ export function createCrudController<T, CreateData, UpdateData>(
 
     const item = await service.getById(id as string);
 
-    if (!item) {
+    if (item === null) {
       sendError(res, `${entityName} not found`, 404);
       return;
     }
@@ -96,9 +96,9 @@ export function createCrudController<T, CreateData, UpdateData>(
       }
     }
 
-    if (options.requiredRole && options.requiredRole.length > 0) {
+    if (options.requiredRole !== undefined && options.requiredRole.length > 0) {
       const authReq = req as AuthenticatedRequest;
-      if (!authReq.user || !validateUserRole(authReq.user.role)) {
+      if (authReq.user === undefined || !validateUserRole(authReq.user.role)) {
         sendError(res, 'Insufficient permissions', 403);
         return;
       }
@@ -117,9 +117,9 @@ export function createCrudController<T, CreateData, UpdateData>(
       }
     }
 
-    if (options.requiredRole && options.requiredRole.length > 0) {
+    if (options.requiredRole !== undefined && options.requiredRole.length > 0) {
       const authReq = req as AuthenticatedRequest;
-      if (!authReq.user || !validateUserRole(authReq.user.role)) {
+      if (authReq.user === undefined || !validateUserRole(authReq.user.role)) {
         sendError(res, 'Insufficient permissions', 403);
         return;
       }
@@ -131,7 +131,7 @@ export function createCrudController<T, CreateData, UpdateData>(
     }
 
     const item = await service.update(id as string, req.body as UpdateData);
-    if (!item) {
+    if (item === null) {
       sendError(res, `${entityName} not found`, 404);
       return;
     }
@@ -148,9 +148,9 @@ export function createCrudController<T, CreateData, UpdateData>(
       }
     }
 
-    if (options.requiredRole && options.requiredRole.length > 0) {
+    if (options.requiredRole !== undefined && options.requiredRole.length > 0) {
       const authReq = req as AuthenticatedRequest;
-      if (!authReq.user || !validateUserRole(authReq.user.role)) {
+      if (authReq.user === undefined || !validateUserRole(authReq.user.role)) {
         sendError(res, 'Insufficient permissions', 403);
         return;
       }

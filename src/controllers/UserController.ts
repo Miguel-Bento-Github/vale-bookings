@@ -11,14 +11,14 @@ import { validatePhoneNumber } from '../utils/validation';
 
 export const getProfile = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.user?.userId;
-  if (!userId || userId.trim().length === 0) {
+  if (userId === undefined || userId.trim().length === 0) {
     sendError(res, 'Unauthorized', 401);
     return;
   }
 
   const user = await findById(userId);
 
-  if (!user) {
+  if (user === null) {
     sendError(res, 'User not found', 401);
     return;
   }
@@ -28,7 +28,7 @@ export const getProfile = withErrorHandling(async (req: AuthenticatedRequest, re
 
 export const updateProfile = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.user?.userId;
-  if (!userId || userId.trim().length === 0) {
+  if (userId === undefined || userId.trim().length === 0) {
     sendError(res, 'Unauthorized', 401);
     return;
   }
@@ -82,7 +82,7 @@ export const updateProfile = withErrorHandling(async (req: AuthenticatedRequest,
     profile: profileUpdate as IUserProfile
   });
 
-  if (!updatedUser) {
+  if (updatedUser === null) {
     sendError(res, 'User not found', 401);
     return;
   }
@@ -92,14 +92,14 @@ export const updateProfile = withErrorHandling(async (req: AuthenticatedRequest,
 
 export const deleteAccount = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.user?.userId;
-  if (!userId || userId.trim().length === 0) {
+  if (userId === undefined || userId.trim().length === 0) {
     sendError(res, 'Unauthorized', 401);
     return;
   }
 
   // Check if user exists before deletion
   const user = await findById(userId);
-  if (!user) {
+  if (user === null) {
     sendError(res, 'User not found', 401);
     return;
   }

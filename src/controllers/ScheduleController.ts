@@ -9,10 +9,7 @@ import {
   deleteSchedule as deleteExistingSchedule
 } from '../services/ScheduleService';
 import { AuthenticatedRequest } from '../types';
-import {
-  standardUpdate,
-  deactivateDocument
-} from '../utils/mongoHelpers';
+// Removed unused mongoHelpers imports
 import {
   sendSuccess, 
   sendError,
