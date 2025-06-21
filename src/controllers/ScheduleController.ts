@@ -20,14 +20,14 @@ import {
   validateRequiredId
 } from '../utils/validationHelpers';
 
-export const getLocationSchedules = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
+export const getSchedulesByLocation = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
   if (!validateRequiredId(req.params.locationId, res, 'Location ID')) {
     return;
   }
 
   // Check if location exists
   const locationId = req.params.locationId;
-  if (locationId === undefined) {
+  if (!locationId) {
     sendError(res, 'Location ID is required', 400);
     return;
   }
@@ -45,7 +45,7 @@ export const getLocationSchedules = withErrorHandling(async (req: Request, res: 
 export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check authentication and admin role
   const userId = req.user?.userId;
-  if (userId === undefined || userId.trim().length === 0) {
+  if (!userId || userId.trim().length === 0) {
     sendError(res, 'User authentication required', 401);
     return;
   }
@@ -81,8 +81,8 @@ export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest
   }
 
   // Validate time range with proper string handling
-  const startParts = (startTime).split(':');
-  const endParts = (endTime).split(':');
+  const startParts = startTime.split(':');
+  const endParts = endTime.split(':');
 
   if (startParts.length !== 2 || endParts.length !== 2) {
     sendError(res, 'Invalid time format', 400);
@@ -109,14 +109,14 @@ export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const schedule = await createNewSchedule(req.body);
+  const schedule = await createNewSchedule(requestBody);
   sendSuccess(res, schedule, 'Schedule created successfully', 201);
 });
 
 export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check authentication and admin role
   const userId = req.user?.userId;
-  if (userId === undefined || userId.trim().length === 0) {
+  if (!userId || userId.trim().length === 0) {
     sendError(res, 'User authentication required', 401);
     return;
   }
@@ -153,7 +153,7 @@ export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest
 
   // Check if schedule exists
   const scheduleId = req.params.id;
-  if (scheduleId === undefined) {
+  if (!scheduleId) {
     sendError(res, 'Schedule ID is required', 400);
     return;
   }
@@ -164,14 +164,14 @@ export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const schedule = await updateExistingSchedule(scheduleId, req.body);
+  const schedule = await updateExistingSchedule(scheduleId as string, requestBody);
   sendSuccess(res, schedule, 'Schedule updated successfully');
 });
 
 export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check authentication and admin role
   const userId = req.user?.userId;
-  if (userId === undefined || userId.trim().length === 0) {
+  if (!userId || userId.trim().length === 0) {
     sendError(res, 'User authentication required', 401);
     return;
   }
@@ -187,7 +187,7 @@ export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest
 
   // Check if schedule exists
   const scheduleId = req.params.id;
-  if (scheduleId === undefined) {
+  if (!scheduleId) {
     sendError(res, 'Schedule ID is required', 400);
     return;
   }
@@ -198,7 +198,7 @@ export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  await deleteExistingSchedule(scheduleId);
+  await deleteExistingSchedule(scheduleId as string);
   sendSuccess(res, undefined, 'Schedule deleted successfully');
 });
 
@@ -208,12 +208,12 @@ export const getScheduleById = withErrorHandling(async (req: Request, res: Respo
   }
 
   const scheduleId = req.params.id;
-  if (scheduleId === undefined) {
+  if (!scheduleId) {
     sendError(res, 'Schedule ID is required', 400);
     return;
   }
 
-  const schedule = await findScheduleById(scheduleId);
+  const schedule = await findScheduleById(scheduleId as string);
   if (schedule === null) {
     sendError(res, 'Schedule not found', 404);
     return;

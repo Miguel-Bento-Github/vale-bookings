@@ -52,7 +52,7 @@ export const getLocationById = withErrorHandling(async (req: Request, res: Respo
     return;
   }
 
-  const location = await findLocationById(id);
+  const location = await findLocationById(id as string);
 
   if (!location) {
     sendError(res, 'Location not found', 404);
@@ -69,13 +69,14 @@ export const createLocation = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const validationErrors = validateLocationData(req.body);
+  const requestBody = req.body as Record<string, unknown>;
+  const validationErrors = validateLocationData(requestBody);
   if (validationErrors.length > 0) {
     sendError(res, validationErrors[0], 400);
     return;
   }
 
-  const location = await createNewLocation(req.body);
+  const location = await createNewLocation(requestBody);
   sendSuccess(res, location, 'Location created successfully', 201);
 });
 
@@ -102,7 +103,7 @@ export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest
     }
   }
 
-  const location = await updateExistingLocation(id, req.body);
+  const location = await updateExistingLocation(id as string, req.body);
 
   if (!location) {
     sendError(res, 'Location not found', 404);
@@ -125,7 +126,7 @@ export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  await deleteExistingLocation(id);
+  await deleteExistingLocation(id as string);
   sendSuccess(res, undefined, 'Location deleted successfully');
 });
 
@@ -160,7 +161,7 @@ export const getLocationAvailability = withErrorHandling(async (req: Request, re
     return;
   }
 
-  const availability = await getLocationAvailabilityService(id, parsedDate);
+  const availability = await getLocationAvailabilityService(id as string, parsedDate);
   sendSuccess(res, availability);
 });
 
@@ -183,7 +184,7 @@ export const getLocationTimeSlots = withErrorHandling(async (req: Request, res: 
     return;
   }
 
-  const timeSlots = await getLocationTimeslotsService(id, parsedDate);
+  const timeSlots = await getLocationTimeslotsService(id as string, parsedDate);
   sendSuccess(res, timeSlots);
 });
 
@@ -196,7 +197,7 @@ export const getRealtimeAvailability = withErrorHandling(async (req: Request, re
 
   // Mock realtime availability data
   const availability = {
-    locationId: id,
+    locationId: id as string,
     timestamp: new Date(),
     availableSpots: 15,
     totalSpots: 20,

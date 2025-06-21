@@ -205,8 +205,8 @@ export function validateBulkRequestBody<T>(
 
     const itemWithLocation = locationIdRequired ? {
       ...(item as Record<string, unknown>),
-      locationId: body.locationId
-    } : item;
+      locationId: body.locationId as string
+    } : (item as Record<string, unknown>);
 
     if (!validator(itemWithLocation)) {
       return { isValid: false, error: 'Invalid item data in bulk request' };

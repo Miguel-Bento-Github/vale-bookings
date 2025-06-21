@@ -164,7 +164,7 @@ class AuthController {
     // Return user in the expected format for tests
     sendSuccess(res, {
       user: {
-        _id: user._id.toString(),
+        _id: String(user._id),
         email: user.email,
         role: user.role,
         profile: user.profile
