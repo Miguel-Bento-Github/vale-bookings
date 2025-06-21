@@ -83,7 +83,7 @@ class AuthController {
         refreshToken: result.tokens.refreshToken
       }, 'User registered successfully', 201);
     } catch (error: unknown) {
-      if (error instanceof AppError && error.message === 'Email already exists') {
+      if (error instanceof AppError && error.message === ERROR_MESSAGES.EMAIL_ALREADY_EXISTS) {
         sendError(res, error.message, 409);
         return;
       }

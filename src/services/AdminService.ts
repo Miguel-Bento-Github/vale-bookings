@@ -26,6 +26,7 @@ import {
   safeDelete,
   checkDocumentExists
 } from '../utils/mongoHelpers';
+import { ERROR_MESSAGES } from '../utils/validationHelpers';
 
 interface IUserWithStatistics extends IUserDocument {
   statistics?: {
@@ -190,13 +191,13 @@ class AdminService {
     await checkDocumentExists(
       User,
       { email: valetData.email },
-      'Email already exists'
+      ERROR_MESSAGES.EMAIL_ALREADY_EXISTS
     );
 
     return await createWithDuplicateHandling(
       User,
       valetData,
-      'Email already exists'
+      ERROR_MESSAGES.EMAIL_ALREADY_EXISTS
     );
   }
 
@@ -237,7 +238,7 @@ class AdminService {
     return await createWithDuplicateHandling(
       Location,
       { ...locationData, isActive: true },
-      'Location already exists'
+      ERROR_MESSAGES.LOCATION_ALREADY_EXISTS
     );
   }
 
@@ -288,13 +289,13 @@ class AdminService {
     await checkDocumentExists(
       Schedule,
       { locationId: scheduleData.locationId, dayOfWeek: scheduleData.dayOfWeek },
-      'Schedule already exists for this location and day'
+      ERROR_MESSAGES.SCHEDULE_ALREADY_EXISTS
     );
 
     return await createWithDuplicateHandling(
       Schedule,
       { ...scheduleData, isActive: true },
-      'Schedule already exists for this location and day'
+      ERROR_MESSAGES.SCHEDULE_ALREADY_EXISTS
     );
   }
 
