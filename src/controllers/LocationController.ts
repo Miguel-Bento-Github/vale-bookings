@@ -72,7 +72,8 @@ export const createLocation = withErrorHandling(async (req: AuthenticatedRequest
   const requestBody = req.body as Record<string, unknown>;
   const validationErrors = validateLocationData(requestBody);
   if (validationErrors.length > 0) {
-    sendError(res, validationErrors[0], 400);
+    const errorMessage = validationErrors[0] ?? 'Validation error';
+    sendError(res, errorMessage, 400);
     return;
   }
 
@@ -111,7 +112,7 @@ export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest
     }
   }
 
-  const location = await updateExistingLocation(id as string, req.body);
+  const location = await updateExistingLocation(id as string, requestBody);
 
   if (location === null) {
     sendError(res, 'Location not found', 404);
@@ -141,7 +142,7 @@ export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest
 export const searchLocations = withErrorHandling(async (req: Request, res: Response): Promise<void> => {
   const { q } = req.query;
 
-  if (!q || typeof q !== 'string' || q.trim().length === 0) {
+  if (q === undefined || typeof q !== 'string' || q.trim().length === 0) {
     sendError(res, 'Search query is required', 400);
     return;
   }
@@ -158,7 +159,7 @@ export const getLocationAvailability = withErrorHandling(async (req: Request, re
     return;
   }
 
-  if (!date || typeof date !== 'string' || date.trim().length === 0) {
+  if (date === undefined || typeof date !== 'string' || date.trim().length === 0) {
     sendError(res, 'Date parameter is required', 400);
     return;
   }
@@ -181,7 +182,7 @@ export const getLocationTimeSlots = withErrorHandling(async (req: Request, res: 
     return;
   }
 
-  if (!date || typeof date !== 'string' || date.trim().length === 0) {
+  if (date === undefined || typeof date !== 'string' || date.trim().length === 0) {
     sendError(res, 'Date parameter is required', 400);
     return;
   }
