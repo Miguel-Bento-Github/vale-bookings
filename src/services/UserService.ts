@@ -1,16 +1,13 @@
 import User from '../models/User';
 import { IUser, IUserDocument , AppError } from '../types';
+import { createWithDuplicateHandling } from '../utils/mongoHelpers';
 
 export async function createUser(userData: IUser): Promise<IUserDocument> {
-  try {
-    const user = new User(userData);
-    return await user.save();
-  } catch (error: unknown) {
-    if (error instanceof Error && 'code' in error && error.code === 11000) {
-      throw new AppError('User with this email already exists', 409);
-    }
-    throw error;
-  }
+  return await createWithDuplicateHandling(
+    User,
+    userData,
+    'User with this email already exists'
+  );
 }
 
 export async function findById(userId: string): Promise<IUserDocument | null> {

@@ -258,273 +258,102 @@ export async function updateValet(req: AuthenticatedRequest, res: Response): Pro
   }
 }
 
-export async function deleteValet(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
+export const deleteValet = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
 
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Valet ID is required'
-      });
-      return;
-    }
-
-    await AdminService.deleteValet(id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Valet deleted successfully'
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (id === undefined || id === null || id.trim().length === 0) {
+    sendError(res, 'Valet ID is required', 400);
+    return;
   }
-}
+
+  await AdminService.deleteValet(id);
+  sendSuccess(res, undefined, 'Valet deleted successfully');
+});
 
 // Location Management
-export async function createLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    if (!isCreateLocationRequestBody(req.body)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid location data'
-      });
-      return;
-    }
-
-    const location = await AdminService.createLocation(req.body);
-
-    res.status(201).json({
-      success: true,
-      data: location
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+export const createLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!isCreateLocationRequestBody(req.body)) {
+    sendError(res, 'Invalid location data', 400);
+    return;
   }
-}
 
-export async function updateLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
+  const location = await AdminService.createLocation(req.body);
+  sendSuccess(res, location, undefined, 201);
+});
 
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Location ID is required'
-      });
-      return;
-    }
+export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
 
-    if (!isUpdateLocationRequestBody(req.body)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid location update data'
-      });
-      return;
-    }
-
-    const location = await AdminService.updateLocation(id, req.body);
-
-    res.status(200).json({
-      success: true,
-      data: location
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (id === undefined || id === null || id.trim().length === 0) {
+    sendError(res, 'Location ID is required', 400);
+    return;
   }
-}
 
-export async function deleteLocation(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Location ID is required'
-      });
-      return;
-    }
-
-    await AdminService.deleteLocation(id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Location deleted successfully'
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (!isUpdateLocationRequestBody(req.body)) {
+    sendError(res, 'Invalid location update data', 400);
+    return;
   }
-}
+
+  const location = await AdminService.updateLocation(id, req.body);
+  sendSuccess(res, location);
+});
+
+export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  if (id === undefined || id === null || id.trim().length === 0) {
+    sendError(res, 'Location ID is required', 400);
+    return;
+  }
+
+  await AdminService.deleteLocation(id);
+  sendSuccess(res, undefined, 'Location deleted successfully');
+});
 
 // Schedule Management
-export async function getAllSchedules(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const schedules = await AdminService.getAllSchedules();
+export const getAllSchedules = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const schedules = await AdminService.getAllSchedules();
+  sendSuccess(res, schedules);
+});
 
-    res.status(200).json({
-      success: true,
-      data: schedules
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (!isCreateScheduleRequestBody(req.body)) {
+    sendError(res, 'Invalid schedule data', 400);
+    return;
   }
-}
 
-export async function createSchedule(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    if (!isCreateScheduleRequestBody(req.body)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid schedule data'
-      });
-      return;
-    }
+  const schedule = await AdminService.createSchedule(req.body);
+  sendSuccess(res, schedule, undefined, 201);
+});
 
-    const schedule = await AdminService.createSchedule(req.body);
+export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
 
-    res.status(201).json({
-      success: true,
-      data: schedule
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (id === undefined || id === null || id.trim().length === 0) {
+    sendError(res, 'Schedule ID is required', 400);
+    return;
   }
-}
 
-export async function updateSchedule(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
-
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Schedule ID is required'
-      });
-      return;
-    }
-
-    if (!isUpdateScheduleRequestBody(req.body)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid schedule update data'
-      });
-      return;
-    }
-
-    const schedule = await AdminService.updateSchedule(id, req.body);
-
-    res.status(200).json({
-      success: true,
-      data: schedule
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (!isUpdateScheduleRequestBody(req.body)) {
+    sendError(res, 'Invalid schedule update data', 400);
+    return;
   }
-}
 
-export async function deleteSchedule(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const { id } = req.params;
+  const schedule = await AdminService.updateSchedule(id, req.body);
+  sendSuccess(res, schedule);
+});
 
-    if (id === undefined || id === null || id.trim().length === 0) {
-      res.status(400).json({
-        success: false,
-        message: 'Schedule ID is required'
-      });
-      return;
-    }
+export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
 
-    await AdminService.deleteSchedule(id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Schedule deleted successfully'
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
+  if (id === undefined || id === null || id.trim().length === 0) {
+    sendError(res, 'Schedule ID is required', 400);
+    return;
   }
-}
+
+  await AdminService.deleteSchedule(id);
+  sendSuccess(res, undefined, 'Schedule deleted successfully');
+});
 
 export async function createBulkSchedules(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -602,34 +431,16 @@ export async function createBulkSchedules(req: AuthenticatedRequest, res: Respon
 }
 
 // Booking Oversight
-export async function getAllBookings(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const filters = {
-      status: req.query.status as BookingStatus,
-      startDate: req.query.startDate as string,
-      endDate: req.query.endDate as string
-    };
+export const getAllBookings = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const filters = {
+    status: req.query.status as BookingStatus,
+    startDate: req.query.startDate as string,
+    endDate: req.query.endDate as string
+  };
 
-    const bookings = await AdminService.getAllBookings(filters);
-
-    res.status(200).json({
-      success: true,
-      data: bookings
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error'
-      });
-    }
-  }
-}
+  const bookings = await AdminService.getAllBookings(filters);
+  sendSuccess(res, bookings);
+});
 
 export async function updateBookingStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
