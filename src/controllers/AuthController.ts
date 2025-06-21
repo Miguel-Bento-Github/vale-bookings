@@ -1,15 +1,16 @@
-import { Request, Response } from 'express';
 import { compare, hash } from 'bcryptjs';
-import { AuthenticatedRequest, AppError } from '../types';
-import * as AuthService from '../services/AuthService';
+import { Request, Response } from 'express';
+
+import { ERROR_MESSAGES } from '../constants';
 import User from '../models/User';
+import * as AuthService from '../services/AuthService';
+import { AuthenticatedRequest, AppError } from '../types';
 import { 
   withErrorHandling, 
   sendError, 
   sendSuccess 
 } from '../utils/responseHelpers';
 import { validateRequiredId } from '../utils/validationHelpers';
-import { ERROR_MESSAGES } from '../constants';
 
 interface RegisterRequestBody {
   email: string;
