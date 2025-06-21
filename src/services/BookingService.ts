@@ -2,6 +2,8 @@ import Booking from '../models/Booking';
 import { IBooking, IBookingDocument, IUpdateBookingRequest, BookingStatus, IBookingModel , AppError } from '../types';
 import { standardUpdate, ensureDocumentExists, safeDelete } from '../utils/mongoHelpers';
 
+import webSocketService from './WebSocketService';
+
 export async function createBooking(bookingData: IBooking): Promise<IBookingDocument> {
   // Check for overlapping bookings
   const hasOverlap = await checkOverlappingBookings(
@@ -15,7 +17,31 @@ export async function createBooking(bookingData: IBooking): Promise<IBookingDocu
   }
 
   const booking = new Booking(bookingData);
-  return await booking.save();
+  const savedBooking = await booking.save();
+
+  // Emit WebSocket event for new booking
+  webSocketService.emitBookingUpdate({
+    bookingId: String(savedBooking._id),
+    status: savedBooking.status,
+    locationId: String(savedBooking.locationId),
+    userId: String(savedBooking.userId),
+    timestamp: new Date()
+  });
+
+  // Send notification to user
+  webSocketService.sendUserNotification({
+    userId: String(savedBooking.userId),
+    type: 'booking_confirmed',
+    title: 'Booking Confirmed',
+    message: 'Your valet parking booking has been confirmed',
+    data: {
+      bookingId: String(savedBooking._id),
+      locationId: String(savedBooking.locationId)
+    },
+    timestamp: new Date()
+  });
+
+  return savedBooking;
 }
 
 export async function findById(bookingId: string): Promise<IBookingDocument | null> {
@@ -76,7 +102,41 @@ export async function updateBookingStatus(
   bookingId: string,
   status: BookingStatus
 ): Promise<IBookingDocument | null> {
-  return await standardUpdate(Booking, bookingId, { status } as Partial<IBookingDocument>);
+  const updatedBooking = await standardUpdate(Booking, bookingId, { status } as Partial<IBookingDocument>);
+
+  if (updatedBooking) {
+    // Emit WebSocket event for status update
+    webSocketService.emitBookingUpdate({
+      bookingId: String(updatedBooking._id),
+      status: updatedBooking.status,
+      locationId: String(updatedBooking.locationId),
+      userId: String(updatedBooking.userId),
+      timestamp: new Date()
+    });
+
+    // Send notification for important status changes
+    if (['COMPLETED', 'CANCELLED'].includes(status)) {
+      const notificationType = status === 'COMPLETED' ? 'booking_completed' : 'booking_cancelled';
+      const title = status === 'COMPLETED' ? 'Booking Completed' : 'Booking Cancelled';
+      const message = status === 'COMPLETED'
+        ? 'Your valet parking service has been completed'
+        : 'Your valet parking booking has been cancelled';
+
+      webSocketService.sendUserNotification({
+        userId: String(updatedBooking.userId),
+        type: notificationType,
+        title,
+        message,
+        data: {
+          bookingId: String(updatedBooking._id),
+          locationId: String(updatedBooking.locationId)
+        },
+        timestamp: new Date()
+      });
+    }
+  }
+
+  return updatedBooking;
 }
 
 export async function cancelBooking(bookingId: string): Promise<IBookingDocument | null> {

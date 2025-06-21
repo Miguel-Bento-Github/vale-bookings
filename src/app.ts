@@ -1,3 +1,5 @@
+import { createServer } from 'http';
+
 import cors from 'cors';
 import express, { Request, Response, NextFunction, json } from 'express';
 import { rateLimit } from 'express-rate-limit';
@@ -9,6 +11,7 @@ import bookingRoutes from './routes/bookings';
 import locationRoutes from './routes/locations';
 import scheduleRoutes from './routes/schedules';
 import userRoutes from './routes/users';
+import webSocketService from './services/WebSocketService';
 import { AppError } from './types';
 import { createPrettyLogger, responseTimeMiddleware, logError } from './utils/logger';
 import { sendError } from './utils/responseHelpers';
@@ -101,4 +104,9 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   }
 });
 
-export default app; 
+// Create HTTP server and initialize WebSocket
+const httpServer = createServer(app);
+webSocketService.initialize(httpServer);
+
+export default app;
+export { httpServer }; 

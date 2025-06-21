@@ -1,94 +1,11 @@
-import cors from 'cors';
 import { config } from 'dotenv';
-import express, { Request, Response, NextFunction, json, urlencoded } from 'express';
-import { rateLimit } from 'express-rate-limit';
-import helmet from 'helmet';
 import mongoose from 'mongoose';
 
-import routes from './routes';
-import { AppError } from './types';
-import { createPrettyLogger, responseTimeMiddleware, logInfo, logSuccess, logError } from './utils/logger';
-import { sendError } from './utils/responseHelpers';
-
+import app, { httpServer } from './app';
+import { logInfo, logSuccess, logError } from './utils/logger';
 
 config();
-
-const app = express();
 const PORT = process.env.PORT ?? '3000';
-
-// Security middleware
-app.use(helmet());
-app.use(cors());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
-
-// Response time tracking and logging
-app.use(responseTimeMiddleware);
-
-// Logging - disable during tests and when explicitly disabled
-if (process.env.NODE_ENV !== 'test' &&
-  process.env.DISABLE_LOGGING !== 'true' &&
-  !process.argv.includes('--coverage') &&
-  !process.argv.includes('jest')) {
-  app.use(createPrettyLogger());
-}
-
-// Content type validation middleware
-app.use((req: Request, res: Response, next: NextFunction): void => {
-  // Only check POST/PUT/PATCH requests that should have JSON bodies
-  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-    const contentType = req.get('Content-Type');
-
-    // If content-type is explicitly set to something other than JSON, reject it
-    if (contentType?.includes('text/plain') === true) {
-      sendError(res, 'Invalid JSON payload', 400);
-      return;
-    }
-  }
-  next();
-});
-
-// JSON parsing with error handling
-app.use(json({
-  limit: '10kb', // Limit payload size
-  verify: (req: Request, res: Response, buf: Buffer, _encoding: string) => {
-    try {
-      JSON.parse(buf.toString());
-    } catch {
-      sendError(res, 'Invalid JSON payload', 400);
-      throw new Error('Invalid JSON');
-    }
-  }
-}));
-app.use(urlencoded({ extended: true }));
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-// API routes
-app.use('/api', routes);
-
-// Error handling middleware
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-  if (err instanceof AppError) {
-    sendError(res, err.message, err.statusCode);
-  } else {
-    logError('Unhandled error:', err);
-    sendError(res, 'Internal server error', 500);
-  }
-});
-
-// 404 handler
-app.use('*', (req, res) => {
-  sendError(res, 'Route not found', 404);
-});
 
 // Database connection and server start
 const startServer = async (): Promise<void> => {
@@ -102,8 +19,8 @@ const startServer = async (): Promise<void> => {
     await Location.createIndexes();
     logInfo('Database indexes created');
 
-    app.listen(PORT, () => {
-      logSuccess(`Server running on port ${PORT}`);
+    httpServer.listen(PORT, () => {
+      logSuccess(`Server running on port ${PORT} with WebSocket support`);
     });
   } catch (error) {
     logError('Failed to start server:', error);
