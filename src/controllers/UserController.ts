@@ -8,6 +8,7 @@ import {
   withErrorHandling
 } from '../utils/responseHelpers';
 import { validatePhoneNumber } from '../utils/validation';
+import { ERROR_MESSAGES } from '../utils/validationHelpers';
 
 export const getProfile = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const userId = req.user?.userId;
@@ -19,7 +20,7 @@ export const getProfile = withErrorHandling(async (req: AuthenticatedRequest, re
   const user = await findById(userId);
 
   if (user === null) {
-    sendError(res, 'User not found', 401);
+    sendError(res, ERROR_MESSAGES.USER_NOT_FOUND, 401);
     return;
   }
 
@@ -42,7 +43,7 @@ export const updateProfile = withErrorHandling(async (req: AuthenticatedRequest,
   }
 
   if (typeof requestBody.profile !== 'object' || requestBody.profile === null) {
-    sendError(res, 'Profile data is required', 400);
+    sendError(res, ERROR_MESSAGES.PROFILE_DATA_REQUIRED, 400);
     return;
   }
 
@@ -60,7 +61,7 @@ export const updateProfile = withErrorHandling(async (req: AuthenticatedRequest,
   }
 
   if (typeof profile.phone === 'string' && !validatePhoneNumber(profile.phone)) {
-    sendError(res, 'Invalid phone number format', 400);
+    sendError(res, ERROR_MESSAGES.INVALID_PHONE_FORMAT, 400);
     return;
   }
 
@@ -83,7 +84,7 @@ export const updateProfile = withErrorHandling(async (req: AuthenticatedRequest,
   });
 
   if (updatedUser === null) {
-    sendError(res, 'User not found', 401);
+    sendError(res, ERROR_MESSAGES.USER_NOT_FOUND, 401);
     return;
   }
 
@@ -100,7 +101,7 @@ export const deleteAccount = withErrorHandling(async (req: AuthenticatedRequest,
   // Check if user exists before deletion
   const user = await findById(userId);
   if (user === null) {
-    sendError(res, 'User not found', 401);
+    sendError(res, ERROR_MESSAGES.USER_NOT_FOUND, 401);
     return;
   }
 

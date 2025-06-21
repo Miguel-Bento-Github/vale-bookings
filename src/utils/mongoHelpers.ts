@@ -2,6 +2,8 @@ import { Model, Document } from 'mongoose';
 
 import { AppError } from '../types';
 
+import { ERROR_MESSAGES } from './validationHelpers';
+
 /**
  * Handles MongoDB duplicate key errors (code 11000) and throws appropriate AppError
  */
@@ -84,7 +86,7 @@ export async function activateDocument<T extends Document>(
 export async function ensureDocumentExists<T extends Document>(
   ModelClass: Model<T>,
   id: string,
-  errorMessage: string = 'Document not found'
+  errorMessage: string = ERROR_MESSAGES.DOCUMENT_NOT_FOUND
 ): Promise<T> {
   const document = await ModelClass.findById(id);
   if (!document) {
@@ -163,7 +165,7 @@ export async function findWithPagination<T extends Document>(
 export async function safeDelete<T extends Document>(
   ModelClass: Model<T>,
   id: string,
-  errorMessage: string = 'Document not found'
+  errorMessage: string = ERROR_MESSAGES.DOCUMENT_NOT_FOUND
 ): Promise<void> {
   const result = await ModelClass.findByIdAndDelete(id);
   if (!result) {

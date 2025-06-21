@@ -10,7 +10,8 @@ import {
   sendError
 } from '../utils/responseHelpers';
 import { 
-  validateRequiredId
+  validateRequiredId,
+  ERROR_MESSAGES
 } from '../utils/validationHelpers';
 
 interface RegisterRequestBody {
@@ -50,14 +51,14 @@ class AuthController {
     }
 
     if (profile?.name === undefined || profile.name.trim().length === 0) {
-      sendError(res, 'Profile name is required', 400);
+      sendError(res, ERROR_MESSAGES.PROFILE_NAME_REQUIRED, 400);
       return;
     }
 
     // Enhanced email format validation for test requirements
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email) || email.length > 64 || email.includes(' ')) {
-      sendError(res, 'Invalid email format', 400);
+      sendError(res, ERROR_MESSAGES.INVALID_EMAIL_FORMAT, 400);
       return;
     }
 
@@ -102,7 +103,7 @@ class AuthController {
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      sendError(res, 'Invalid email format', 400);
+      sendError(res, ERROR_MESSAGES.INVALID_EMAIL_FORMAT, 400);
       return;
     }
 
@@ -121,7 +122,7 @@ class AuthController {
 
     // More permissive validation - only check if completely missing
     if (refreshToken === undefined || refreshToken === null || typeof refreshToken !== 'string') {
-      sendError(res, 'Refresh token is required', 400);
+      sendError(res, ERROR_MESSAGES.REFRESH_TOKEN_REQUIRED, 400);
       return;
     }
 

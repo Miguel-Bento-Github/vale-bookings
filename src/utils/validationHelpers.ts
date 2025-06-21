@@ -8,6 +8,53 @@ import {
   validatePassword as validatePasswordCore
 } from './validation';
 
+// Common error message constants
+export const ERROR_MESSAGES = {
+  // Not found errors
+  USER_NOT_FOUND: 'User not found',
+  LOCATION_NOT_FOUND: 'Location not found',
+  BOOKING_NOT_FOUND: 'Booking not found',
+  SCHEDULE_NOT_FOUND: 'Schedule not found',
+  VALET_NOT_FOUND: 'Valet not found',
+  DOCUMENT_NOT_FOUND: 'Document not found',
+  ROUTE_NOT_FOUND: 'Route not found',
+
+  // Required field errors
+  USER_ID_REQUIRED: 'User ID is required',
+  LOCATION_ID_REQUIRED: 'Location ID is required',
+  BOOKING_ID_REQUIRED: 'Booking ID is required',
+  SCHEDULE_ID_REQUIRED: 'Schedule ID is required',
+  VALET_ID_REQUIRED: 'Valet ID is required',
+  EMAIL_REQUIRED: 'Email is required',
+  PASSWORD_REQUIRED: 'Password is required',
+  PROFILE_NAME_REQUIRED: 'Profile name is required',
+  PROFILE_DATA_REQUIRED: 'Profile data is required',
+  SEARCH_QUERY_REQUIRED: 'Search query is required',
+  DATE_PARAMETER_REQUIRED: 'Date parameter is required',
+  REFRESH_TOKEN_REQUIRED: 'Refresh token is required',
+
+  // Format errors
+  INVALID_EMAIL_FORMAT: 'Invalid email format',
+  INVALID_DATE_FORMAT: 'Invalid date format',
+  INVALID_TIME_FORMAT: 'Invalid time format',
+  INVALID_ID_FORMAT: 'Invalid ID format',
+  INVALID_COORDINATES_FORMAT: 'Invalid coordinates format',
+  INVALID_PHONE_FORMAT: 'Invalid phone number format',
+
+  // Already exists errors
+  EMAIL_ALREADY_EXISTS: 'Email already exists',
+  USER_ALREADY_EXISTS: 'User with this email already exists',
+  LOCATION_ALREADY_EXISTS: 'Location already exists',
+  SCHEDULE_ALREADY_EXISTS: 'Schedule already exists for this location and day',
+
+  // Authentication/authorization errors
+  USER_AUTH_REQUIRED: 'User authentication required',
+  FORBIDDEN_ACCESS_DENIED: 'Forbidden: access denied',
+
+  // Other common errors
+  INVALID_JSON_PAYLOAD: 'Invalid JSON payload'
+} as const;
+
 export function validateRequiredId(id: string | undefined, res: Response, fieldName: string = 'ID'): boolean {
   if (id === undefined || id.trim().length === 0) {
     sendError(res, `${fieldName} is required`, 400);
@@ -15,7 +62,7 @@ export function validateRequiredId(id: string | undefined, res: Response, fieldN
   }
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    sendError(res, 'Invalid ID format', 400);
+    sendError(res, ERROR_MESSAGES.INVALID_ID_FORMAT, 400);
     return false;
   }
 
@@ -38,7 +85,7 @@ export function validateTimeRange(startTime: string, endTime: string, res: Respo
   const now = new Date();
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-    sendError(res, 'Invalid date format', 400);
+    sendError(res, ERROR_MESSAGES.INVALID_DATE_FORMAT, 400);
     return false;
   }
 
@@ -57,13 +104,13 @@ export function validateTimeRange(startTime: string, endTime: string, res: Respo
 
 export function validateCoordinatesFromRequest(coordinates: unknown, res: Response): boolean {
   if (typeof coordinates !== 'object' || coordinates === null) {
-    sendError(res, 'Invalid coordinates format', 400);
+    sendError(res, ERROR_MESSAGES.INVALID_COORDINATES_FORMAT, 400);
     return false;
   }
 
   const coordsObj = coordinates as Record<string, unknown>;
   if (typeof coordsObj.latitude !== 'number' || typeof coordsObj.longitude !== 'number') {
-    sendError(res, 'Invalid coordinates format', 400);
+    sendError(res, ERROR_MESSAGES.INVALID_COORDINATES_FORMAT, 400);
     return false;
   }
 
@@ -143,12 +190,12 @@ export function validateRequiredString(value: string | undefined, fieldName: str
 
 export function validateEmail(email: string): string | null {
   if (email === undefined || email.trim().length === 0) {
-    return 'Email is required';
+    return ERROR_MESSAGES.EMAIL_REQUIRED;
   }
 
   // Use the core validation function from validation.ts
   if (!validateEmailCore(email)) {
-    return 'Invalid email format';
+    return ERROR_MESSAGES.INVALID_EMAIL_FORMAT;
   }
 
   return null;
@@ -156,7 +203,7 @@ export function validateEmail(email: string): string | null {
 
 export function validatePassword(password: string): string | null {
   if (password === undefined || password.trim().length === 0) {
-    return 'Password is required';
+    return ERROR_MESSAGES.PASSWORD_REQUIRED;
   }
 
   // Use the core validation function from validation.ts
@@ -178,7 +225,7 @@ export function validateAuthentication(userId?: string): boolean {
 
 export function validateAdminRole(user: { role: string } | undefined, res: Response): boolean {
   if (!user || user.role !== 'ADMIN') {
-    sendError(res, 'Forbidden: access denied', 403);
+    sendError(res, ERROR_MESSAGES.FORBIDDEN_ACCESS_DENIED, 403);
     return false;
   }
   return true;
@@ -186,7 +233,7 @@ export function validateAdminRole(user: { role: string } | undefined, res: Respo
 
 export function validateUserAuthentication(userId: string | undefined, res: Response): boolean {
   if (userId === undefined || userId.trim().length === 0) {
-    sendError(res, 'User authentication required', 401);
+    sendError(res, ERROR_MESSAGES.USER_AUTH_REQUIRED, 401);
     return false;
   }
   return true;
@@ -216,7 +263,7 @@ export function validateBulkRequestBody<T>(
   locationIdRequired: boolean = true
 ): { isValid: boolean; error?: string; data?: { locationId: string; items: T[] } } {
   if (locationIdRequired && typeof body.locationId !== 'string') {
-    return { isValid: false, error: 'Location ID is required' };
+    return { isValid: false, error: ERROR_MESSAGES.LOCATION_ID_REQUIRED };
   }
 
   if (!Array.isArray(body.schedules) || body.schedules.length === 0) {

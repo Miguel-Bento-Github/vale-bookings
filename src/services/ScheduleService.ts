@@ -12,12 +12,13 @@ import {
   safeDelete,
   deactivateDocument
 } from '../utils/mongoHelpers';
+import { ERROR_MESSAGES } from '../utils/validationHelpers';
 
 export async function createSchedule(scheduleData: ISchedule): Promise<IScheduleDocument> {
   return await createWithDuplicateHandling(
     Schedule,
     scheduleData,
-    'Schedule already exists for this location and day'
+    ERROR_MESSAGES.SCHEDULE_ALREADY_EXISTS
   );
 }
 

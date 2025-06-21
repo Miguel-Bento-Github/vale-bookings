@@ -1,12 +1,13 @@
 import User from '../models/User';
 import { IUser, IUserDocument } from '../types';
 import { createWithDuplicateHandling } from '../utils/mongoHelpers';
+import { ERROR_MESSAGES } from '../utils/validationHelpers';
 
 export async function createUser(userData: IUser): Promise<IUserDocument> {
   return await createWithDuplicateHandling(
     User,
     userData,
-    'User with this email already exists'
+    ERROR_MESSAGES.USER_ALREADY_EXISTS
   );
 }
 
