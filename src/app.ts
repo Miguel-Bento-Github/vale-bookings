@@ -11,7 +11,7 @@ import bookingRoutes from './routes/bookings';
 import locationRoutes from './routes/locations';
 import scheduleRoutes from './routes/schedules';
 import userRoutes from './routes/users';
-import { webSocketService } from './services/WebSocketService';
+import { initializeWebSocket } from './services/WebSocketService';
 import { AppError } from './types';
 import { createPrettyLogger, responseTimeMiddleware, logError } from './utils/logger';
 import { sendError } from './utils/responseHelpers';
@@ -106,7 +106,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 
 // Create HTTP server and initialize WebSocket
 const httpServer = createServer(app);
-webSocketService.initialize(httpServer);
+initializeWebSocket(httpServer);
 
 export default app;
 export { httpServer }; 

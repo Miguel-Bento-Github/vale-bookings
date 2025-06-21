@@ -2,7 +2,7 @@ import Booking from '../models/Booking';
 import { IBooking, IBookingDocument, IUpdateBookingRequest, BookingStatus, IBookingModel , AppError } from '../types';
 import { standardUpdate, ensureDocumentExists, safeDelete } from '../utils/mongoHelpers';
 
-import { webSocketService } from './WebSocketService';
+import { emitBookingUpdate, sendUserNotification } from './WebSocketService';
 
 export async function createBooking(bookingData: IBooking): Promise<IBookingDocument> {
   // Check for overlapping bookings
@@ -20,7 +20,7 @@ export async function createBooking(bookingData: IBooking): Promise<IBookingDocu
   const savedBooking = await booking.save();
 
   // Emit WebSocket event for new booking
-  webSocketService.emitBookingUpdate({
+  emitBookingUpdate({
     bookingId: String(savedBooking._id),
     status: savedBooking.status,
     locationId: String(savedBooking.locationId),
@@ -29,7 +29,7 @@ export async function createBooking(bookingData: IBooking): Promise<IBookingDocu
   });
 
   // Send notification to user
-  webSocketService.sendUserNotification({
+  sendUserNotification({
     userId: String(savedBooking.userId),
     type: 'booking_confirmed',
     title: 'Booking Confirmed',
@@ -106,7 +106,7 @@ export async function updateBookingStatus(
 
   if (updatedBooking) {
     // Emit WebSocket event for status update
-    webSocketService.emitBookingUpdate({
+    emitBookingUpdate({
       bookingId: String(updatedBooking._id),
       status: updatedBooking.status,
       locationId: String(updatedBooking.locationId),
@@ -122,7 +122,7 @@ export async function updateBookingStatus(
         ? 'Your valet parking service has been completed'
         : 'Your valet parking booking has been cancelled';
 
-      webSocketService.sendUserNotification({
+      sendUserNotification({
         userId: String(updatedBooking.userId),
         type: notificationType,
         title,
