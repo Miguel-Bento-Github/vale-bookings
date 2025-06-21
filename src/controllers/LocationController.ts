@@ -38,9 +38,10 @@ export const getNearbyLocations = withErrorHandling(async (req: Request, res: Re
     return;
   }
 
-  const radiusInKm = radius && radius > 0 ? radius : 10;
+  const radiusInKm = (radius !== undefined && radius > 0) ? radius : 10;
 
-  const locations = await findNearby(latitude!, longitude!, radiusInKm);
+  // Since validateCoordinatesFromQuery passed, we know latitude and longitude are defined
+  const locations = await findNearby(latitude as number, longitude as number, radiusInKm);
   sendSuccess(res, locations);
 });
 

@@ -33,23 +33,26 @@ interface UpdateBookingBody {
 
 class BookingController {
   // Create booking
-  create = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
+  create = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { locationId, startTime, endTime, notes } = req.body as CreateBookingBody;
     const userId = req.user?.userId;
 
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'Unauthorized', 401);
+    if (userId === undefined || userId.trim().length === 0) {
+      sendError(res, 'Unauthorized', 401);
+      return;
     }
 
     // Basic validation that matches test expectations
-    if (!locationId || !startTime || !endTime) {
-      return sendError(res, 'Location ID, start time, and end time are required', 400);
+    if (locationId === undefined || startTime === undefined || endTime === undefined) {
+      sendError(res, 'Location ID, start time, and end time are required', 400);
+      return;
     }
 
     // Validate location exists
     const location = await Location.findById(locationId);
-    if (!location) {
-      return sendError(res, 'Location not found', 404);
+    if (location === null) {
+      sendError(res, 'Location not found', 404);
+      return;
     }
 
     // Parse and validate time range
@@ -58,17 +61,20 @@ class BookingController {
 
     // Validate dates are valid
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      return sendError(res, 'Invalid date format', 400);
+      sendError(res, 'Invalid date format', 400);
+      return;
     }
 
     // Validate time range
     const now = new Date();
     if (startDate < now) {
-      return sendError(res, 'Cannot create booking in the past', 400);
+      sendError(res, 'Cannot create booking in the past', 400);
+      return;
     }
 
     if (endDate <= startDate) {
-      return sendError(res, 'End time must be after start time', 400);
+      sendError(res, 'End time must be after start time', 400);
+      return;
     }
 
     // Calculate price (example: $10 per hour)
@@ -126,26 +132,29 @@ class BookingController {
   });
 
   // Get booking by ID
-  getById = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
+  getById = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (!validateRequiredId(req.params.id, res, 'Booking ID')) {
       return;
     }
 
     // Check authentication first
     const userId = req.user?.userId;
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'Unauthorized', 401);
+    if (userId === undefined || userId.trim().length === 0) {
+      sendError(res, 'Unauthorized', 401);
+      return;
     }
 
     const bookingId = req.params.id;
-    if (!bookingId) {
-      return sendError(res, 'Booking ID is required', 400);
+    if (bookingId === undefined) {
+      sendError(res, 'Booking ID is required', 400);
+      return;
     }
 
     const booking = await BookingService.findById(bookingId);
 
-    if (!booking) {
-      return sendError(res, 'Booking not found', 404);
+    if (booking === null) {
+      sendError(res, 'Booking not found', 404);
+      return;
     }
 
     // Check ownership or admin access
@@ -153,21 +162,23 @@ class BookingController {
     const isAdmin = req.user?.role === 'ADMIN';
 
     if (!isOwner && !isAdmin) {
-      return sendError(res, 'Forbidden: access denied', 403);
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
     }
 
     sendSuccess(res, booking);
   });
 
   // Update booking
-  update = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
+  update = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (!validateRequiredId(req.params.id, res, 'Booking ID')) {
       return;
     }
 
     const userId = req.user?.userId;
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'Unauthorized', 401);
+    if (userId === undefined || userId.trim().length === 0) {
+      sendError(res, 'Unauthorized', 401);
+      return;
     }
 
     const updateData = req.body as UpdateBookingBody;
@@ -176,7 +187,8 @@ class BookingController {
     const isValidOperation = updates.every(update => allowedUpdates.includes(update));
 
     if (!isValidOperation) {
-      return sendError(res, 'Invalid updates', 400);
+      sendError(res, 'Invalid updates', 400);
+      return;
     }
 
     // Check permissions for status updates
@@ -184,57 +196,72 @@ class BookingController {
       // Validate status value
       const validStatuses = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
       if (!validStatuses.includes(updateData.status)) {
-        return sendError(res, 'Invalid status value', 400);
+        sendError(res, 'Invalid status value', 400);
+        return;
       }
 
       const isAdmin = req.user?.role === 'ADMIN';
       const isValet = req.user?.role === 'VALET';
 
       if (!isAdmin && !isValet) {
-        return sendError(res, 'Forbidden: insufficient permissions', 403);
+        sendError(res, 'Forbidden: insufficient permissions', 403);
+        return;
       }
 
       // Use BookingService for status updates
       const bookingId = req.params.id;
-      if (!bookingId) {
-        return sendError(res, 'Booking ID is required', 400);
+      if (bookingId === undefined) {
+        sendError(res, 'Booking ID is required', 400);
+        return;
       }
       const updatedBooking = await BookingService.updateBookingStatus(bookingId, updateData.status as BookingStatus);
-      if (!updatedBooking) {
-        return sendError(res, 'Booking not found', 404);
+      if (updatedBooking === null) {
+        sendError(res, 'Booking not found', 404);
+        return;
       }
-      return sendSuccess(res, updatedBooking, 'Booking status updated successfully');
+      sendSuccess(res, updatedBooking, 'Booking status updated successfully');
+      return;
     }
 
     // Ensure req.params.id is defined since we validated it
     const bookingId = req.params.id;
-    if (!bookingId || bookingId.trim().length === 0) {
-      return sendError(res, 'Booking ID is required', 400);
+    if (bookingId === undefined || bookingId.trim().length === 0) {
+      sendError(res, 'Booking ID is required', 400);
+      return;
     }
 
-    const updatedBooking = await standardUpdate(Booking, bookingId, updateData);
+    // Create a properly typed update object for notes-only updates
+    const safeUpdateData: { notes?: string } = {};
+    if (typeof updateData.notes === 'string') {
+      safeUpdateData.notes = updateData.notes;
+    }
+
+    const updatedBooking = await standardUpdate(Booking, bookingId, safeUpdateData);
     sendSuccess(res, updatedBooking, 'Booking updated successfully');
   });
 
   // Delete booking (soft delete by changing status to CANCELLED)
-  delete = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
+  delete = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (!validateRequiredId(req.params.id, res, 'Booking ID')) {
       return;
     }
 
     const userId = req.user?.userId;
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'Unauthorized', 401);
+    if (userId === undefined || userId.trim().length === 0) {
+      sendError(res, 'Unauthorized', 401);
+      return;
     }
 
     const bookingId = req.params.id;
-    if (!bookingId) {
-      return sendError(res, 'Booking ID is required', 400);
+    if (bookingId === undefined) {
+      sendError(res, 'Booking ID is required', 400);
+      return;
     }
 
     const booking = await BookingService.findById(bookingId);
-    if (!booking) {
-      return sendError(res, 'Booking not found', 404);
+    if (booking === null) {
+      sendError(res, 'Booking not found', 404);
+      return;
     }
 
     // Check ownership or admin access
@@ -242,7 +269,8 @@ class BookingController {
     const isAdmin = req.user?.role === 'ADMIN';
 
     if (!isOwner && !isAdmin) {
-      return sendError(res, 'Forbidden: access denied', 403);
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
     }
 
     // Use BookingService for cancellation
@@ -251,10 +279,11 @@ class BookingController {
   });
 
   // Get user's bookings
-  getUserBookings = withErrorHandling(async (req: AuthenticatedRequest, res: Response) => {
+  getUserBookings = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const userId = req.user?.userId;
-    if (!userId || userId.trim().length === 0) {
-      return sendError(res, 'Unauthorized', 401);
+    if (userId === undefined || userId.trim().length === 0) {
+      sendError(res, 'Unauthorized', 401);
+      return;
     }
 
     const bookings = await BookingService.getUserBookings(userId);

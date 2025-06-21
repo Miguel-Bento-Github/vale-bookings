@@ -33,6 +33,10 @@ interface ChangePasswordRequestBody {
   newPassword: string;
 }
 
+interface RefreshTokenRequestBody {
+  refreshToken: string;
+}
+
 // RefreshTokenBody interface removed as it's not used
 
 class AuthController {
@@ -113,10 +117,10 @@ class AuthController {
   });
 
   refreshToken = withErrorHandling(async (req: Request, res: Response) => {
-    const { refreshToken } = req.body;
+    const { refreshToken } = req.body as RefreshTokenRequestBody;
 
     // More permissive validation - only check if completely missing
-    if (refreshToken === undefined || refreshToken === null) {
+    if (refreshToken === undefined || refreshToken === null || typeof refreshToken !== 'string') {
       sendError(res, 'Refresh token is required', 400);
       return;
     }
@@ -160,7 +164,7 @@ class AuthController {
     // Return user in the expected format for tests
     sendSuccess(res, {
       user: {
-        _id: user._id,
+        _id: user._id.toString(),
         email: user.email,
         role: user.role,
         profile: user.profile
