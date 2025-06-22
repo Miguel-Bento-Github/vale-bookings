@@ -9,7 +9,10 @@ import {
   updateValet,
   deleteValet,
   createLocation as createAdminLocation,
+  updateLocation as updateAdminLocation,
+  deleteLocation as deleteAdminLocation,
   getAllSchedules,
+  createSchedule as createAdminSchedule,
   updateSchedule as updateAdminSchedule,
   deleteSchedule as deleteAdminSchedule,
   createBulkSchedules,
@@ -30,21 +33,31 @@ import {
 import {
   getLocations,
   getNearbyLocations,
-  getLocationById,
-  createLocation,
-  updateLocation,
-  deleteLocation
+  getLocationById
 } from '../../../src/controllers/LocationController';
 import {
-  getSchedulesByLocation,
-  createSchedule,
-  updateSchedule,
-  deleteSchedule
+  getSchedulesByLocation
 } from '../../../src/controllers/ScheduleController';
 import { getProfile, updateProfile, deleteAccount } from '../../../src/controllers/UserController';
 import Booking from '../../../src/models/Booking';
 import Location from '../../../src/models/Location';
-import AdminService from '../../../src/services/AdminService';
+import {
+  getAllUsers as getAllUsersService,
+  updateUserRole as updateUserRoleService,
+  deleteUser as deleteUserService,
+  getAllValets as getAllValetsService,
+  createValet as createValetService,
+  updateValet as updateValetService,
+  deleteValet as deleteValetService,
+  createLocation as createLocationService,
+  getAllSchedules as getAllSchedulesService,
+  createBulkSchedules as createBulkSchedulesService,
+  getAllBookings as getAllBookingsService,
+  updateBookingStatus as updateBookingStatusService,
+  getAnalyticsOverview as getAnalyticsOverviewService,
+  getRevenueAnalytics as getRevenueAnalyticsService,
+  getBookingAnalytics as getBookingAnalyticsService
+} from '../../../src/services/AdminService';
 import * as AuthService from '../../../src/services/AuthService';
 import * as BookingService from '../../../src/services/BookingService';
 import * as LocationService from '../../../src/services/LocationService';
@@ -867,7 +880,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -884,7 +897,7 @@ describe('Controllers', () => {
           coordinates: { latitude: 40.7128, longitude: -74.0060 }
         };
 
-        await createLocation(mockAuthenticatedRequest, mockResponse as Response);
+        await createAdminLocation(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -900,7 +913,7 @@ describe('Controllers', () => {
           body: { name: 'New Location' } // missing address and coordinates
         };
 
-        await createLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -920,7 +933,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -942,7 +955,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -964,7 +977,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -987,7 +1000,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1001,7 +1014,7 @@ describe('Controllers', () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439011' };
         mockAuthenticatedRequest.body = { name: 'Updated Location' };
 
-        await updateLocation(mockAuthenticatedRequest, mockResponse as Response);
+        await updateAdminLocation(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1020,7 +1033,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1037,7 +1050,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1057,7 +1070,7 @@ describe('Controllers', () => {
           }
         };
 
-        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1076,7 +1089,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1095,7 +1108,7 @@ describe('Controllers', () => {
           body: { name: 'Updated Location' }
         };
 
-        await updateLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1118,7 +1131,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439011' }
         };
 
-        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1130,7 +1143,7 @@ describe('Controllers', () => {
       it('should return 403 for non-admin user', async () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439011' };
 
-        await deleteLocation(mockAuthenticatedRequest, mockResponse as Response);
+        await deleteAdminLocation(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1148,7 +1161,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439016' }
         };
 
-        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1164,7 +1177,7 @@ describe('Controllers', () => {
           params: {} // missing id
         };
 
-        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1182,7 +1195,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439011' }
         };
 
-        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1198,7 +1211,7 @@ describe('Controllers', () => {
           params: { id: '' } // Empty ID
         };
 
-        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1216,7 +1229,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439011' }
         };
 
-        await deleteLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminLocation(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1837,7 +1850,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(201);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1855,7 +1868,7 @@ describe('Controllers', () => {
           endTime: '18:00'
         };
 
-        await createSchedule(mockAuthenticatedRequest, mockResponse as Response);
+        await createAdminSchedule(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1876,7 +1889,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1897,7 +1910,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1916,7 +1929,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1940,7 +1953,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1963,7 +1976,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -1988,7 +2001,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2011,7 +2024,7 @@ describe('Controllers', () => {
           }
         };
 
-        await createSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await createAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2042,7 +2055,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00', endTime: '19:00' }
         };
 
-        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2056,7 +2069,7 @@ describe('Controllers', () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439015' };
         mockAuthenticatedRequest.body = { startTime: '08:00' };
 
-        await updateSchedule(mockAuthenticatedRequest, mockResponse as Response);
+        await updateAdminSchedule(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2075,7 +2088,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00' }
         };
 
-        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2092,7 +2105,7 @@ describe('Controllers', () => {
           body: { startTime: '25:00' } // invalid time
         };
 
-        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2109,7 +2122,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00' }
         };
 
-        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2126,7 +2139,7 @@ describe('Controllers', () => {
           body: { dayOfWeek: 8 } // invalid day of week
         };
 
-        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2143,7 +2156,7 @@ describe('Controllers', () => {
           body: { endTime: '25:00' } // invalid time
         };
 
-        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2163,7 +2176,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00' }
         };
 
-        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2183,7 +2196,7 @@ describe('Controllers', () => {
           body: { startTime: '08:00' }
         };
 
-        await updateSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await updateAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2204,7 +2217,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439015' }
         };
 
-        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2216,7 +2229,7 @@ describe('Controllers', () => {
       it('should return 403 for non-admin user', async () => {
         mockAuthenticatedRequest.params = { id: '507f1f77bcf86cd799439015' };
 
-        await deleteSchedule(mockAuthenticatedRequest, mockResponse as Response);
+        await deleteAdminSchedule(mockAuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(403);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2234,7 +2247,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439016' }
         };
 
-        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(404);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2250,7 +2263,7 @@ describe('Controllers', () => {
           params: {} // missing id
         };
 
-        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(400);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2268,7 +2281,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439015' }
         };
 
-        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2287,7 +2300,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439015' }
         };
 
-        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2305,7 +2318,7 @@ describe('Controllers', () => {
           params: { id: '507f1f77bcf86cd799439015' }
         };
 
-        await deleteSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
+        await deleteAdminSchedule(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2332,7 +2345,7 @@ describe('Controllers', () => {
           users: [{ _id: '1', email: 'user1@example.com' }, { _id: '2', email: 'user2@example.com' }],
           pagination: { page: 1, limit: 10, total: 2, pages: 1 }
         };
-        (AdminService.getAllUsers as jest.Mock).mockResolvedValue(mockResult);
+        (getAllUsersService as jest.Mock).mockResolvedValue(mockResult);
 
         adminRequest.query = { page: '1', limit: '10' };
 
@@ -2347,7 +2360,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.getAllUsers as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (getAllUsersService as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         await getAllUsers(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
@@ -2359,7 +2372,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.getAllUsers as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (getAllUsersService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         await getAllUsers(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
@@ -2374,7 +2387,7 @@ describe('Controllers', () => {
     describe('updateUserRole', () => {
       it('should update user role successfully', async () => {
         const mockUser = { _id: '507f1f77bcf86cd799439012', email: 'test@example.com', role: 'VALET' };
-        (AdminService.updateUserRole as jest.Mock).mockResolvedValue(mockUser);
+        (updateUserRoleService as jest.Mock).mockResolvedValue(mockUser);
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { role: 'VALET' };
@@ -2415,7 +2428,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.updateUserRole as jest.Mock).mockRejectedValue(new AppError('User not found', 404));
+        (updateUserRoleService as jest.Mock).mockRejectedValue(new AppError('User not found', 404));
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { role: 'VALET' };
@@ -2430,7 +2443,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.updateUserRole as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (updateUserRoleService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { role: 'VALET' };
@@ -2447,7 +2460,7 @@ describe('Controllers', () => {
 
     describe('deleteUser', () => {
       it('should delete user successfully', async () => {
-        (AdminService.deleteUser as jest.Mock).mockResolvedValue(true);
+        (deleteUserService as jest.Mock).mockResolvedValue(true);
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.user = { ...adminRequest.user, userId: '507f1f77bcf86cd799439013' }; // Different user
@@ -2487,7 +2500,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.deleteUser as jest.Mock).mockRejectedValue(new AppError('User not found', 404));
+        (deleteUserService as jest.Mock).mockRejectedValue(new AppError('User not found', 404));
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.user = { ...adminRequest.user, userId: '507f1f77bcf86cd799439013' };
@@ -2502,7 +2515,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.deleteUser as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (deleteUserService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.user = { ...adminRequest.user, userId: '507f1f77bcf86cd799439013' };
@@ -2523,7 +2536,7 @@ describe('Controllers', () => {
           { _id: '1', email: 'valet1@example.com', role: 'VALET' },
           { _id: '2', email: 'valet2@example.com', role: 'VALET' }
         ];
-        (AdminService.getAllValets as jest.Mock).mockResolvedValue(mockValets);
+        (getAllValetsService as jest.Mock).mockResolvedValue(mockValets);
 
         await getAllValets(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
@@ -2535,7 +2548,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.getAllValets as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (getAllValetsService as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         await getAllValets(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
@@ -2547,7 +2560,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.getAllValets as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (getAllValetsService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         await getAllValets(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
@@ -2562,7 +2575,7 @@ describe('Controllers', () => {
     describe('createValet', () => {
       it('should create valet successfully', async () => {
         const mockValet = { _id: '507f1f77bcf86cd799439012', email: 'valet@example.com', role: 'VALET' };
-        (AdminService.createValet as jest.Mock).mockResolvedValue(mockValet);
+        (createValetService as jest.Mock).mockResolvedValue(mockValet);
 
         adminRequest.body = {
           email: 'valet@example.com',
@@ -2580,7 +2593,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.createValet as jest.Mock).mockRejectedValue(new AppError('Email already exists', 409));
+        (createValetService as jest.Mock).mockRejectedValue(new AppError('Email already exists', 409));
 
         adminRequest.body = {
           email: 'valet@example.com',
@@ -2598,7 +2611,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.createValet as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (createValetService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.body = {
           email: 'valet@example.com',
@@ -2619,7 +2632,7 @@ describe('Controllers', () => {
     describe('updateValet', () => {
       it('should update valet successfully', async () => {
         const mockValet = { _id: '507f1f77bcf86cd799439012', email: 'valet@example.com', role: 'VALET' };
-        (AdminService.updateValet as jest.Mock).mockResolvedValue(mockValet);
+        (updateValetService as jest.Mock).mockResolvedValue(mockValet);
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { profile: { name: 'Updated Valet' } };
@@ -2647,7 +2660,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.updateValet as jest.Mock).mockRejectedValue(new AppError('Valet not found', 404));
+        (updateValetService as jest.Mock).mockRejectedValue(new AppError('Valet not found', 404));
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { profile: { name: 'Updated Valet' } };
@@ -2662,7 +2675,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.updateValet as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (updateValetService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
         adminRequest.body = { profile: { name: 'Updated Valet' } };
@@ -2679,7 +2692,7 @@ describe('Controllers', () => {
 
     describe('deleteValet', () => {
       it('should delete valet successfully', async () => {
-        (AdminService.deleteValet as jest.Mock).mockResolvedValue(true);
+        (deleteValetService as jest.Mock).mockResolvedValue(true);
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
 
@@ -2705,7 +2718,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.deleteValet as jest.Mock).mockRejectedValue(new AppError('Valet not found', 404));
+        (deleteValetService as jest.Mock).mockRejectedValue(new AppError('Valet not found', 404));
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
 
@@ -2719,7 +2732,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.deleteValet as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (deleteValetService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.params = { id: '507f1f77bcf86cd799439012' };
 
@@ -2740,7 +2753,7 @@ describe('Controllers', () => {
           name: 'Test Location',
           address: '123 Test St'
         };
-        (AdminService.createLocation as jest.Mock).mockResolvedValue(mockLocation);
+        (createLocationService as jest.Mock).mockResolvedValue(mockLocation);
 
         adminRequest.body = {
           name: 'Test Location',
@@ -2758,7 +2771,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.createLocation as jest.Mock).mockRejectedValue(new AppError('Invalid coordinates', 400));
+        (createLocationService as jest.Mock).mockRejectedValue(new AppError('Invalid coordinates', 400));
 
         adminRequest.body = {
           name: 'Test Location',
@@ -2776,7 +2789,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.createLocation as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (createLocationService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.body = {
           name: 'Test Location',
@@ -2800,7 +2813,7 @@ describe('Controllers', () => {
           { _id: '1', locationId: 'loc1', dayOfWeek: 1, startTime: '09:00', endTime: '17:00' },
           { _id: '2', locationId: 'loc2', dayOfWeek: 2, startTime: '10:00', endTime: '18:00' }
         ];
-        (AdminService.getAllSchedules as jest.Mock).mockResolvedValue(mockSchedules);
+        (getAllSchedulesService as jest.Mock).mockResolvedValue(mockSchedules);
 
         await getAllSchedules(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
@@ -2812,7 +2825,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.getAllSchedules as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (getAllSchedulesService as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         await getAllSchedules(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
@@ -2824,7 +2837,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.getAllSchedules as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (getAllSchedulesService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         await getAllSchedules(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
@@ -2845,7 +2858,7 @@ describe('Controllers', () => {
           ],
           failed: []
         };
-        (AdminService.createBulkSchedules as jest.Mock).mockResolvedValue(mockResult);
+        (createBulkSchedulesService as jest.Mock).mockResolvedValue(mockResult);
 
         adminRequest.body = {
           locationId: 'loc1',
@@ -2873,7 +2886,7 @@ describe('Controllers', () => {
             { dayOfWeek: 2, error: 'Duplicate schedule' }
           ]
         };
-        (AdminService.createBulkSchedules as jest.Mock).mockResolvedValue(mockResult);
+        (createBulkSchedulesService as jest.Mock).mockResolvedValue(mockResult);
 
         adminRequest.body = {
           locationId: 'loc1',
@@ -2893,7 +2906,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.createBulkSchedules as jest.Mock).mockRejectedValue(new AppError('Invalid schedule data', 400));
+        (createBulkSchedulesService as jest.Mock).mockRejectedValue(new AppError('Invalid schedule data', 400));
 
         adminRequest.body = {
           locationId: 'loc1',
@@ -2912,7 +2925,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.createBulkSchedules as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (createBulkSchedulesService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.body = {
           locationId: 'loc1',
@@ -2937,7 +2950,7 @@ describe('Controllers', () => {
           { _id: '1', userId: 'user1', locationId: 'loc1', status: 'PENDING' },
           { _id: '2', userId: 'user2', locationId: 'loc2', status: 'CONFIRMED' }
         ];
-        (AdminService.getAllBookings as jest.Mock).mockResolvedValue(mockBookings);
+        (getAllBookingsService as jest.Mock).mockResolvedValue(mockBookings);
 
         adminRequest.query = { status: 'PENDING' };
 
@@ -2951,7 +2964,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.getAllBookings as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (getAllBookingsService as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         adminRequest.query = { status: 'PENDING' };
 
@@ -2965,7 +2978,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.getAllBookings as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (getAllBookingsService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.query = { status: 'PENDING' };
 
@@ -2987,7 +3000,7 @@ describe('Controllers', () => {
           totalRevenue: 1000,
           averageBookingValue: 20
         };
-        (AdminService.getAnalyticsOverview as jest.Mock).mockResolvedValue(mockAnalytics);
+        (getAnalyticsOverviewService as jest.Mock).mockResolvedValue(mockAnalytics);
 
         await getAnalyticsOverview(adminRequest, mockResponse as Response);
 
@@ -2999,7 +3012,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.getAnalyticsOverview as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (getAnalyticsOverviewService as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         await getAnalyticsOverview(adminRequest, mockResponse as Response);
 
@@ -3011,7 +3024,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.getAnalyticsOverview as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (getAnalyticsOverviewService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         await getAnalyticsOverview(adminRequest, mockResponse as Response);
 
@@ -3030,7 +3043,7 @@ describe('Controllers', () => {
           dailyRevenue: [{ date: '2023-01-01', revenue: 100 }],
           monthlyRevenue: [{ month: '2023-01', revenue: 3000 }]
         };
-        (AdminService.getRevenueAnalytics as jest.Mock).mockResolvedValue(mockAnalytics);
+        (getRevenueAnalyticsService as jest.Mock).mockResolvedValue(mockAnalytics);
 
         adminRequest.query = { startDate: '2023-01-01', endDate: '2023-01-31' };
 
@@ -3044,7 +3057,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.getRevenueAnalytics as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (getRevenueAnalyticsService as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         adminRequest.query = { startDate: '2023-01-01', endDate: '2023-01-31' };
 
@@ -3058,7 +3071,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.getRevenueAnalytics as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (getRevenueAnalyticsService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.query = { startDate: '2023-01-01', endDate: '2023-01-31' };
 
@@ -3079,7 +3092,7 @@ describe('Controllers', () => {
           bookingsByStatus: { PENDING: 10, CONFIRMED: 30, COMPLETED: 10 },
           bookingsByLocation: [{ locationId: 'loc1', count: 25 }, { locationId: 'loc2', count: 25 }]
         };
-        (AdminService.getBookingAnalytics as jest.Mock).mockResolvedValue(mockAnalytics);
+        (getBookingAnalyticsService as jest.Mock).mockResolvedValue(mockAnalytics);
 
         await getBookingAnalytics(adminRequest, mockResponse as Response);
 
@@ -3091,7 +3104,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.getBookingAnalytics as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (getBookingAnalyticsService as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
         await getBookingAnalytics(adminRequest, mockResponse as Response);
 
@@ -3103,7 +3116,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.getBookingAnalytics as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (getBookingAnalyticsService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         await getBookingAnalytics(adminRequest, mockResponse as Response);
 
@@ -3124,7 +3137,7 @@ describe('Controllers', () => {
           startTime: '08:00',
           endTime: '19:00'
         };
-        (AdminService.updateSchedule as jest.Mock).mockResolvedValue(mockUpdatedSchedule);
+        (updateAdminSchedule as jest.Mock).mockResolvedValue(mockUpdatedSchedule);
 
         adminRequest.params = { id: '1' };
         adminRequest.body = { startTime: '08:00', endTime: '19:00' };
@@ -3152,7 +3165,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.updateSchedule as jest.Mock).mockRejectedValue(new AppError('Schedule not found', 404));
+        (updateAdminSchedule as jest.Mock).mockRejectedValue(new AppError('Schedule not found', 404));
 
         adminRequest.params = { id: '1' };
         adminRequest.body = { startTime: '08:00' };
@@ -3167,7 +3180,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.updateSchedule as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (updateAdminSchedule as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.params = { id: '1' };
         adminRequest.body = { startTime: '08:00' };
@@ -3184,7 +3197,7 @@ describe('Controllers', () => {
 
     describe('deleteAdminSchedule', () => {
       it('should delete schedule successfully', async () => {
-        (AdminService.deleteSchedule as jest.Mock).mockResolvedValue(true);
+        (deleteAdminSchedule as jest.Mock).mockResolvedValue(true);
 
         adminRequest.params = { id: '1' };
 
@@ -3210,7 +3223,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.deleteSchedule as jest.Mock).mockRejectedValue(new AppError('Schedule not found', 404));
+        (deleteAdminSchedule as jest.Mock).mockRejectedValue(new AppError('Schedule not found', 404));
 
         adminRequest.params = { id: '1' };
 
@@ -3224,7 +3237,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.deleteSchedule as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (deleteAdminSchedule as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.params = { id: '1' };
 
@@ -3241,7 +3254,7 @@ describe('Controllers', () => {
     describe('updateAdminBookingStatus', () => {
       it('should update booking status successfully', async () => {
         const mockUpdatedBooking = { _id: '1', userId: 'user1', status: 'CONFIRMED' };
-        (AdminService.updateBookingStatus as jest.Mock).mockResolvedValue(mockUpdatedBooking);
+        (updateBookingStatusService as jest.Mock).mockResolvedValue(mockUpdatedBooking);
 
         adminRequest.params = { id: '1' };
         adminRequest.body = { status: 'CONFIRMED' };
@@ -3269,7 +3282,7 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (AdminService.updateBookingStatus as jest.Mock).mockRejectedValue(new AppError('Booking not found', 404));
+        (updateBookingStatusService as jest.Mock).mockRejectedValue(new AppError('Booking not found', 404));
 
         adminRequest.params = { id: '1' };
         adminRequest.body = { status: 'CONFIRMED' };
@@ -3284,7 +3297,7 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (AdminService.updateBookingStatus as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (updateBookingStatusService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
         adminRequest.params = { id: '1' };
         adminRequest.body = { status: 'CONFIRMED' };

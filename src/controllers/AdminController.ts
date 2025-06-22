@@ -1,6 +1,27 @@
 import { Response } from 'express';
 
-import AdminService from '../services/AdminService';
+import {
+  getAllUsers as getAllUsersService,
+  updateUserRole as updateUserRoleService,
+  deleteUser as deleteUserService,
+  getAllValets as getAllValetsService,
+  createValet as createValetService,
+  updateValet as updateValetService,
+  deleteValet as deleteValetService,
+  createLocation as createLocationService,
+  updateLocation as updateLocationService,
+  deleteLocation as deleteLocationService,
+  getAllSchedules as getAllSchedulesService,
+  createSchedule as createScheduleService,
+  updateSchedule as updateScheduleService,
+  deleteSchedule as deleteScheduleService,
+  createBulkSchedules as createBulkSchedulesService,
+  getAllBookings as getAllBookingsService,
+  updateBookingStatus as updateBookingStatusService,
+  getAnalyticsOverview as getAnalyticsOverviewService,
+  getRevenueAnalytics as getRevenueAnalyticsService,
+  getBookingAnalytics as getBookingAnalyticsService
+} from '../services/AdminService';
 import {
   AuthenticatedRequest,
   UserRole,
@@ -144,7 +165,7 @@ function isUpdateScheduleRequestBody(body: unknown): body is IUpdateScheduleRequ
 export const getAllUsers = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
-  const result = await AdminService.getAllUsers({ page, limit });
+  const result = await getAllUsersService({ page, limit });
 
   res.status(200).json({
     success: true,
@@ -167,7 +188,7 @@ export const updateUserRole = withErrorHandling(async (req: AuthenticatedRequest
   }
 
   const { role } = req.body;
-  const user = await AdminService.updateUserRole(id, role);
+  const user = await updateUserRoleService(id, role);
   sendSuccess(res, user);
 });
 
@@ -185,13 +206,13 @@ export const deleteUser = withErrorHandling(async (req: AuthenticatedRequest, re
     return;
   }
 
-  await AdminService.deleteUser(id);
+  await deleteUserService(id);
   sendSuccess(res, undefined, 'User deleted successfully');
 });
 
 // Valet Management
 export const getAllValets = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const valets = await AdminService.getAllValets();
+  const valets = await getAllValetsService();
   sendSuccess(res, valets);
 });
 
@@ -206,7 +227,7 @@ export const createValet = withErrorHandling(async (req: AuthenticatedRequest, r
     role: 'VALET' as const
   };
 
-  const valet = await AdminService.createValet(valetData);
+  const valet = await createValetService(valetData);
   sendSuccess(res, valet, undefined, 201);
 });
 
@@ -223,7 +244,7 @@ export const updateValet = withErrorHandling(async (req: AuthenticatedRequest, r
     return;
   }
 
-  const valet = await AdminService.updateValet(id, req.body);
+  const valet = await updateValetService(id, req.body);
   sendSuccess(res, valet);
 });
 
@@ -235,7 +256,7 @@ export const deleteValet = withErrorHandling(async (req: AuthenticatedRequest, r
     return;
   }
 
-  await AdminService.deleteValet(id);
+  await deleteValetService(id);
   sendSuccess(res, undefined, 'Valet deleted successfully');
 });
 
@@ -246,7 +267,7 @@ export const createLocation = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const location = await AdminService.createLocation(req.body);
+  const location = await createLocationService(req.body);
   sendSuccess(res, location, undefined, 201);
 });
 
@@ -263,7 +284,7 @@ export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const location = await AdminService.updateLocation(id, req.body);
+  const location = await updateLocationService(id, req.body);
   sendSuccess(res, location);
 });
 
@@ -275,13 +296,13 @@ export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  await AdminService.deleteLocation(id);
+  await deleteLocationService(id);
   sendSuccess(res, undefined, 'Location deleted successfully');
 });
 
 // Schedule Management
 export const getAllSchedules = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const schedules = await AdminService.getAllSchedules();
+  const schedules = await getAllSchedulesService();
   sendSuccess(res, schedules);
 });
 
@@ -291,7 +312,7 @@ export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const schedule = await AdminService.createSchedule(req.body);
+  const schedule = await createScheduleService(req.body);
   sendSuccess(res, schedule, undefined, 201);
 });
 
@@ -308,7 +329,7 @@ export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  const schedule = await AdminService.updateSchedule(id, req.body);
+  const schedule = await updateScheduleService(id, req.body);
   sendSuccess(res, schedule);
 });
 
@@ -320,7 +341,7 @@ export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
-  await AdminService.deleteSchedule(id);
+  await deleteScheduleService(id);
   sendSuccess(res, undefined, 'Schedule deleted successfully');
 });
 
@@ -362,7 +383,7 @@ export const createBulkSchedules = withErrorHandling(
     const { locationId } = bodyObj;
     const validatedSchedules = validatedScheduleData;
 
-    const result = await AdminService.createBulkSchedules(locationId, validatedSchedules);
+    const result = await createBulkSchedulesService(locationId, validatedSchedules);
 
     if (result.failed.length > 0) {
       res.status(207).json({
@@ -382,7 +403,7 @@ export const getAllBookings = withErrorHandling(async (req: AuthenticatedRequest
     endDate: req.query.endDate as string
   };
 
-  const bookings = await AdminService.getAllBookings(filters);
+  const bookings = await getAllBookingsService(filters);
   sendSuccess(res, bookings);
 });
 
@@ -401,14 +422,14 @@ export const updateBookingStatus = withErrorHandling(
     }
 
     const { status } = req.body;
-    const booking = await AdminService.updateBookingStatus(id, status);
+    const booking = await updateBookingStatusService(id, status);
     sendSuccess(res, booking);
   });
 
 // Analytics
 export const getAnalyticsOverview = withErrorHandling(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const analytics = await AdminService.getAnalyticsOverview();
+    const analytics = await getAnalyticsOverviewService();
     sendSuccess(res, analytics);
   });
 
@@ -419,12 +440,12 @@ export const getRevenueAnalytics = withErrorHandling(
       endDate: req.query.endDate as string
     };
 
-    const analytics = await AdminService.getRevenueAnalytics(filters);
+    const analytics = await getRevenueAnalyticsService(filters);
     sendSuccess(res, analytics);
   });
 
 export const getBookingAnalytics = withErrorHandling(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const analytics = await AdminService.getBookingAnalytics();
+    const analytics = await getBookingAnalyticsService();
     sendSuccess(res, analytics);
   }); 
