@@ -146,6 +146,7 @@ module.exports = {
         '@typescript-eslint/no-unsafe-assignment': 'off',
         '@typescript-eslint/no-unsafe-member-access': 'off',
         '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-misused-promises': 'off',
         'security/detect-object-injection': 'off',
         'security/detect-non-literal-fs-filename': 'off',
       },

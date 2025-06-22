@@ -179,6 +179,17 @@ export const changePassword = withErrorHandling(async (req: AuthenticatedRequest
 
   const { currentPassword, newPassword } = req.body as ChangePasswordRequestBody;
 
+  // Validate required fields
+  if (currentPassword === undefined || currentPassword.trim().length === 0) {
+    sendError(res, 'Current password is required', 400);
+    return;
+  }
+
+  if (newPassword === undefined || newPassword.trim().length === 0) {
+    sendError(res, 'New password is required', 400);
+    return;
+  }
+
   const user = await User.findById(userId).select('+password');
   if (user === null) {
     sendError(res, 'User not found', 401);
