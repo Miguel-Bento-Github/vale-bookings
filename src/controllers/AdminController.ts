@@ -163,6 +163,11 @@ function isUpdateScheduleRequestBody(body: unknown): body is IUpdateScheduleRequ
 
 // User Management
 export const getAllUsers = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const result = await getAllUsersService({ page, limit });
@@ -175,6 +180,11 @@ export const getAllUsers = withErrorHandling(async (req: AuthenticatedRequest, r
 });
 
 export const updateUserRole = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const { id } = req.params;
 
   if (id === undefined || id === null || id.trim().length === 0) {
@@ -193,6 +203,11 @@ export const updateUserRole = withErrorHandling(async (req: AuthenticatedRequest
 });
 
 export const deleteUser = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const { id } = req.params;
   const currentUserId = req.user?.userId;
 
@@ -212,11 +227,21 @@ export const deleteUser = withErrorHandling(async (req: AuthenticatedRequest, re
 
 // Valet Management
 export const getAllValets = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const valets = await getAllValetsService();
   sendSuccess(res, valets);
 });
 
 export const createValet = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   if (!isCreateValetRequestBody(req.body)) {
     sendError(res, 'Invalid valet data', 400);
     return;
@@ -232,6 +257,11 @@ export const createValet = withErrorHandling(async (req: AuthenticatedRequest, r
 });
 
 export const updateValet = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const { id } = req.params;
 
   if (id === undefined || id === null || id.trim().length === 0) {
@@ -249,6 +279,11 @@ export const updateValet = withErrorHandling(async (req: AuthenticatedRequest, r
 });
 
 export const deleteValet = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const { id } = req.params;
 
   if (id === undefined || id === null || id.trim().length === 0) {
@@ -262,6 +297,11 @@ export const deleteValet = withErrorHandling(async (req: AuthenticatedRequest, r
 
 // Location Management
 export const createLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   if (!isCreateLocationRequestBody(req.body)) {
     sendError(res, 'Invalid location data', 400);
     return;
@@ -272,6 +312,11 @@ export const createLocation = withErrorHandling(async (req: AuthenticatedRequest
 });
 
 export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const { id } = req.params;
 
   if (id === undefined || id === null || id.trim().length === 0) {
@@ -289,6 +334,11 @@ export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest
 });
 
 export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const { id } = req.params;
 
   if (id === undefined || id === null || id.trim().length === 0) {
@@ -302,11 +352,21 @@ export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest
 
 // Schedule Management
 export const getAllSchedules = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const schedules = await getAllSchedulesService();
   sendSuccess(res, schedules);
 });
 
 export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   if (!isCreateScheduleRequestBody(req.body)) {
     sendError(res, 'Invalid schedule data', 400);
     return;
@@ -317,6 +377,11 @@ export const createSchedule = withErrorHandling(async (req: AuthenticatedRequest
 });
 
 export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const { id } = req.params;
 
   if (id === undefined || id === null || id.trim().length === 0) {
@@ -334,6 +399,11 @@ export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest
 });
 
 export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const { id } = req.params;
 
   if (id === undefined || id === null || id.trim().length === 0) {
@@ -347,6 +417,11 @@ export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest
 
 export const createBulkSchedules = withErrorHandling(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.user?.role !== 'ADMIN') {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+
     const bodyObj = req.body as Record<string, unknown>;
 
     if (
@@ -397,6 +472,11 @@ export const createBulkSchedules = withErrorHandling(
 
 // Booking Oversight
 export const getAllBookings = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
   const filters = {
     status: req.query.status as BookingStatus,
     startDate: req.query.startDate as string,
@@ -409,6 +489,11 @@ export const getAllBookings = withErrorHandling(async (req: AuthenticatedRequest
 
 export const updateBookingStatus = withErrorHandling(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.user?.role !== 'ADMIN') {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+
     const { id } = req.params;
 
     if (id === undefined || id === null || id.trim().length === 0) {
@@ -429,12 +514,22 @@ export const updateBookingStatus = withErrorHandling(
 // Analytics
 export const getAnalyticsOverview = withErrorHandling(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.user?.role !== 'ADMIN') {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+
     const analytics = await getAnalyticsOverviewService();
     sendSuccess(res, analytics);
   });
 
 export const getRevenueAnalytics = withErrorHandling(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.user?.role !== 'ADMIN') {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+
     const filters = {
       startDate: req.query.startDate as string,
       endDate: req.query.endDate as string
@@ -446,6 +541,11 @@ export const getRevenueAnalytics = withErrorHandling(
 
 export const getBookingAnalytics = withErrorHandling(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.user?.role !== 'ADMIN') {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+
     const analytics = await getBookingAnalyticsService();
     sendSuccess(res, analytics);
   }); 
