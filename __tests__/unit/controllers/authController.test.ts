@@ -1,7 +1,12 @@
 // Mock User model (declare with var for hoisting)
-var mockFindById = jest.fn();
-var mockFindByIdAndDelete = jest.fn();
-var mockFind = jest.fn();
+import { compare, hash } from 'bcryptjs';
+import { Request, Response } from 'express';
+
+import { UserRole } from '../../../src/types';
+
+const mockFindById = jest.fn();
+const mockFindByIdAndDelete = jest.fn();
+const mockFind = jest.fn();
 
 jest.doMock('../../../src/models/User', () => ({
   __esModule: true,
@@ -12,10 +17,6 @@ jest.doMock('../../../src/models/User', () => ({
   }
 }));
 
-import { Request, Response } from 'express';
-import bcryptjs from 'bcryptjs';
-import { UserRole } from '../../../src/types';
-
 // Controller functions will be assigned after import
 let me: typeof import('../../../src/controllers/AuthController').me;
 let changePassword: typeof import('../../../src/controllers/AuthController').changePassword;
@@ -24,7 +25,10 @@ let getAllUsers: typeof import('../../../src/controllers/AuthController').getAll
 let deleteUser: typeof import('../../../src/controllers/AuthController').deleteUser;
 
 // Mock bcryptjs
-jest.mock('bcryptjs');
+jest.mock('bcryptjs', () => ({
+  compare: jest.fn(),
+  hash: jest.fn()
+}));
 
 // Mock sendSuccess and sendError
 jest.mock('../../../src/utils/responseHelpers', () => ({
@@ -149,8 +153,8 @@ describe('AuthController Extended Tests', () => {
       };
       const mockSelect = jest.fn().mockResolvedValue(mockUser);
       mockFindById.mockReturnValueOnce({ select: mockSelect });
-      jest.spyOn(bcryptjs, 'compare').mockImplementation(() => Promise.resolve(true));
-      jest.spyOn(bcryptjs, 'hash').mockImplementation(() => Promise.resolve('$2a$12$newHashedPassword'));
+      jest.spyOn({ compare }, 'compare').mockImplementation(() => Promise.resolve(true));
+      jest.spyOn({ hash }, 'hash').mockImplementation(() => Promise.resolve('$2a$12$newHashedPassword'));
       mockAuthenticatedRequest.body = {
         currentPassword: 'oldPassword123',
         newPassword: 'newPassword123'
@@ -161,8 +165,8 @@ describe('AuthController Extended Tests', () => {
         success: true,
         message: 'Password changed successfully'
       });
-      expect(bcryptjs.compare).toHaveBeenCalledWith('oldPassword123', '$2a$12$hashedPassword');
-      expect(bcryptjs.hash).toHaveBeenCalledWith('newPassword123', 12);
+      expect(compare).toHaveBeenCalledWith('oldPassword123', '$2a$12$hashedPassword');
+      expect(hash).toHaveBeenCalledWith('newPassword123', 12);
       expect(mockUser.save).toHaveBeenCalled();
     });
     it('should return 401 for missing user ID', async () => {
@@ -208,7 +212,7 @@ describe('AuthController Extended Tests', () => {
       };
       const mockSelect = jest.fn().mockResolvedValue(mockUser);
       mockFindById.mockReturnValueOnce({ select: mockSelect });
-      jest.spyOn(bcryptjs, 'compare').mockImplementation(() => Promise.resolve(false));
+      jest.spyOn({ compare }, 'compare').mockImplementation(() => Promise.resolve(false));
       mockAuthenticatedRequest.body = {
         currentPassword: 'wrongPassword',
         newPassword: 'newPassword123'
