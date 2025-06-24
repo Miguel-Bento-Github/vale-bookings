@@ -3,8 +3,8 @@ import { Server as HTTPServer } from 'http';
 import { verify } from 'jsonwebtoken';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 
-import { logInfo, logError } from '../utils/logger';
 import { UserRole } from '../types';
+import { logInfo, logError } from '../utils/logger';
 
 interface AuthenticatedSocket extends Socket {
     userId?: string;

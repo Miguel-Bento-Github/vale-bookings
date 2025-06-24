@@ -14,7 +14,7 @@ import { createUser, findByEmail, findById } from './UserService';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'your-super-secret-jwt-key-change-this-in-production';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? 'your-super-secret-refresh-key-change-this-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '15m';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '45m';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN ?? '7d';
 
 export async function register(
