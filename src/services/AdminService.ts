@@ -28,6 +28,8 @@ import {
   checkDocumentExists
 } from '../utils/mongoHelpers';
 
+import { emitBookingUpdate, sendUserNotification } from './WebSocketService';
+
 interface IUserWithStatistics extends IUserDocument {
   statistics?: {
     totalBookings: number;
@@ -453,6 +455,36 @@ export const updateBookingStatus = async (bookingId: string, status: BookingStat
 
   if (!updatedBooking) {
     throw new AppError('Failed to update booking', 500);
+  }
+
+  // Emit WebSocket event for status update
+  emitBookingUpdate({
+    bookingId: String(updatedBooking._id),
+    status: updatedBooking.status,
+    locationId: String(updatedBooking.locationId),
+    userId: String(updatedBooking.userId),
+    timestamp: new Date()
+  });
+
+  // Send notification for important status changes
+  if (['COMPLETED', 'CANCELLED'].includes(status)) {
+    const notificationType = status === 'COMPLETED' ? 'booking_completed' : 'booking_cancelled';
+    const title = status === 'COMPLETED' ? 'Booking Completed' : 'Booking Cancelled';
+    const message = status === 'COMPLETED'
+      ? 'Your valet parking service has been completed'
+      : 'Your valet parking booking has been cancelled';
+
+    sendUserNotification({
+      userId: String(updatedBooking.userId),
+      type: notificationType,
+      title,
+      message,
+      data: {
+        bookingId: String(updatedBooking._id),
+        locationId: String(updatedBooking.locationId)
+      },
+      timestamp: new Date()
+    });
   }
 
   return updatedBooking;
