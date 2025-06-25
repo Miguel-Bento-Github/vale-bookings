@@ -152,25 +152,25 @@ function setupEventHandlers(): void {
 
     // Handle booking status subscription
     socket.on('subscribe:booking', (bookingId: string) => {
-      console.info(`🔔 Subscribe request - User: ${userId}, Booking: ${bookingId}`);
+      logInfo(`🔔 Subscribe request - User: ${userId}, Booking: ${bookingId}`);
       if (typeof bookingId === 'string' && bookingId.trim() !== '') {
         void socket.join(`booking:${bookingId}`);
-        console.info(`✅ User ${userId ?? 'unknown'} subscribed to booking:${bookingId}`);
+        logInfo(`✅ User ${userId ?? 'unknown'} subscribed to booking:${bookingId}`);
         logInfo(`User ${userId ?? 'unknown'} subscribed to booking ${bookingId}`);
       } else {
-        console.warn(`❌ Invalid booking ID for subscription: ${bookingId}`);
+        logError(`❌ Invalid booking ID for subscription: ${bookingId}`);
       }
     });
 
     // Handle location availability subscription
     socket.on('subscribe:location', (locationId: string) => {
-      console.info(`🔔 Subscribe request - User: ${userId}, Location: ${locationId}`);
+      logInfo(`🔔 Subscribe request - User: ${userId}, Location: ${locationId}`);
       if (typeof locationId === 'string' && locationId.trim() !== '') {
         void socket.join(`location:${locationId}`);
-        console.info(`✅ User ${userId ?? 'unknown'} subscribed to location:${locationId}`);
+        logInfo(`✅ User ${userId ?? 'unknown'} subscribed to location:${locationId}`);
         logInfo(`User ${userId ?? 'unknown'} subscribed to location ${locationId}`);
       } else {
-        console.warn(`❌ Invalid location ID for subscription: ${locationId}`);
+        logError(`❌ Invalid location ID for subscription: ${locationId}`);
       }
     });
 

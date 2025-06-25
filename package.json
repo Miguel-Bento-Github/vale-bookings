@@ -10,7 +10,7 @@
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
     "build": "tsc",
-    "test": "jest --forceExit --detectOpenHandles",
+    "test": "jest --forceExit",
     "test:watch": "jest --watch",
     "test:unit": "jest --testPathPattern=unit/ --forceExit",
     "test:integration": "jest --testPathPattern=integration/ --forceExit --maxWorkers=4 --testTimeout=15000",

@@ -390,8 +390,8 @@ export const getAllBookings = async (filters: IBookingFilters): Promise<IBooking
         const year = dateParts[0] as number;
         const month = dateParts[1] as number;
         const day = dateParts[2] as number;
-        // Use UTC to avoid timezone issues
-        const startDate = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed
+        // Construct start of day in local timezone to align with provided date string
+        const startDate = new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight
         dateRange.$gte = startDate;
       }
     }
@@ -407,9 +407,8 @@ export const getAllBookings = async (filters: IBookingFilters): Promise<IBooking
         const year = dateParts[0] as number;
         const month = dateParts[1] as number;
         const day = dateParts[2] as number;
-        // Use UTC to avoid timezone issues
-        const endDate = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed
-        endDate.setUTCHours(23, 59, 59, 999);
+        // Construct end of day in local timezone
+        const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
         dateRange.$lte = endDate;
       }
     }
@@ -542,8 +541,8 @@ export const getRevenueAnalytics = async (filters: IRevenueFilters): Promise<{
         const year = dateParts[0] as number;
         const month = dateParts[1] as number;
         const day = dateParts[2] as number;
-        // Use UTC to avoid timezone issues
-        const startDate = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed
+        // Construct start of day in local timezone to align with provided date string
+        const startDate = new Date(year, month - 1, day, 0, 0, 0, 0); // Local midnight
         dateQuery.$gte = startDate;
       }
     }
@@ -560,9 +559,8 @@ export const getRevenueAnalytics = async (filters: IRevenueFilters): Promise<{
         const year = dateParts[0] as number;
         const month = dateParts[1] as number;
         const day = dateParts[2] as number;
-        // Use UTC to avoid timezone issues
-        const endDate = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed
-        endDate.setUTCHours(23, 59, 59, 999);
+        // Construct end of day in local timezone
+        const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
         dateQuery.$lte = endDate;
       }
     }
