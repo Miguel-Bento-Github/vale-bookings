@@ -54,32 +54,57 @@ const connectedUsers = new Map<string, string>(); // socketId -> userId
 function setupMiddleware(): void {
   if (!io) return;
 
+  console.info('=== Setting Up WebSocket Authentication Middleware ===');
+
   io.use((socket, next) => {
+    console.info('🔐 New WebSocket connection attempt from:', socket.handshake.address);
+    console.info('Connection headers:', {
+      origin: socket.handshake.headers.origin,
+      userAgent: socket.handshake.headers['user-agent']?.substring(0, 50) + '...',
+      referer: socket.handshake.headers.referer
+    });
+
     const token = socket.handshake.auth.token as string;
+    console.info('Auth token received:', {
+      hasToken: !!token,
+      tokenLength: token?.length || 0,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : 'none'
+    });
 
     if (!token || token.trim() === '') {
-      logInfo('WebSocket auth: No token provided');
+      logInfo('❌ WebSocket auth: No token provided');
       return next(new Error('Authentication token required'));
     }
 
     try {
       const jwtSecret = process.env.JWT_SECRET ?? 'fallback-secret-key';
       if (jwtSecret.trim() === '') {
-        logError('WebSocket auth: JWT_SECRET not configured');
+        logError('❌ WebSocket auth: JWT_SECRET not configured');
         return next(new Error('JWT secret not configured'));
       }
 
+      console.info('🔍 Verifying JWT token...');
       const decoded = verify(token, jwtSecret) as unknown as SocketAuthPayload;
-      logInfo(`WebSocket auth: User ${decoded.userId} connected successfully`);
+      console.info('✅ JWT verification successful:', {
+        userId: decoded.userId,
+        role: decoded.role,
+        email: decoded.email,
+        exp: new Date(decoded.exp * 1000).toISOString()
+      });
+      
+      logInfo(`✅ WebSocket auth: User ${decoded.userId} connected successfully`);
       
       (socket as AuthenticatedSocket).userId = decoded.userId;
       (socket as AuthenticatedSocket).userRole = decoded.role;
       next();
     } catch (error) {
+      console.error('❌ JWT verification failed:', error);
       logError('WebSocket auth: Token verification failed:', error);
       next(new Error('Invalid authentication token'));
     }
   });
+
+  console.info('✅ WebSocket authentication middleware configured');
 }
 
 /**
@@ -88,20 +113,31 @@ function setupMiddleware(): void {
 function setupEventHandlers(): void {
   if (!io) return;
 
+  console.info('=== Setting Up WebSocket Event Handlers ===');
+
   io.on('connection', (socket) => {
     const authSocket = socket as AuthenticatedSocket;
     const userId = authSocket.userId;
 
+    console.info('🎯 New authenticated connection:', {
+      socketId: socket.id,
+      userId: userId,
+      userRole: authSocket.userRole,
+      timestamp: new Date().toISOString()
+    });
+
     if (userId !== undefined && userId.trim() !== '') {
       connectedUsers.set(socket.id, userId);
-      logInfo(`User ${userId} connected via WebSocket`);
+      console.info(`📥 User ${userId} joined WebSocket (total connections: ${connectedUsers.size})`);
 
       // Join user-specific room
       void socket.join(`user:${userId}`);
+      console.info(`🏠 User ${userId} joined room: user:${userId}`);
 
       // Join role-specific room if admin
       if (authSocket.userRole === 'ADMIN') {
         void socket.join('admins');
+        console.info(`👑 Admin ${userId} joined admins room`);
       }
     }
 
@@ -109,76 +145,122 @@ function setupEventHandlers(): void {
     socket.on('disconnect', () => {
       if (userId !== undefined && userId.trim() !== '') {
         connectedUsers.delete(socket.id);
+        console.info(`📤 User ${userId} disconnected from WebSocket (remaining: ${connectedUsers.size})`);
         logInfo(`User ${userId} disconnected from WebSocket`);
       }
     });
 
     // Handle booking status subscription
     socket.on('subscribe:booking', (bookingId: string) => {
+      console.info(`🔔 Subscribe request - User: ${userId}, Booking: ${bookingId}`);
       if (typeof bookingId === 'string' && bookingId.trim() !== '') {
         void socket.join(`booking:${bookingId}`);
+        console.info(`✅ User ${userId ?? 'unknown'} subscribed to booking:${bookingId}`);
         logInfo(`User ${userId ?? 'unknown'} subscribed to booking ${bookingId}`);
+      } else {
+        console.warn(`❌ Invalid booking ID for subscription: ${bookingId}`);
       }
     });
 
     // Handle location availability subscription
     socket.on('subscribe:location', (locationId: string) => {
+      console.info(`🔔 Subscribe request - User: ${userId}, Location: ${locationId}`);
       if (typeof locationId === 'string' && locationId.trim() !== '') {
         void socket.join(`location:${locationId}`);
+        console.info(`✅ User ${userId ?? 'unknown'} subscribed to location:${locationId}`);
         logInfo(`User ${userId ?? 'unknown'} subscribed to location ${locationId}`);
+      } else {
+        console.warn(`❌ Invalid location ID for subscription: ${locationId}`);
       }
     });
 
     // Handle unsubscription
     socket.on('unsubscribe:booking', (bookingId: string) => {
+      console.info(`🔕 Unsubscribe request - User: ${userId}, Booking: ${bookingId}`);
       if (typeof bookingId === 'string' && bookingId.trim() !== '') {
         void socket.leave(`booking:${bookingId}`);
+        console.info(`✅ User ${userId ?? 'unknown'} unsubscribed from booking:${bookingId}`);
       }
     });
 
     socket.on('unsubscribe:location', (locationId: string) => {
+      console.info(`🔕 Unsubscribe request - User: ${userId}, Location: ${locationId}`);
       if (typeof locationId === 'string' && locationId.trim() !== '') {
         void socket.leave(`location:${locationId}`);
+        console.info(`✅ User ${userId ?? 'unknown'} unsubscribed from location:${locationId}`);
       }
     });
   });
+
+  console.info('✅ WebSocket event handlers configured');
 }
 
 /**
  * Initialize WebSocket server
  */
 export function initializeWebSocket(httpServer: HTTPServer): void {
+  console.info('=== Initializing WebSocket Server ===');
+  
+  const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:9000';
+  console.info('CORS settings:', {
+    origin: frontendUrl,
+    methods: ['GET', 'POST'],
+    credentials: true
+  });
+
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL ?? 'http://localhost:9000',
+      origin: frontendUrl,
       methods: ['GET', 'POST'],
       credentials: true
     },
     transports: ['websocket', 'polling']
   });
 
+  console.info('Socket.IO server created, setting up middleware and handlers...');
   setupMiddleware();
   setupEventHandlers();
 
-  logInfo('WebSocket service initialized');
+  logInfo('✅ WebSocket service initialized successfully');
 }
 
 /**
  * Emit booking status update
  */
 export function emitBookingUpdate(data: BookingUpdateData): void {
-  if (!io) return;
+  console.info('📡 === Emitting Booking Update ===');
+  console.info('Booking update data:', {
+    bookingId: data.bookingId,
+    status: data.status,
+    userId: data.userId,
+    locationId: data.locationId,
+    timestamp: data.timestamp.toISOString()
+  });
+
+  if (!io) {
+    console.error('❌ Cannot emit booking update - WebSocket server not initialized');
+    return;
+  }
+
+  console.info('Connected users count:', connectedUsers.size);
+  console.info('Connected users:', Array.from(connectedUsers.values()));
 
   try {
+    console.info('📢 Emitting to rooms:');
+    
     // Emit to specific booking subscribers
-    io.to(`booking:${data.bookingId}`).emit('booking:updated', {
+    const bookingRoom = `booking:${data.bookingId}`;
+    console.info(`  - ${bookingRoom}`);
+    io.to(bookingRoom).emit('booking:updated', {
       bookingId: data.bookingId,
       status: data.status,
       timestamp: data.timestamp
     });
 
     // Emit to user's personal room
-    io.to(`user:${data.userId}`).emit('booking:status_changed', {
+    const userRoom = `user:${data.userId}`;
+    console.info(`  - ${userRoom}`);
+    io.to(userRoom).emit('booking:status_changed', {
       bookingId: data.bookingId,
       status: data.status,
       locationId: data.locationId,
@@ -186,6 +268,7 @@ export function emitBookingUpdate(data: BookingUpdateData): void {
     });
 
     // Emit to admins
+    console.info(`  - admins`);
     io.to('admins').emit('admin:booking_updated', {
       bookingId: data.bookingId,
       userId: data.userId,
@@ -194,8 +277,10 @@ export function emitBookingUpdate(data: BookingUpdateData): void {
       timestamp: data.timestamp
     });
 
+    console.info('✅ All booking update events emitted successfully');
     logInfo(`Booking update emitted for booking ${data.bookingId}`);
   } catch (error) {
+    console.error('❌ Failed to emit booking update:', error);
     logError('Failed to emit booking update:', error);
   }
 }
