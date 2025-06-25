@@ -268,7 +268,7 @@ export function emitBookingUpdate(data: BookingUpdateData): void {
     });
 
     // Emit to admins
-    console.info(`  - admins`);
+    console.info('  - admins');
     io.to('admins').emit('admin:booking_updated', {
       bookingId: data.bookingId,
       userId: data.userId,
