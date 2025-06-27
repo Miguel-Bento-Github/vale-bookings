@@ -83,3 +83,36 @@ export function calculateDynamicPrice(
     totalAmount
   };
 }
+
+// Placeholder for Stripe integration
+export interface PaymentIntentData {
+  bookingId: string;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
+  customerId: string;
+  savePaymentMethod?: boolean;
+}
+
+export function createPaymentIntent(data: PaymentIntentData): Promise<{
+  paymentIntentId: string;
+  clientSecret: string;
+  amount: number;
+  currency: string;
+}> {
+  // TODO: Implement Stripe integration
+  return Promise.resolve({
+    paymentIntentId: 'pi_mock',
+    clientSecret: 'secret_mock',
+    amount: data.amount,
+    currency: data.currency.toLowerCase()
+  });
+}
+
+export function handleStripeWebhook(
+  _signature: string,
+  _payload: string
+): Promise<void> {
+  // TODO: Implement Stripe webhook handling
+  return Promise.resolve();
+}
