@@ -18,4 +18,7 @@ export {
   type UserRole,
   type BookingStatus,
   type DayOfWeek
-} from './validation'; 
+} from './validation';
+
+// Widget constants
+export * from './widget'; 
