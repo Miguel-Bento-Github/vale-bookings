@@ -8,12 +8,12 @@ beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create({
     binary: {
       version: '6.0.4', // Use stable version
-      downloadDir: './node_modules/.cache/mongodb-memory-server', // Cache binaries
+      downloadDir: './node_modules/.cache/mongodb-memory-server' // Cache binaries
     },
     instance: {
       dbName: 'test_valet_db',
-      storageEngine: 'ephemeralForTest', // Fastest storage engine for tests
-    },
+      storageEngine: 'ephemeralForTest' // Fastest storage engine for tests
+    }
   });
 
   const mongoUri = mongoServer.getUri();
@@ -27,7 +27,7 @@ beforeAll(async () => {
     connectTimeoutMS: 2000, // Faster connection timeout
     maxIdleTimeMS: 30000, // Connection idle time
     bufferCommands: false, // Disable command buffering
-    waitQueueTimeoutMS: 1000, // Fast queue timeout
+    waitQueueTimeoutMS: 1000 // Fast queue timeout
   });
 
   // Warm up the connection

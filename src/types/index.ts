@@ -10,4 +10,5 @@ export * from './common';
 export * from './user';
 export * from './location';
 export * from './booking';
-export * from './schedule'; 
+export * from './schedule';
+export * from './payment'; 
