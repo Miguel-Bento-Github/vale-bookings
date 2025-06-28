@@ -5,13 +5,6 @@ import { ApiKey } from '../models/ApiKey';
 import { IApiKey } from '../types/widget';
 import { logInfo, logWarning, logError } from '../utils/logger';
 
-// Create logger functions
-const logger = {
-  info: logInfo,
-  warn: logWarning,
-  error: logError
-};
-
 // Extend IApiKey with custom methods
 interface IApiKeyWithMethods extends IApiKey {
   validateDomain(domain: string): boolean;
@@ -103,7 +96,7 @@ export const validateApiKey = async (rawKey: string): Promise<IApiKeyWithMethods
     
     return apiKey;
   } catch (error) {
-    logger.error('Error validating API key', error);
+    logError('Error validating API key', error);
     return null;
   }
 };
@@ -149,7 +142,7 @@ export const validateRequest = async (req: Request): Promise<{
   
   // Validate domain against whitelist
   if (!apiKey.validateDomain(domain)) {
-    logger.warn(`Domain ${domain} not allowed for API key ${apiKey.keyPrefix}`);
+    logWarning(`Domain ${domain} not allowed for API key ${apiKey.keyPrefix}`);
     return {
       isValid: false,
       error: 'Domain not allowed',
@@ -159,7 +152,7 @@ export const validateRequest = async (req: Request): Promise<{
   
   // Update usage statistics (async, don't wait)
   apiKey.incrementUsage(req.path).catch((err: Error) => {
-    logger.error('Error updating API key usage', err);
+    logError('Error updating API key usage', err);
   });
   
   return {
@@ -195,7 +188,7 @@ export const generateApiKey = async (params: {
     throw new Error('Failed to generate API key');
   }
   
-  logger.info(`API key created: ${savedKey.keyPrefix} for domains: ${params.domainWhitelist.join(', ')}`);
+  logInfo(`API key created: ${savedKey.keyPrefix} for domains: ${params.domainWhitelist.join(', ')}`);
   
   return { apiKey: savedKey as IApiKeyWithMethods, rawKey };
 };
@@ -223,7 +216,7 @@ export const rotateApiKey = async (
     throw new Error('Failed to create rotated key');
   }
   
-  logger.info(`API key rotated: ${oldKey.keyPrefix} -> ${newKey.keyPrefix}`);
+  logInfo(`API key rotated: ${oldKey.keyPrefix} -> ${newKey.keyPrefix}`);
   
   return { oldKey, newKey, rawKey };
 };
@@ -240,7 +233,7 @@ export const revokeApiKey = async (apiKeyId: string): Promise<IApiKeyWithMethods
   apiKey.isActive = false;
   await apiKey.save();
   
-  logger.info(`API key revoked: ${apiKey.keyPrefix}`);
+  logInfo(`API key revoked: ${apiKey.keyPrefix}`);
   
   return apiKey;
 };
@@ -277,7 +270,7 @@ export const cleanupExpiredKeys = async (): Promise<number> => {
   const result = await (ApiKey as any).cleanupExpired();
   
   if (result.deletedCount > 0) {
-    logger.info(`Cleaned up ${result.deletedCount} expired API keys`);
+    logInfo(`Cleaned up ${result.deletedCount} expired API keys`);
   }
   
   return result.deletedCount;

@@ -5,13 +5,6 @@ import { WIDGET_ERROR_CODES, RATE_LIMIT_DEFAULTS } from '../constants/widget';
 import { RateLimitConfig, IApiKey } from '../types/widget';
 import { logInfo, logWarning, logError } from '../utils/logger';
 
-// Create logger functions
-const logger = {
-  info: logInfo,
-  warn: logWarning,
-  error: logError
-};
-
 // Configuration
 const BLOCK_DURATION = 3600000; // 1 hour
 
@@ -40,11 +33,11 @@ const initializeRedis = (redisInstance?: Redis): Redis => {
   });
 
   redis.on('error', (err: Error) => {
-    logger.error('Redis connection error:', err);
+    logError('Redis connection error:', err);
   });
 
   redis.on('connect', () => {
-    logger.info('Connected to Redis for rate limiting');
+    logInfo('Connected to Redis for rate limiting');
   });
 
   return redis;
@@ -98,7 +91,7 @@ const isIPBlocked = (ip: string): boolean => {
 const blockIP = (ip: string, duration: number = BLOCK_DURATION): void => {
   const blockedUntil = new Date(Date.now() + duration);
   blockedIPs.set(ip, blockedUntil);
-  logger.warn(`IP ${ip} blocked until ${blockedUntil.toISOString()}`);
+  logWarning(`IP ${ip} blocked until ${blockedUntil.toISOString()}`);
 };
 
 /**
@@ -152,7 +145,7 @@ export const checkRateLimit = async (
     
     // Calculate when the rate limit will reset
     let resetAt = new Date(now + config.windowMs);
-    if (oldestRequest && oldestRequest.length >= 2) {
+    if (oldestRequest && oldestRequest.length >= 2 && oldestRequest[1]) {
       const oldestTimestamp = parseInt(oldestRequest[1]);
       resetAt = new Date(oldestTimestamp + config.windowMs);
     }
@@ -180,7 +173,7 @@ export const checkRateLimit = async (
       resetAt
     };
   } catch (error) {
-    logger.error('Rate limit check error:', error);
+    logError('Rate limit check error:', error);
     
     // In case of Redis failure, allow the request but log the error
     return {
@@ -231,11 +224,11 @@ const trackAbuse = async (ip: string, apiKeyPrefix?: string): Promise<void> => {
       await redis.del(abuseKey);
       
       if (apiKeyPrefix) {
-        logger.warn(`Potential abuse detected from IP ${ip} using API key ${apiKeyPrefix}`);
+        logWarning(`Potential abuse detected from IP ${ip} using API key ${apiKeyPrefix}`);
       }
     }
   } catch (error) {
-    logger.error('Error tracking abuse:', error);
+    logError('Error tracking abuse:', error);
   }
 };
 
@@ -304,7 +297,7 @@ export const createApiKeyMiddleware = () => {
 
       next();
     } catch (error) {
-      logger.error('Rate limiting middleware error:', error);
+      logError('Rate limiting middleware error:', error);
       // Allow request on error but log it
       next();
     }
@@ -349,7 +342,7 @@ export const createIPMiddleware = (config: RateLimitConfig = RATE_LIMIT_DEFAULTS
 
       next();
     } catch (error) {
-      logger.error('IP rate limiting error:', error);
+      logError('IP rate limiting error:', error);
       next();
     }
   };
@@ -381,7 +374,7 @@ export const createEmailMiddleware = (config: RateLimitConfig = {
 
       next();
     } catch (error) {
-      logger.error('Email rate limiting error:', error);
+      logError('Email rate limiting error:', error);
       next();
     }
   };
@@ -393,7 +386,7 @@ export const createEmailMiddleware = (config: RateLimitConfig = {
 export const resetRateLimit = async (identifier: string, endpoint?: string): Promise<void> => {
   const key = generateKey(identifier, endpoint);
   await redis.del(key);
-  logger.info(`Rate limit reset for ${key}`);
+  logInfo(`Rate limit reset for ${key}`);
 };
 
 /**
@@ -434,7 +427,7 @@ export const getUsage = async (
       resetAt
     };
   } catch (error) {
-    logger.error('Error getting usage:', error);
+    logError('Error getting usage:', error);
     return {
       used: 0,
       limit: config.maxRequests,
@@ -450,7 +443,7 @@ export const getUsage = async (
 export const close = async (): Promise<void> => {
   clearInterval(cleanupInterval);
   await redis.quit();
-  logger.info('Rate limiting service closed');
+  logInfo('Rate limiting service closed');
 };
 
 /**
