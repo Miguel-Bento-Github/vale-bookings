@@ -19,7 +19,7 @@ const getEncryptionKey = (): Buffer => {
   }
 
   const encryptionKeyEnv = process.env.ENCRYPTION_KEY;
-  if (!encryptionKeyEnv) {
+  if (encryptionKeyEnv === undefined || encryptionKeyEnv === null || encryptionKeyEnv === '') {
     throw new Error('ENCRYPTION_KEY environment variable is required');
   }
 
@@ -117,7 +117,7 @@ export const decrypt = (encryptedData: string): string => {
  * Hash data using SHA-256 (for non-reversible data like API keys)
  */
 export const hash = (data: string, salt?: string): string => {
-  const dataToHash = salt ? `${data}${salt}` : data;
+  const dataToHash = salt !== undefined ? `${data}${salt}` : data;
   return crypto
     .createHash(API_KEY_CONFIG.HASH_ALGORITHM)
     .update(dataToHash)
@@ -140,7 +140,8 @@ export const generateReferenceNumber = (): string => {
   
   for (let i = 0; i < LENGTH - PREFIX.length; i++) {
     const randomIndex = crypto.randomInt(0, CHARSET.length);
-    reference += CHARSET[randomIndex];
+    const char = CHARSET.charAt(randomIndex);
+    reference += char;
   }
   
   return reference;

@@ -22,9 +22,9 @@ export interface AuditTrailEntry {
   timestamp: Date;
   userId?: string;
   ipAddress?: string;
-  previousValue?: any;
-  newValue?: any;
-  metadata?: Record<string, any>;
+  previousValue?: string | number | boolean | null;
+  newValue?: string | number | boolean | null;
+  metadata?: Record<string, string | number | boolean>;
 }
 
 /**
