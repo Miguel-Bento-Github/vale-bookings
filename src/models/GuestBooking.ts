@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+import mongoose, { Schema, model } from 'mongoose';
 
 import { 
   GUEST_BOOKING_STATUSES, 
@@ -279,5 +279,11 @@ guestBookingSchema.statics.findExpired = function() {
   return this.find({ expiresAt: { $lte: new Date() } });
 };
 
+// Create interface for static methods
+interface IGuestBookingModel extends mongoose.Model<IGuestBooking> {
+  findByReference(referenceNumber: string): Promise<IGuestBooking | null>;
+  findExpired(): Promise<IGuestBooking[]>;
+}
+
 // Export model
-export const GuestBooking = model<IGuestBooking>('GuestBooking', guestBookingSchema); 
+export const GuestBooking = model<IGuestBooking, IGuestBookingModel>('GuestBooking', guestBookingSchema); 
