@@ -5,22 +5,20 @@ import { WIDGET_ERROR_CODES } from '../constants/widget';
 import { GuestBooking } from '../models/GuestBooking';
 import Location from '../models/Location';
 import { IGuestBooking } from '../types/widget';
-import { logInfo, logWarning, logError } from '../utils/logger';
+import { logInfo, logError } from '../utils/logger';
 import { validateEmail } from '../utils/validationHelpers';
 
 
-// Extend Request interface to include apiKey
-declare global {
-  namespace Express {
-    interface Request {
-      apiKey?: {
-        _id: string;
-        keyPrefix: string;
-        name: string;
-        domainWhitelist: string[];
-        isActive: boolean;
-      };
-    }
+// Express Request augmentation for apiKey property
+declare module 'express-serve-static-core' {
+  interface Request {
+    apiKey?: {
+      _id: string;
+      keyPrefix: string;
+      name: string;
+      domainWhitelist: string[];
+      isActive: boolean;
+    };
   }
 }
 
@@ -32,14 +30,23 @@ interface IGuestBookingModel extends Model<IGuestBooking> {
 const GuestBookingModel = GuestBooking as IGuestBookingModel;
 
 // Custom validation functions
-const validateLocationQuery = (query: any): { isValid: boolean; error?: string; data?: any } => {
+interface LocationQueryValidated {
+  page: number;
+  limit: number;
+  service?: string;
+  lat?: number;
+  lng?: number;
+  radius?: number;
+}
+
+const validateLocationQuery = (query: Record<string, string | undefined>): { isValid: boolean; error?: string; data?: LocationQueryValidated } => {
   const page = parseInt(query.page) || 1;
   const limit = Math.min(parseInt(query.limit) || 10, 100);
   
   if (page < 1) return { isValid: false, error: 'Page must be greater than 0' };
   if (limit < 1 || limit > 100) return { isValid: false, error: 'Limit must be between 1 and 100' };
   
-  const result: any = { page, limit };
+  const result: LocationQueryValidated = { page, limit };
   
   if (query.service) result.service = query.service;
   if (query.lat && query.lng) {
@@ -54,7 +61,12 @@ const validateLocationQuery = (query: any): { isValid: boolean; error?: string; 
   return { isValid: true, data: result };
 };
 
-const validateAvailabilityQuery = (query: any): { isValid: boolean; error?: string; data?: any } => {
+interface AvailabilityQueryValidated {
+  date: string;
+  service: string;
+}
+
+const validateAvailabilityQuery = (query: Record<string, string | undefined>): { isValid: boolean; error?: string; data?: AvailabilityQueryValidated } => {
   if (!query.date || !query.service) {
     return { isValid: false, error: 'Date and service are required' };
   }
@@ -66,7 +78,9 @@ const validateAvailabilityQuery = (query: any): { isValid: boolean; error?: stri
   return { isValid: true, data: { date: query.date, service: query.service } };
 };
 
-const validateBookingData = (body: any): { isValid: boolean; error?: string; data?: any } => {
+type BookingRequestBody = Record<string, unknown>;
+
+const validateBookingData = (body: BookingRequestBody): { isValid: boolean; error?: string; data?: BookingRequestBody } => {
   const required = ['locationId', 'serviceId', 'guestEmail', 'guestName', 'guestPhone', 'bookingDate', 'bookingTime', 'duration', 'gdprConsent'];
   
   for (const field of required) {
@@ -394,7 +408,13 @@ const getBooking = async (req: Request, res: Response, next: NextFunction): Prom
 };
 
 // Helper function to calculate availability (simplified for now)
-const calculateAvailability = async (locationId: string, date: string, service: string): Promise<any[]> => {
+interface Slot {
+  time: string;
+  available: boolean;
+  price: number;
+}
+
+const calculateAvailability = async (locationId: string, date: string, service: string): Promise<Slot[]> => {
   // This is a simplified implementation - in reality this would involve:
   // - Location schedule
   // - Service duration
