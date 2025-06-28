@@ -11,6 +11,7 @@ import bookingRoutes from './routes/bookings';
 import locationRoutes from './routes/locations';
 import scheduleRoutes from './routes/schedules';
 import userRoutes from './routes/users';
+import widgetRoutes from './routes/widget';
 import { initializeWebSocket } from './services/WebSocketService';
 import { AppError } from './types';
 import { createPrettyLogger, responseTimeMiddleware, logError } from './utils/logger';
@@ -84,6 +85,7 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/widget/v1', widgetRoutes);
 
 // Test routes for error handling
 app.get('/api/test-error', () => {
