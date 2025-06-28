@@ -17,7 +17,7 @@ const initializeRedis = (redisInstance?: Redis): Redis => {
     return redis;
   }
 
-  if (redis) {
+  if (redis !== undefined) {
     return redis;
   }
 
@@ -26,7 +26,7 @@ const initializeRedis = (redisInstance?: Redis): Redis => {
     port: parseInt(process.env.REDIS_PORT ?? '6379'),
     password: process.env.REDIS_PASSWORD,
     keyPrefix: 'rate_limit:',
-    retryStrategy: (times: number) => {
+    retryStrategy: (times: number): number => {
       const delay = Math.min(times * 50, 2000);
       return delay;
     }
@@ -134,18 +134,20 @@ export const checkRateLimit = async (
     
     const results = await pipeline.exec();
     
-    if (!results) {
+    if (results === null || results === undefined) {
       throw new Error('Redis pipeline execution failed');
     }
     
     // The count is before adding the new request
-    const requestCountBefore = (results[1]?.[1]) ? results[1][1] as number : 0;
+    const countResult = results[1]?.[1];
+    const requestCountBefore = typeof countResult === 'number' ? countResult : 0;
     const requestCount = requestCountBefore + 1; // Include the current request
-    const oldestRequest = (results[4]?.[1]) ? results[4][1] as string[] : [];
+    const oldestResult = results[4]?.[1];
+    const oldestRequest = Array.isArray(oldestResult) ? oldestResult as string[] : [];
     
     // Calculate when the rate limit will reset
     let resetAt = new Date(now + config.windowMs);
-    if (oldestRequest && oldestRequest.length >= 2 && oldestRequest[1]) {
+    if (oldestRequest.length >= 2 && typeof oldestRequest[1] === 'string') {
       const oldestTimestamp = parseInt(oldestRequest[1]);
       resetAt = new Date(oldestTimestamp + config.windowMs);
     }
@@ -191,13 +193,13 @@ export const checkRateLimit = async (
 const getClientIP = (req: Request): string => {
   // Check various headers for real IP
   const forwardedFor = req.headers['x-forwarded-for'];
-  if (forwardedFor) {
+  if (forwardedFor !== undefined && forwardedFor !== null) {
     const ips = (forwardedFor as string).split(',').map(ip => ip.trim());
-    return ips[0] || 'unknown';
+    return ips[0] ?? 'unknown';
   }
 
   const realIP = req.headers['x-real-ip'] as string;
-  if (realIP) {
+  if (realIP !== undefined && realIP !== null && realIP !== '') {
     return realIP;
   }
 
@@ -235,116 +237,137 @@ const trackAbuse = async (ip: string, apiKeyPrefix?: string): Promise<void> => {
 /**
  * Express middleware for API key-based rate limiting
  */
-export const createApiKeyMiddleware = () => {
-  return async (req: Request & { apiKey?: IApiKey }, res: Response, next: NextFunction) => {
-    try {
-      const apiKey = req.apiKey;
-      if (!apiKey) {
-        return res.status(401).json({
-          error: 'API key required',
-          errorCode: WIDGET_ERROR_CODES.INVALID_API_KEY
-        });
-      }
+export const createApiKeyMiddleware = (): (
+  req: Request & { apiKey?: IApiKey },
+  res: Response,
+  next: NextFunction
+) => void => {
+  return (req: Request & { apiKey?: IApiKey }, res: Response, next: NextFunction): void => {
+    Promise.resolve().then(async () => {
+      try {
+        const apiKey = req.apiKey;
+        if (apiKey === undefined) {
+          res.status(401).json({
+            error: 'API key required',
+            errorCode: WIDGET_ERROR_CODES.INVALID_API_KEY
+          });
+          return;
+        }
 
-      // Check IP blocking first
-      const clientIP = getClientIP(req);
-      if (isIPBlocked(clientIP)) {
-        return res.status(429).json({
-          error: 'IP address is temporarily blocked',
-          errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED
-        });
-      }
+        // Check IP blocking first
+        const clientIP = getClientIP(req);
+        if (isIPBlocked(clientIP)) {
+          res.status(429).json({
+            error: 'IP address is temporarily blocked',
+            errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED
+          });
+          return;
+        }
 
-      // Get endpoint-specific config or fall back to global
-      const endpoint = req.path;
-      let endpointConfig: RateLimitConfig | undefined = undefined;
-      
-      if (apiKey.rateLimits?.endpoints instanceof Map) {
-        endpointConfig = apiKey.rateLimits.endpoints.get(endpoint);
-      }
-      
-      const config = endpointConfig ?? apiKey.rateLimits?.global ?? RATE_LIMIT_DEFAULTS.GLOBAL;
-
-      // Check rate limit
-      const result = await checkRateLimit(
-        `api_key:${apiKey.keyPrefix}`,
-        config,
-        endpoint
-      );
-
-      // Set rate limit headers
-      res.setHeader('X-RateLimit-Limit', result.limit);
-      res.setHeader('X-RateLimit-Remaining', result.remaining);
-      res.setHeader('X-RateLimit-Reset', result.resetAt.toISOString());
-
-      if (!result.allowed) {
-        res.setHeader('Retry-After', result.retryAfter!);
+        // Get endpoint-specific config or fall back to global
+        const endpoint = req.path;
+        let endpointConfig: RateLimitConfig | undefined = undefined;
         
-        // Track abuse - block IP if too many violations
-        await trackAbuse(clientIP, apiKey.keyPrefix);
+        if (apiKey.rateLimits?.endpoints instanceof Map) {
+          endpointConfig = apiKey.rateLimits.endpoints.get(endpoint);
+        }
         
-        return res.status(429).json({
-          error: config.message ?? 'Too many requests',
-          errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED,
-          retryAfter: result.retryAfter
-        });
-      }
+        const config = endpointConfig ?? apiKey.rateLimits?.global ?? RATE_LIMIT_DEFAULTS.GLOBAL;
 
-      // Warn if approaching limit
-      if (result.remaining <= Math.ceil(result.limit * 0.2)) {
-        res.setHeader('X-RateLimit-Warning', 'Approaching rate limit');
-      }
+        // Check rate limit
+        const result = await checkRateLimit(
+          `api_key:${apiKey.keyPrefix}`,
+          config,
+          endpoint
+        );
 
-      next();
-    } catch (error) {
+        // Set rate limit headers
+        res.setHeader('X-RateLimit-Limit', result.limit);
+        res.setHeader('X-RateLimit-Remaining', result.remaining);
+        res.setHeader('X-RateLimit-Reset', result.resetAt.toISOString());
+
+        if (!result.allowed) {
+          if (result.retryAfter !== undefined) {
+            res.setHeader('Retry-After', result.retryAfter);
+          }
+          
+          // Track abuse - block IP if too many violations
+          await trackAbuse(clientIP, apiKey.keyPrefix);
+          
+          res.status(429).json({
+            error: config.message ?? 'Too many requests',
+            errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED,
+            retryAfter: result.retryAfter
+          });
+          return;
+        }
+
+        // Warn if approaching limit
+        if (result.remaining <= Math.ceil(result.limit * 0.2)) {
+          res.setHeader('X-RateLimit-Warning', 'Approaching rate limit');
+        }
+
+        next();
+      } catch (error) {
+        logError('Rate limiting middleware error:', error);
+        // Allow request on error but log it
+        next();
+      }
+    }).catch((error) => {
       logError('Rate limiting middleware error:', error);
-      // Allow request on error but log it
       next();
-    }
+    });
   };
 };
 
 /**
  * Express middleware for IP-based rate limiting
  */
-export const createIPMiddleware = (config: RateLimitConfig = RATE_LIMIT_DEFAULTS.GLOBAL) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const clientIP = getClientIP(req);
-      
-      // Check if IP is blocked
-      if (isIPBlocked(clientIP)) {
-        return res.status(429).json({
-          error: 'IP address is temporarily blocked',
-          errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED
-        });
-      }
-
-      const result = await checkRateLimit(`ip:${clientIP}`, config);
-
-      // Set rate limit headers
-      res.setHeader('X-RateLimit-Limit', result.limit);
-      res.setHeader('X-RateLimit-Remaining', result.remaining);
-      res.setHeader('X-RateLimit-Reset', result.resetAt.toISOString());
-
-      if (!result.allowed) {
-        res.setHeader('Retry-After', result.retryAfter!);
+export const createIPMiddleware = (
+  config: RateLimitConfig = RATE_LIMIT_DEFAULTS.GLOBAL
+): (req: Request, res: Response, next: NextFunction) => void => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    Promise.resolve().then(async () => {
+      try {
+        const clientIP = getClientIP(req);
         
-        // Block IP after too many violations
-        await trackAbuse(clientIP);
-        
-        return res.status(429).json({
-          error: config.message ?? 'Too many requests',
-          errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED,
-          retryAfter: result.retryAfter
-        });
-      }
+        // Check if IP is blocked
+        if (isIPBlocked(clientIP)) {
+          return res.status(429).json({
+            error: 'IP address is temporarily blocked',
+            errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED
+          });
+        }
 
-      next();
-    } catch (error) {
+        const result = await checkRateLimit(`ip:${clientIP}`, config);
+
+        // Set rate limit headers
+        res.setHeader('X-RateLimit-Limit', result.limit);
+        res.setHeader('X-RateLimit-Remaining', result.remaining);
+        res.setHeader('X-RateLimit-Reset', result.resetAt.toISOString());
+
+        if (!result.allowed) {
+          res.setHeader('Retry-After', result.retryAfter!);
+          
+          // Block IP after too many violations
+          await trackAbuse(clientIP);
+          
+          return res.status(429).json({
+            error: config.message ?? 'Too many requests',
+            errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED,
+            retryAfter: result.retryAfter
+          });
+        }
+
+        next();
+      } catch (error) {
+        logError('IP rate limiting error:', error);
+        next();
+      }
+    }).catch((error) => {
       logError('IP rate limiting error:', error);
       next();
-    }
+    });
   };
 };
 
