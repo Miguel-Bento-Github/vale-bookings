@@ -1,11 +1,9 @@
 import {
   GDPRConsent,
   AuditTrailEntry,
-  IGuestBooking,
-  RateLimitConfig,
-  IApiKey,
   WidgetConfig,
-  DataExportFormat
+  DataExportFormat,
+  RateLimitConfig
 } from '../../../src/types/widget';
 
 describe('Widget Types', () => {

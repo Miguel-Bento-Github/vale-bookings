@@ -333,10 +333,11 @@ export const createIPMiddleware = (
         
         // Check if IP is blocked
         if (isIPBlocked(clientIP)) {
-          return res.status(429).json({
+          res.status(429).json({
             error: 'IP address is temporarily blocked',
             errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED
           });
+          return;
         }
 
         const result = await checkRateLimit(`ip:${clientIP}`, config);
@@ -352,17 +353,20 @@ export const createIPMiddleware = (
           // Block IP after too many violations
           await trackAbuse(clientIP);
           
-          return res.status(429).json({
+          res.status(429).json({
             error: config.message ?? 'Too many requests',
             errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED,
             retryAfter: result.retryAfter
           });
+          return;
         }
 
         next();
+        
       } catch (error) {
         logError('IP rate limiting error:', error);
         next();
+        
       }
     }).catch((error) => {
       logError('IP rate limiting error:', error);
@@ -377,29 +381,36 @@ export const createIPMiddleware = (
 export const createEmailMiddleware = (config: RateLimitConfig = {
   windowMs: 3600000, // 1 hour
   maxRequests: 5 // 5 bookings per hour per email
-}) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const email = req.body.guestEmail?.toLowerCase();
-      if (!email) {
-        return next();
+}): (req: Request, res: Response, next: NextFunction) => void => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    Promise.resolve().then(async () => {
+      try {
+        const requestBody = req.body as { guestEmail?: string };
+        const email = requestBody.guestEmail?.toLowerCase();
+        if (!email || typeof email !== 'string') {
+          return next();
+        }
+
+        const result = await checkRateLimit(`email:${email}`, config);
+
+        if (!result.allowed) {
+          res.status(429).json({
+            error: 'Too many bookings from this email address',
+            errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED,
+            retryAfter: result.retryAfter
+          });
+          return;
+        }
+
+        next();
+      } catch (error) {
+        logError('Email rate limiting error:', error);
+        next();
       }
-
-      const result = await checkRateLimit(`email:${email}`, config);
-
-      if (!result.allowed) {
-        return res.status(429).json({
-          error: 'Too many bookings from this email address',
-          errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED,
-          retryAfter: result.retryAfter
-        });
-      }
-
-      next();
-    } catch (error) {
+    }).catch((error) => {
       logError('Email rate limiting error:', error);
       next();
-    }
+    });
   };
 };
 

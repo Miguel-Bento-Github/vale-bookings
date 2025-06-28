@@ -13,7 +13,7 @@ import { validateEmail } from '../utils/validationHelpers';
 declare module 'express-serve-static-core' {
   interface Request {
     apiKey?: {
-      _id: string;
+      _id?: string;
       keyPrefix: string;
       name: string;
       domainWhitelist: string[];
@@ -39,23 +39,40 @@ interface LocationQueryValidated {
   radius?: number;
 }
 
-const validateLocationQuery = (query: Record<string, string | undefined>): { isValid: boolean; error?: string; data?: LocationQueryValidated } => {
-  const page = parseInt(query.page) || 1;
-  const limit = Math.min(parseInt(query.limit) || 10, 100);
+const validateLocationQuery = (
+  query: Record<string, unknown>
+): { isValid: boolean; error?: string; data?: LocationQueryValidated } => {
+  // Extract only the known keys to avoid object-injection issues
+  const pageStr = typeof query.page === 'string' ? query.page : undefined;
+  const limitStr = typeof query.limit === 'string' ? query.limit : undefined;
+  const serviceStr = typeof query.service === 'string' ? query.service : undefined;
+  const latStr = typeof query.lat === 'string' ? query.lat : undefined;
+  const lngStr = typeof query.lng === 'string' ? query.lng : undefined;
+  const radiusStr = typeof query.radius === 'string' ? query.radius : undefined;
+
+  const page = pageStr !== undefined ? parseInt(pageStr, 10) : 1;
+  const limit = Math.min(limitStr !== undefined ? parseInt(limitStr, 10) : 10, 100);
   
   if (page < 1) return { isValid: false, error: 'Page must be greater than 0' };
   if (limit < 1 || limit > 100) return { isValid: false, error: 'Limit must be between 1 and 100' };
   
   const result: LocationQueryValidated = { page, limit };
   
-  if (query.service) result.service = query.service;
-  if (query.lat && query.lng) {
-    const lat = parseFloat(query.lat);
-    const lng = parseFloat(query.lng);
+  if (serviceStr !== undefined) {
+    result.service = serviceStr;
+  }
+
+  const hasLat = latStr !== undefined;
+  const hasLng = lngStr !== undefined;
+
+  if (hasLat && hasLng) {
+    const lat = parseFloat(latStr);
+    const lng = parseFloat(lngStr);
     if (isNaN(lat) || isNaN(lng)) return { isValid: false, error: 'Invalid coordinates' };
     result.lat = lat;
     result.lng = lng;
-    result.radius = parseInt(query.radius) || 5000;
+    const maybeRadius = radiusStr !== undefined ? parseInt(radiusStr, 10) : undefined;
+    result.radius = Number.isNaN(maybeRadius) ? 5000 : maybeRadius;
   }
   
   return { isValid: true, data: result };
@@ -66,51 +83,89 @@ interface AvailabilityQueryValidated {
   service: string;
 }
 
-const validateAvailabilityQuery = (query: Record<string, string | undefined>): { isValid: boolean; error?: string; data?: AvailabilityQueryValidated } => {
-  if (!query.date || !query.service) {
+const validateAvailabilityQuery = (
+  query: Record<string, unknown>
+): { isValid: boolean; error?: string; data?: AvailabilityQueryValidated } => {
+  const date = typeof query.date === 'string' ? query.date : undefined;
+  const service = typeof query.service === 'string' ? query.service : undefined;
+
+  if (date === undefined || service === undefined) {
     return { isValid: false, error: 'Date and service are required' };
   }
   
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(query.date)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return { isValid: false, error: 'Invalid date format. Use YYYY-MM-DD' };
   }
   
-  return { isValid: true, data: { date: query.date, service: query.service } };
+  return { isValid: true, data: { date, service } };
 };
 
 type BookingRequestBody = Record<string, unknown>;
 
-const validateBookingData = (body: BookingRequestBody): { isValid: boolean; error?: string; data?: BookingRequestBody } => {
-  const required = ['locationId', 'serviceId', 'guestEmail', 'guestName', 'guestPhone', 'bookingDate', 'bookingTime', 'duration', 'gdprConsent'];
+const validateBookingData = (
+  body: BookingRequestBody
+): { isValid: boolean; error?: string; data?: BookingRequestBody } => {
+  const required = ['locationId', 'serviceId', 'guestEmail', 'guestName', 
+    'guestPhone', 'bookingDate', 'bookingTime', 'duration', 'gdprConsent'];
   
-  for (const field of required) {
-    if (!body[field]) {
-      return { isValid: false, error: `${field} is required` };
-    }
+  interface RequiredBookingFields {
+    locationId?: unknown;
+    serviceId?: unknown;
+    guestEmail?: unknown;
+    guestName?: unknown;
+    guestPhone?: unknown;
+    bookingDate?: unknown;
+    bookingTime?: unknown;
+    duration?: unknown;
+    gdprConsent?: unknown;
+  }
+
+  const b = body as RequiredBookingFields;
+
+  const missingField = Object.entries(b).find(([key, value]) => {
+    return (
+      (required).includes(key) &&
+      (value === undefined || value === null || value === '')
+    );
+  });
+
+  if (missingField) {
+    return { isValid: false, error: `${missingField[0]} is required` };
   }
   
   // Email validation
-  const emailError = validateEmail(body.guestEmail);
-  if (emailError) return { isValid: false, error: emailError };
+  const email = body.guestEmail as string;
+  const emailError = validateEmail(email);
+  if (emailError !== null && emailError !== undefined && emailError.length > 0) {
+    return { isValid: false, error: emailError };
+  }
   
   // Date format validation
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(body.bookingDate)) {
+  const bookingDate = body.bookingDate as string;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(bookingDate)) {
     return { isValid: false, error: 'Invalid date format. Use YYYY-MM-DD' };
   }
   
   // Time format validation
-  if (!/^\d{2}:\d{2}$/.test(body.bookingTime)) {
+  const bookingTime = body.bookingTime as string;
+  if (!/^\d{2}:\d{2}$/.test(bookingTime)) {
     return { isValid: false, error: 'Invalid time format. Use HH:MM' };
   }
   
   // Duration validation
-  const duration = parseInt(body.duration);
+  const durationRaw = body.duration as string;
+  const duration = parseInt(durationRaw, 10);
   if (isNaN(duration) || duration < 15 || duration > 480) {
     return { isValid: false, error: 'Duration must be between 15 and 480 minutes' };
   }
   
   // GDPR consent validation
-  if (!body.gdprConsent?.version || !body.gdprConsent?.acceptedAt || !body.gdprConsent?.ipAddress) {
+  const consent = body.gdprConsent as { version?: string; acceptedAt?: unknown; ipAddress?: unknown } | undefined;
+  if (
+    consent?.version === undefined ||
+    consent.acceptedAt === undefined ||
+    consent.ipAddress === undefined
+  ) {
     return { isValid: false, error: 'GDPR consent is required with version, acceptedAt, and ipAddress' };
   }
   
@@ -121,8 +176,8 @@ const validateReferenceNumber = (reference: string): boolean => {
   return /^W[A-Z0-9]{8}$/.test(reference);
 };
 
-// Widget configuration
-const getConfig = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// Widget configuration (no await needed)
+const getConfig = (req: Request, res: Response): void => {
   try {
     if (!req.apiKey) {
       res.status(401).json({
@@ -153,7 +208,7 @@ const getConfig = async (req: Request, res: Response, next: NextFunction): Promi
         timeFormat: '12h',
         dateFormat: 'MM/DD/YYYY'
       }
-    };
+    } satisfies Record<string, unknown>;
 
     logInfo('Widget configuration retrieved', { apiKey: req.apiKey?.keyPrefix });
 
@@ -162,16 +217,17 @@ const getConfig = async (req: Request, res: Response, next: NextFunction): Promi
       data: config
     });
   } catch (error) {
-    logError('Error retrieving widget configuration', { error: error instanceof Error ? error.message : 'Unknown error' });
-    next(error);
+    logError('Error retrieving widget configuration', {
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };
 
 // Get locations with filtering and pagination
-const getLocations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+const getLocations = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
   try {
-    const validation = validateLocationQuery(req.query);
-    if (!validation.isValid) {
+    const validation = validateLocationQuery(req.query as Record<string, unknown>);
+    if (!validation.isValid || validation.data === undefined) {
       res.status(400).json({
         success: false,
         error: validation.error,
@@ -180,20 +236,21 @@ const getLocations = async (req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
-    const { page, limit, service, lat, lng, radius } = validation.data;
+    const locData = validation.data;
+    const { page, limit, service, lat, lng, radius } = locData;
     const skip = (page - 1) * limit;
 
     // Build query
-    const query: any = { isActive: true };
+    const query: Record<string, unknown> = { isActive: true };
 
-    if (service) {
+    if (service !== undefined && service !== null && service !== '') {
       query.services = { $in: [service] };
     }
 
-    if (lat && lng) {
+    if (lat !== undefined && lng !== undefined) {
       query.coordinates = {
         $geoWithin: {
-          $centerSphere: [[lng, lat], radius / 6378100] // radius in radians
+          $centerSphere: [[lng, lat], (radius ?? 5000) / 6378100]
         }
       };
     }
@@ -213,11 +270,15 @@ const getLocations = async (req: Request, res: Response, next: NextFunction): Pr
       pages: Math.ceil(total / limit)
     };
 
-    logInfo('Locations retrieved', { 
-      count: locations.length, 
-      page, 
+    const geoFilterApplied = lat !== undefined && lng !== undefined;
+    logInfo('Locations retrieved', {
+      count: locations.length,
+      page,
       total,
-      filters: { service, hasGeoFilter: !!(lat && lng) }
+      filters: {
+        service,
+        hasGeoFilter: geoFilterApplied
+      }
     });
 
     res.status(200).json({
@@ -241,9 +302,9 @@ const getLocations = async (req: Request, res: Response, next: NextFunction): Pr
 const getAvailability = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { locationId } = req.params;
-    const validation = validateAvailabilityQuery(req.query);
+    const validation = validateAvailabilityQuery(req.query as Record<string, unknown>);
     
-    if (!validation.isValid) {
+    if (!validation.isValid || validation.data === undefined) {
       res.status(400).json({
         success: false,
         error: validation.error,
@@ -252,7 +313,8 @@ const getAvailability = async (req: Request, res: Response, next: NextFunction):
       return;
     }
 
-    const { date, service } = validation.data;
+    const availData = validation.data;
+    const { date, service } = availData;
 
     const location = await Location.findById(locationId);
     if (!location) {
@@ -265,7 +327,7 @@ const getAvailability = async (req: Request, res: Response, next: NextFunction):
     }
 
     // Calculate availability (mocked for now - this would be a complex business logic)
-    const slots = await calculateAvailability(locationId || '', date, service);
+    const slots = calculateAvailability(locationId ?? '', date, service);
 
     logInfo('Availability retrieved', { locationId, date, service, slotsCount: slots.length });
 
@@ -287,8 +349,8 @@ const getAvailability = async (req: Request, res: Response, next: NextFunction):
 // Create a new booking
 const createBooking = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const validation = validateBookingData(req.body);
-    if (!validation.isValid) {
+    const validation = validateBookingData(req.body as BookingRequestBody);
+    if (!validation.isValid || validation.data === undefined) {
       res.status(400).json({
         success: false,
         error: `Validation error: ${validation.error}`,
@@ -330,12 +392,12 @@ const createBooking = async (req: Request, res: Response, next: NextFunction): P
     // Create booking
     const guestBooking = new GuestBooking({
       ...bookingData,
-      apiKeyId: req.apiKey?._id || '',
+      apiKeyId: req.apiKey?._id ?? '',
       auditTrail: [{
         action: 'BOOKING_CREATED',
         timestamp: new Date(),
-        ipAddress: req.ip,
-        userAgent: (req.headers['user-agent'] as string) || 'Unknown'
+        ipAddress: req.ip ?? 'unknown',
+        userAgent: (req.headers['user-agent'] as string) ?? 'Unknown'
       }]
     });
 
@@ -368,8 +430,18 @@ const getBooking = async (req: Request, res: Response, next: NextFunction): Prom
   try {
     const { reference } = req.params;
 
+    // Check if reference exists
+    if (reference === null || reference === undefined || reference.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: 'Reference number is required',
+        errorCode: 'VALIDATION_ERROR'
+      });
+      return;
+    }
+
     // Validate reference format
-    if (!reference || !validateReferenceNumber(reference)) {
+    if (!validateReferenceNumber(reference)) {
       res.status(400).json({
         success: false,
         error: 'Invalid reference number format',
@@ -414,7 +486,11 @@ interface Slot {
   price: number;
 }
 
-const calculateAvailability = async (locationId: string, date: string, service: string): Promise<Slot[]> => {
+const calculateAvailability = (
+  _locationId: string,
+  _date: string,
+  _service: string
+): Slot[] => {
   // This is a simplified implementation - in reality this would involve:
   // - Location schedule
   // - Service duration

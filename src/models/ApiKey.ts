@@ -58,7 +58,7 @@ const apiKeySchema = new Schema<IApiKey>({
     type: [String],
     required: true,
     validate: {
-      validator: function(domains: string[]) {
+      validator: function(domains: string[]): boolean {
         return domains.length <= API_KEY_CONFIG.MAX_DOMAINS_PER_KEY;
       },
       message: `Maximum ${API_KEY_CONFIG.MAX_DOMAINS_PER_KEY} domains allowed per API key`
@@ -116,9 +116,8 @@ const apiKeySchema = new Schema<IApiKey>({
       default: Date.now
     },
     endpoints: {
-      type: Map,
-      of: Number,
-      default: new Map()
+      type: Schema.Types.Mixed,
+      default: (): Record<string, number> => ({})
     }
   },
   
@@ -147,12 +146,12 @@ apiKeySchema.index({ lastUsedAt: -1 });
 apiKeySchema.index({ expiresAt: 1 }, { sparse: true });
 
 // Virtual for checking if key is expired
-apiKeySchema.virtual('isExpired').get(function() {
-  return this.expiresAt && this.expiresAt <= new Date();
+apiKeySchema.virtual('isExpired').get(function(this: IApiKey): boolean {
+  return Boolean(this.expiresAt && this.expiresAt <= new Date());
 });
 
 // Virtual for checking if rotation is needed
-apiKeySchema.virtual('needsRotation').get(function() {
+apiKeySchema.virtual('needsRotation').get(function(this: IApiKey): boolean {
   if (!this.createdAt) return false;
   
   const daysSinceCreation = Math.floor(
@@ -163,9 +162,9 @@ apiKeySchema.virtual('needsRotation').get(function() {
 });
 
 // Pre-save middleware
-apiKeySchema.pre('save', async function(next) {
+apiKeySchema.pre('save', function(this: IApiKey, next): void {
   // Generate and hash API key if new
-  if (this.isNew && !this.key) {
+  if (this.isNew === true && !this.key) {
     const rawKey = encryptionService.generateSecureToken(API_KEY_CONFIG.KEY_LENGTH);
     const salt = encryptionService.generateSecureToken(16);
     
@@ -176,11 +175,11 @@ apiKeySchema.pre('save', async function(next) {
     this.keyPrefix = rawKey.substring(0, API_KEY_CONFIG.PREFIX_LENGTH);
     
     // Return the raw key to the caller (only time it's available)
-    (this as any)._rawKey = rawKey;
+    (this as IApiKey & { _rawKey?: string })._rawKey = rawKey;
   }
   
   // Set default expiration if not set
-  if (!this.expiresAt && API_KEY_CONFIG.ROTATION_DAYS) {
+  if (!this.expiresAt && API_KEY_CONFIG.ROTATION_DAYS > 0) {
     const expirationDate = new Date();
     expirationDate.setDate(expirationDate.getDate() + API_KEY_CONFIG.ROTATION_DAYS);
     this.expiresAt = expirationDate;
@@ -190,7 +189,7 @@ apiKeySchema.pre('save', async function(next) {
 });
 
 // Instance methods
-apiKeySchema.methods.validateKey = function(rawKey: string): boolean {
+apiKeySchema.methods.validateKey = function(this: IApiKey, rawKey: string): boolean {
   // Check if key matches prefix
   if (!rawKey.startsWith(this.keyPrefix)) {
     return false;
@@ -203,13 +202,17 @@ apiKeySchema.methods.validateKey = function(rawKey: string): boolean {
   return true;
 };
 
-apiKeySchema.methods.validateDomain = function(domain: string): boolean {
-  if (!this.isActive || this.isExpired) {
+apiKeySchema.methods.validateDomain = function(this: IApiKey, domain: string): boolean {
+  if (this.isActive === false || this.isExpired === true) {
+    return false;
+  }
+  
+  if (!Array.isArray(this.domainWhitelist)) {
     return false;
   }
   
   return this.domainWhitelist.some((whitelistedDomain: string) => {
-    if (this.allowWildcardSubdomains && whitelistedDomain.startsWith('*.')) {
+    if (this.allowWildcardSubdomains === true && whitelistedDomain.startsWith('*.')) {
       const baseDomain = whitelistedDomain.substring(2);
       return domain === baseDomain || domain.endsWith(`.${baseDomain}`);
     }
@@ -217,55 +220,69 @@ apiKeySchema.methods.validateDomain = function(domain: string): boolean {
   });
 };
 
-apiKeySchema.methods.incrementUsage = async function(endpoint?: string) {
+apiKeySchema.methods.incrementUsage = function(this: IApiKey, endpoint?: string): Promise<IApiKey> {
+  // Ensure usage object exists
+  if (!this.usage) {
+    this.usage = {
+      totalRequests: 0,
+      lastResetAt: new Date(),
+      endpoints: {}
+    } as IApiKey['usage'];
+  }
+  
+  const endpointsObj = this.usage.endpoints;
+  
   this.usage.totalRequests += 1;
   
-  if (endpoint) {
-    const currentCount = this.usage.endpoints.get(endpoint) || 0;
-    this.usage.endpoints.set(endpoint, currentCount + 1);
+  if (endpoint && endpoint.length > 0) {
+    if (Object.prototype.hasOwnProperty.call(endpointsObj, endpoint)) {
+      endpointsObj[endpoint] = (endpointsObj[endpoint] ?? 0) + 1;
+    } else {
+      endpointsObj[endpoint] = 1;
+    }
   }
   
   this.lastUsedAt = new Date();
   
-  // Reset usage counters if needed (e.g., monthly reset)
+  // Monthly reset logic
   const daysSinceReset = Math.floor(
     (Date.now() - this.usage.lastResetAt.getTime()) / (1000 * 60 * 60 * 24)
   );
-  
   if (daysSinceReset >= 30) {
     this.usage.totalRequests = 1;
-    this.usage.endpoints = new Map(endpoint ? [[endpoint, 1]] : []);
+    this.usage.endpoints = endpoint && endpoint.length > 0 ? { [endpoint]: 1 } : {};
     this.usage.lastResetAt = new Date();
   }
   
   return this.save();
 };
 
-apiKeySchema.methods.rotate = async function(createdBy: string) {
+apiKeySchema.methods.rotate = function(this: IApiKey, createdBy: string): Promise<string> {
   // Create new API key
-  const newKey = new ApiKey({
+  const newKeyData: Partial<IApiKey> = {
     name: `${this.name} (Rotated)`,
-    domainWhitelist: this.domainWhitelist,
+    domainWhitelist: Array.isArray(this.domainWhitelist) ? [...this.domainWhitelist] : [],
     allowWildcardSubdomains: this.allowWildcardSubdomains,
     rateLimits: this.rateLimits,
     createdBy,
-    rotatedFrom: this._id,
+    rotatedFrom: this._id?.toString(),
     rotatedAt: new Date(),
-    tags: [...this.tags, 'rotated']
-  });
+    tags: Array.isArray(this.tags) ? [...this.tags, 'rotated'] : ['rotated']
+  };
+  
+  const newKey = new ApiKey(newKeyData);
   
   // Deactivate current key
   this.isActive = false;
   
-  await this.save();
-  const savedNewKey = await newKey.save();
-  
-  // Return the raw key from the new key
-  return (savedNewKey as any)._rawKey;
+  return Promise.all([this.save(), newKey.save()]).then(([, savedNewKey]) => {
+    // Return the raw key from the new key
+    return (savedNewKey as IApiKey & { _rawKey?: string })._rawKey ?? '';
+  });
 };
 
 // Static methods
-apiKeySchema.statics.findByPrefix = function(prefix: string) {
+apiKeySchema.statics.findByPrefix = function(prefix: string): Promise<IApiKey | null> {
   return this.findOne({ 
     keyPrefix: prefix,
     isActive: true,
@@ -276,7 +293,7 @@ apiKeySchema.statics.findByPrefix = function(prefix: string) {
   });
 };
 
-apiKeySchema.statics.findActive = function() {
+apiKeySchema.statics.findActive = function(): Promise<IApiKey[]> {
   return this.find({ 
     isActive: true,
     $or: [
@@ -286,7 +303,7 @@ apiKeySchema.statics.findActive = function() {
   });
 };
 
-apiKeySchema.statics.cleanupExpired = async function() {
+apiKeySchema.statics.cleanupExpired = function(): Promise<{ deletedCount?: number }> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - DATA_RETENTION_PERIODS.API_KEY_USAGE);
   

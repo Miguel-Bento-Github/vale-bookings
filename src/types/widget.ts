@@ -64,6 +64,10 @@ export interface IGuestBooking extends Document {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   auditTrail: AuditTrailEntry[];
   
+  // Methods
+  addAuditEntry(entry: Partial<AuditTrailEntry>): Promise<IGuestBooking>;
+  anonymize(): Promise<IGuestBooking>;
+  
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -83,6 +87,7 @@ export interface RateLimitConfig {
  * API Key interface for widget authentication
  */
 export interface IApiKey extends Document {
+  _id?: string;
   // Key identification
   name: string;
   key: string; // Hashed
@@ -120,6 +125,10 @@ export interface IApiKey extends Document {
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
+  
+  // Computed properties (virtuals)
+  isExpired?: boolean;
+  needsRotation?: boolean;
 }
 
 /**

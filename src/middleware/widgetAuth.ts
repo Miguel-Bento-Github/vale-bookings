@@ -3,14 +3,24 @@ import { Request, Response, NextFunction } from 'express';
 import { WIDGET_ERROR_CODES } from '../constants/widget';
 import { checkRateLimit } from '../services/RateLimitService';
 import { validateApiKey, extractApiKey as extractKey, extractOrigin } from '../services/WidgetAuthService';
+import { IApiKey } from '../types/widget';
 import { logWarning, logError } from '../utils/logger';
+
+// Define the extended interface locally
+interface IApiKeyWithMethods extends IApiKey {
+  _id?: string;
+  validateDomain(domain: string): boolean;
+  incrementUsage(endpoint?: string): Promise<IApiKeyWithMethods>;
+  rotate(createdBy: string): Promise<string>;
+  isExpired?: boolean;
+}
 
 // Extract API key from request headers
 export const extractApiKey = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const apiKey = extractKey(req);
     
-    if (!apiKey) {
+    if (apiKey === null || apiKey === undefined || apiKey === '') {
       res.status(401).json({
         success: false,
         error: 'API key is required',
@@ -30,8 +40,8 @@ export const extractApiKey = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    // Attach API key data to request (with type assertion)
-    req.apiKey = keyData as any;
+    // Attach API key data to request with type casting
+    (req as Request & { apiKey?: IApiKeyWithMethods }).apiKey = keyData;
     next();
   } catch (error) {
     logError('Error in API key extraction', { error: error instanceof Error ? error.message : 'Unknown error' });
@@ -46,12 +56,13 @@ export const extractApiKey = async (req: Request, res: Response, next: NextFunct
 // Rate limiting middleware
 export const rateLimitRequest = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    if (!req.apiKey) {
+    const reqWithApiKey = req as Request & { apiKey?: IApiKeyWithMethods };
+    if (!reqWithApiKey.apiKey) {
       next();
       return;
     }
 
-    const identifier = `${req.apiKey._id}:${req.ip}`;
+    const identifier = `${reqWithApiKey.apiKey._id ?? reqWithApiKey.apiKey.keyPrefix}:${req.ip}`;
     const config = {
       windowMs: 60000, // 1 minute
       maxRequests: 100,
@@ -62,7 +73,7 @@ export const rateLimitRequest = async (req: Request, res: Response, next: NextFu
     
     if (!rateLimit.allowed) {
       logWarning('Rate limit exceeded', {
-        apiKey: req.apiKey.keyPrefix,
+        apiKey: reqWithApiKey.apiKey.keyPrefix,
         ip: req.ip,
         endpoint: req.path,
         limit: rateLimit.limit,
@@ -92,9 +103,10 @@ export const rateLimitRequest = async (req: Request, res: Response, next: NextFu
 };
 
 // Request validation middleware
-export const validateRequest = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const validateRequest = (req: Request, res: Response, next: NextFunction): void => {
   try {
-    if (!req.apiKey) {
+    const reqWithApiKey = req as Request & { apiKey?: IApiKeyWithMethods };
+    if (!reqWithApiKey.apiKey) {
       next();
       return;
     }
@@ -102,20 +114,20 @@ export const validateRequest = async (req: Request, res: Response, next: NextFun
     const origin = extractOrigin(req);
     
     // Validate origin against whitelist
-    if (!req.apiKey.domainWhitelist.includes('*')) {
-      const isAllowed = req.apiKey.domainWhitelist.some(domain => {
+    if (!reqWithApiKey.apiKey.domainWhitelist.includes('*')) {
+      const isAllowed = reqWithApiKey.apiKey.domainWhitelist.some(domain => {
         if (domain.startsWith('*.')) {
           const baseDomain = domain.slice(2);
-          return origin?.endsWith(baseDomain);
+          return origin?.endsWith(baseDomain) ?? false;
         }
         return origin === domain;
       });
 
       if (!isAllowed) {
         logWarning('Origin not in whitelist', {
-          apiKey: req.apiKey.keyPrefix,
+          apiKey: reqWithApiKey.apiKey.keyPrefix,
           origin,
-          whitelist: req.apiKey.domainWhitelist
+          whitelist: reqWithApiKey.apiKey.domainWhitelist
         });
 
         res.status(403).json({

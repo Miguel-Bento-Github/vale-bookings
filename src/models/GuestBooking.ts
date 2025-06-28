@@ -51,8 +51,7 @@ const auditTrailSchema = new Schema<AuditTrailEntry>({
   previousValue: Schema.Types.Mixed,
   newValue: Schema.Types.Mixed,
   metadata: {
-    type: Map,
-    of: Schema.Types.Mixed
+    type: Schema.Types.Mixed
   }
 }, { _id: false });
 
@@ -72,19 +71,19 @@ const guestBookingSchema = new Schema<IGuestBooking>({
   guestEmail: {
     type: String,
     required: true,
-    set: (value: string) => value ? encryptionService.encrypt(value.toLowerCase()) : value,
-    get: (value: string) => value ? encryptionService.decrypt(value) : value
+    set: (value: string): string => value ? encryptionService.encrypt(value.toLowerCase()) : value,
+    get: (value: string): string => value ? encryptionService.decrypt(value) : value
   },
   guestName: {
     type: String,
     required: true,
-    set: (value: string) => value ? encryptionService.encrypt(value) : value,
-    get: (value: string) => value ? encryptionService.decrypt(value) : value
+    set: (value: string): string => value ? encryptionService.encrypt(value) : value,
+    get: (value: string): string => value ? encryptionService.decrypt(value) : value
   },
   guestPhone: {
     type: String,
-    set: (value: string) => value ? encryptionService.encrypt(value) : value,
-    get: (value: string) => value ? encryptionService.decrypt(value) : value
+    set: (value: string): string => value ? encryptionService.encrypt(value) : value,
+    get: (value: string): string => value ? encryptionService.decrypt(value) : value
   },
   
   // Booking details
@@ -173,7 +172,7 @@ const guestBookingSchema = new Schema<IGuestBooking>({
   // Data retention
   expiresAt: {
     type: Date,
-    default: function() {
+    default: function(): Date {
       const now = new Date();
       now.setDate(now.getDate() + DATA_RETENTION_PERIODS.GUEST_BOOKING);
       return now;
@@ -196,7 +195,7 @@ guestBookingSchema.index({ widgetApiKey: 1, createdAt: -1 });
 guestBookingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Pre-save middleware
-guestBookingSchema.pre('save', async function(next) {
+guestBookingSchema.pre('save', async function(next): Promise<void> {
   // Generate reference number if not exists
   if (!this.referenceNumber) {
     let isUnique = false;
@@ -213,11 +212,14 @@ guestBookingSchema.pre('save', async function(next) {
   
   // Add audit trail entry for creation
   if (this.isNew) {
+    if (!Array.isArray(this.auditTrail)) {
+      this.auditTrail = [];
+    }
     this.auditTrail.push({
       action: AUDIT_ACTIONS.CREATE,
       timestamp: new Date(),
       ipAddress: this.ipAddress,
-      metadata: new Map([['initialStatus', this.status]])
+      metadata: { initialStatus: this.status }
     });
   }
   
@@ -225,57 +227,70 @@ guestBookingSchema.pre('save', async function(next) {
 });
 
 // Pre-update middleware to track changes
-guestBookingSchema.pre('findOneAndUpdate', function(next) {
-  const update = this.getUpdate() as any;
+guestBookingSchema.pre('findOneAndUpdate', function(next): void {
+  const update = this.getUpdate() as {
+    $set?: Record<string, unknown>;
+    $push?: Record<string, unknown>;
+  };
   
   // If status is being updated, add audit trail
-  if (update.$set?.status) {
-    if (!update.$push) {
-      update.$push = {};
+  if (update.$set && typeof update.$set === 'object' && update.$set !== null && typeof update.$set.status === 'string') {
+    update.$push ??= {};
+    if (typeof update.$push === 'object' && update.$push !== null) {
+      const auditEntry = {
+        action: AUDIT_ACTIONS.STATUS_CHANGE,
+        timestamp: new Date(),
+        previousValue: this.getOptions().status,
+        newValue: update.$set.status,
+        ipAddress: typeof update.$set.ipAddress === 'string' ? update.$set.ipAddress : 'system'
+      };
+      update.$push.auditTrail = auditEntry;
     }
-    
-    update.$push.auditTrail = {
-      action: AUDIT_ACTIONS.STATUS_CHANGE,
-      timestamp: new Date(),
-      previousValue: this.getOptions().status,
-      newValue: update.$set.status,
-      ipAddress: update.$set.ipAddress || 'system'
-    };
   }
   
   next();
 });
 
 // Instance methods
-guestBookingSchema.methods.addAuditEntry = function(entry: Partial<AuditTrailEntry>) {
-  this.auditTrail.push({
-    ...entry,
-    timestamp: entry.timestamp || new Date()
-  });
+guestBookingSchema.methods.addAuditEntry = function(
+  this: IGuestBooking,
+  entry: Partial<AuditTrailEntry>
+): Promise<IGuestBooking> {
+  const completeEntry: AuditTrailEntry = {
+    action: entry.action ?? 'UNKNOWN',
+    timestamp: entry.timestamp ?? new Date(),
+    userId: entry.userId,
+    ipAddress: entry.ipAddress,
+    previousValue: entry.previousValue,
+    newValue: entry.newValue,
+    metadata: entry.metadata
+  };
+  if (!Array.isArray(this.auditTrail)) {
+    this.auditTrail = [];
+  }
+  this.auditTrail.push(completeEntry);
   return this.save();
 };
 
-guestBookingSchema.methods.anonymize = async function() {
+guestBookingSchema.methods.anonymize = function(this: IGuestBooking): Promise<IGuestBooking> {
   this.guestEmail = encryptionService.encrypt('anonymized@example.com');
   this.guestName = encryptionService.encrypt('ANONYMIZED');
   this.guestPhone = undefined;
   this.ipAddress = '0.0.0.0';
   this.userAgent = 'ANONYMIZED';
   
-  await this.addAuditEntry({
+  return this.addAuditEntry({
     action: AUDIT_ACTIONS.DATA_ERASURE,
-    metadata: new Map([['reason', 'GDPR request']])
+    metadata: { reason: 'GDPR request' }
   });
-  
-  return this.save();
 };
 
 // Static methods
-guestBookingSchema.statics.findByReference = function(referenceNumber: string) {
+guestBookingSchema.statics.findByReference = function(referenceNumber: string): Promise<IGuestBooking | null> {
   return this.findOne({ referenceNumber });
 };
 
-guestBookingSchema.statics.findExpired = function() {
+guestBookingSchema.statics.findExpired = function(): Promise<IGuestBooking[]> {
   return this.find({ expiresAt: { $lte: new Date() } });
 };
 

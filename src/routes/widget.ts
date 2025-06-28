@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 
 import { widgetController } from '../controllers/WidgetController';
 import { validateRequest, extractApiKey, rateLimitRequest } from '../middleware/widgetAuth';
@@ -12,6 +12,13 @@ const widgetAuth = [
   rateLimitRequest,
   validateRequest
 ];
+
+// Wrapper for async routes
+const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};
 
 // Widget configuration endpoint
 router.get('/config', 
@@ -36,7 +43,7 @@ router.get('/locations',
     });
     next();
   },
-  widgetController.getLocations
+  asyncHandler(widgetController.getLocations)
 );
 
 router.get('/locations/:locationId/availability', 
@@ -49,20 +56,21 @@ router.get('/locations/:locationId/availability',
     });
     next();
   },
-  widgetController.getAvailability
+  asyncHandler(widgetController.getAvailability)
 );
 
 // Booking endpoints
 router.post('/bookings', 
   ...widgetAuth,
   (req, res, next) => {
+    const body = req.body as Record<string, unknown>;
     logInfo('Widget booking creation requested', { 
       apiKey: req.apiKey?.keyPrefix,
-      locationId: req.body.locationId
+      locationId: body.locationId
     });
     next();
   },
-  widgetController.createBooking
+  asyncHandler(widgetController.createBooking)
 );
 
 router.get('/bookings/:reference', 
@@ -74,7 +82,7 @@ router.get('/bookings/:reference',
     });
     next();
   },
-  widgetController.getBooking
+  asyncHandler(widgetController.getBooking)
 );
 
 export default router; 

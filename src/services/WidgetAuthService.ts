@@ -13,6 +13,16 @@ interface IApiKeyWithMethods extends IApiKey {
   isExpired: boolean;
 }
 
+// Helper type for static methods that Mongoose adds via plugins
+type ApiKeyModel = typeof ApiKey & {
+  findByPrefix(prefix: string): Promise<IApiKeyWithMethods | null>;
+  findActive(): { where: (query: Record<string, unknown>) => Promise<IApiKeyWithMethods[]> };
+  cleanupExpired(): Promise<{ deletedCount: number }>;
+};
+
+// Cast once using unknown to avoid any
+const ApiKeyModel = ApiKey as unknown as ApiKeyModel;
+
 /**
  * Extract API key from request
  */
@@ -80,7 +90,7 @@ export const validateApiKey = async (rawKey: string): Promise<IApiKeyWithMethods
     const prefix = rawKey.substring(0, 8);
     
     // Find API key by prefix
-    const apiKey = await (ApiKey as any).findByPrefix(prefix) as IApiKeyWithMethods;
+    const apiKey = await ApiKeyModel.findByPrefix(prefix);
     if (!apiKey) {
       return null;
     }
@@ -182,7 +192,8 @@ export const generateApiKey = async (params: {
   });
   
   const savedKey = await apiKey.save();
-  const rawKey = (savedKey as any)._rawKey;
+  interface ApiKeyWithRaw extends IApiKeyWithMethods { _rawKey: string }
+  const rawKey = (savedKey as unknown as ApiKeyWithRaw)._rawKey;
   
   if (!rawKey) {
     throw new Error('Failed to generate API key');
@@ -246,7 +257,7 @@ export const listActiveKeys = async (filters?: {
   domain?: string;
   tag?: string;
 }): Promise<IApiKeyWithMethods[]> => {
-  const query: any = { isActive: true };
+  const query: Record<string, unknown> = { isActive: true };
   
   if (filters?.createdBy) {
     query.createdBy = filters.createdBy;
@@ -260,14 +271,14 @@ export const listActiveKeys = async (filters?: {
     query.tags = filters.tag;
   }
   
-  return (ApiKey as any).findActive().where(query) as Promise<IApiKeyWithMethods[]>;
+  return ApiKeyModel.findActive().where(query);
 };
 
 /**
  * Clean up expired API keys
  */
 export const cleanupExpiredKeys = async (): Promise<number> => {
-  const result = await (ApiKey as any).cleanupExpired();
+  const result = await ApiKeyModel.cleanupExpired();
   
   if (result.deletedCount > 0) {
     logInfo(`Cleaned up ${result.deletedCount} expired API keys`);
