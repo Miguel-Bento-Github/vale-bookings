@@ -14,4 +14,5 @@ export * from './schedule';
 export * from './payment';
 
 // Export all widget types
-export * from './widget'; 
+export * from './widget';
+export * from './notification'; 
