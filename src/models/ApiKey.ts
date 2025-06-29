@@ -43,13 +43,11 @@ const apiKeySchema = new Schema<IApiKey>({
   },
   key: {
     type: String,
-    required: true,
     unique: true,
     index: true
   },
   keyPrefix: {
     type: String,
-    required: true,
     index: true
   },
   
@@ -152,7 +150,7 @@ apiKeySchema.virtual('isExpired').get(function(this: IApiKey): boolean {
 
 // Virtual for checking if rotation is needed
 apiKeySchema.virtual('needsRotation').get(function(this: IApiKey): boolean {
-  if (!this.createdAt) return false;
+  if (this.createdAt == null) return false;
   
   const daysSinceCreation = Math.floor(
     (Date.now() - this.createdAt.getTime()) / (1000 * 60 * 60 * 24)
@@ -164,7 +162,7 @@ apiKeySchema.virtual('needsRotation').get(function(this: IApiKey): boolean {
 // Pre-save middleware
 apiKeySchema.pre('save', function(this: IApiKey, next): void {
   // Generate and hash API key if new
-  if (this.isNew === true && !this.key) {
+  if (this.isNew && this.key == null) {
     const rawKey = encryptionService.generateSecureToken(API_KEY_CONFIG.KEY_LENGTH);
     const salt = encryptionService.generateSecureToken(16);
     
@@ -179,7 +177,7 @@ apiKeySchema.pre('save', function(this: IApiKey, next): void {
   }
   
   // Set default expiration if not set
-  if (!this.expiresAt && API_KEY_CONFIG.ROTATION_DAYS > 0) {
+  if (this.expiresAt == null && API_KEY_CONFIG.ROTATION_DAYS > 0) {
     const expirationDate = new Date();
     expirationDate.setDate(expirationDate.getDate() + API_KEY_CONFIG.ROTATION_DAYS);
     this.expiresAt = expirationDate;
@@ -203,11 +201,11 @@ apiKeySchema.methods.validateKey = function(this: IApiKey, rawKey: string): bool
 };
 
 apiKeySchema.methods.validateDomain = function(this: IApiKey, domain: string): boolean {
-  if (this.isActive === false || this.isExpired === true) {
+  if (this.isActive !== true || this.isExpired === true) {
     return false;
   }
   
-  if (!Array.isArray(this.domainWhitelist)) {
+  if (this.domainWhitelist == null || !Array.isArray(this.domainWhitelist)) {
     return false;
   }
   
@@ -222,24 +220,75 @@ apiKeySchema.methods.validateDomain = function(this: IApiKey, domain: string): b
 
 apiKeySchema.methods.incrementUsage = function(this: IApiKey, endpoint?: string): Promise<IApiKey> {
   // Ensure usage object exists
-  if (!this.usage) {
-    this.usage = {
-      totalRequests: 0,
-      lastResetAt: new Date(),
-      endpoints: {}
-    } as IApiKey['usage'];
-  }
+  this.usage ??= {
+    totalRequests: 0,
+    lastResetAt: new Date(),
+    endpoints: {}
+  } as IApiKey['usage'];
   
-  const endpointsObj = this.usage.endpoints;
+  // Create safe accessor to prevent object injection
+  const getEndpointValue = (key: string): number => {
+    switch (key) {
+    case '/api/widget/v1/config':
+    case '/api/widget/v1/locations':
+    case '/api/widget/v1/bookings': {
+      const endpoints = this.usage.endpoints;
+      if (typeof endpoints === 'object' && endpoints != null) {
+        const endpointsRecord = endpoints;
+        switch (key) {
+        case '/api/widget/v1/config':
+          return endpointsRecord['/api/widget/v1/config'] ?? 0;
+        case '/api/widget/v1/locations':
+          return endpointsRecord['/api/widget/v1/locations'] ?? 0;
+        case '/api/widget/v1/bookings':
+          return endpointsRecord['/api/widget/v1/bookings'] ?? 0;
+        default:
+          return 0;
+        }
+      }
+      return 0;
+    }
+    default:
+      return 0;
+    }
+  };
+  
+  const setEndpointValue = (key: string, value: number): void => {
+    switch (key) {
+    case '/api/widget/v1/config':
+    case '/api/widget/v1/locations':
+    case '/api/widget/v1/bookings': {
+      const endpoints = this.usage.endpoints;
+      if (typeof endpoints === 'object' && endpoints != null) {
+        const endpointsRecord = endpoints;
+        switch (key) {
+        case '/api/widget/v1/config':
+          endpointsRecord['/api/widget/v1/config'] = value;
+          break;
+        case '/api/widget/v1/locations':
+          endpointsRecord['/api/widget/v1/locations'] = value;
+          break;
+        case '/api/widget/v1/bookings':
+          endpointsRecord['/api/widget/v1/bookings'] = value;
+          break;
+        default:
+          // Ignore unknown keys to prevent injection
+          break;
+        }
+      }
+      break;
+    }
+    // Ignore other keys to prevent injection
+    default:
+      break;
+    }
+  };
   
   this.usage.totalRequests += 1;
   
-  if (endpoint && endpoint.length > 0) {
-    if (Object.prototype.hasOwnProperty.call(endpointsObj, endpoint)) {
-      endpointsObj[endpoint] = (endpointsObj[endpoint] ?? 0) + 1;
-    } else {
-      endpointsObj[endpoint] = 1;
-    }
+  if (endpoint != null && endpoint.length > 0) {
+    const currentCount = getEndpointValue(endpoint);
+    setEndpointValue(endpoint, currentCount + 1);
   }
   
   this.lastUsedAt = new Date();
@@ -248,9 +297,9 @@ apiKeySchema.methods.incrementUsage = function(this: IApiKey, endpoint?: string)
   const daysSinceReset = Math.floor(
     (Date.now() - this.usage.lastResetAt.getTime()) / (1000 * 60 * 60 * 24)
   );
-  if (daysSinceReset >= 30) {
+  if (!Number.isNaN(daysSinceReset) && daysSinceReset >= 30) {
     this.usage.totalRequests = 1;
-    this.usage.endpoints = endpoint && endpoint.length > 0 ? { [endpoint]: 1 } : {};
+    this.usage.endpoints = endpoint != null && endpoint.length > 0 ? { [endpoint]: 1 } : {};
     this.usage.lastResetAt = new Date();
   }
   

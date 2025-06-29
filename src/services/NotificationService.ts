@@ -19,7 +19,8 @@ import { logInfo, logError } from '../utils/logger';
 // import { sendEmail } from './EmailService';
 // import { scheduleJob, cancelJob } from './QueueService';
 // import { sendSMS } from './SMSService';
-// import { renderTemplate as renderTemplateFromService, validateTemplate as validateTemplateFromService } from './TemplateService';
+// import { renderTemplate as renderTemplateFromService, 
+//   validateTemplate as validateTemplateFromService } from './TemplateService';
 
 // Mock implementations
 const sendEmail = (_options: {
@@ -36,7 +37,7 @@ const sendEmail = (_options: {
 const sendSMS = (_options: {
   to: string;
   message: string;
-}) => Promise.resolve<{ messageId: string; success: boolean }>({ 
+}): Promise<{ messageId: string; success: boolean }> => Promise.resolve({ 
   messageId: 'mock-id', 
   success: true 
 });
@@ -90,25 +91,49 @@ const createEmptyChannels = (): Record<NotificationChannel, ChannelDeliveryResul
   };
 };
 
+// Safe channel result setter to prevent object injection
+const setChannelResult = (
+  results: Record<NotificationChannel, ChannelDeliveryResult>,
+  channel: NotificationChannel,
+  result: ChannelDeliveryResult
+): void => {
+  switch (channel) {
+  case 'email':
+    results.email = result;
+    break;
+  case 'sms':
+    results.sms = result;
+    break;
+  case 'push':
+    results.push = result;
+    break;
+  default:
+    // Only allow known channels
+    break;
+  }
+};
+
 // Validate booking data
 const validateBookingData = (booking: BookingNotificationData): string[] => {
   const errors: string[] = [];
   
-  if (!booking.referenceNumber) errors.push('Reference number is required');
-  if (!booking.locationName) errors.push('Location name is required');
-  if (!booking.bookingDate) errors.push('Booking date is required');
-  if (!booking.bookingTime) errors.push('Booking time is required');
+  if (booking.referenceNumber == null || booking.referenceNumber === '') errors.push('Reference number is required');
+  if (booking.locationName == null || booking.locationName === '') errors.push('Location name is required');
+  if (booking.bookingDate == null || booking.bookingDate === '') errors.push('Booking date is required');
+  if (booking.bookingTime == null || booking.bookingTime === '') errors.push('Booking time is required');
   
   return errors;
 };
 
 // Validate channels and recipients
 const validateChannels = (booking: BookingNotificationData, channels: NotificationChannel[]): string | null => {
+  const email = booking.guestEmail ?? '';
+  const phone = booking.guestPhone ?? '';
   for (const channel of channels) {
-    if (channel === 'email' && !booking.guestEmail) {
+    if (channel === 'email' && email.trim() === '') {
       return 'Email address required for email notifications';
     }
-    if (channel === 'sms' && !booking.guestPhone) {
+    if (channel === 'sms' && phone.trim() === '') {
       return 'Phone number required for SMS notifications';
     }
   }
@@ -140,7 +165,7 @@ export const sendBookingConfirmation = async (
 
     // Validate channels
     const channelError = validateChannels(booking, channels);
-    if (channelError) {
+    if (channelError != null && channelError !== '') {
       return {
         success: false,
         error: channelError,
@@ -155,7 +180,7 @@ export const sendBookingConfirmation = async (
     // Process each channel
     for (const channel of channels) {
       try {
-        if (channel === 'email' && booking.guestEmail && typeof booking.guestEmail === 'string') {
+        if (channel === 'email' && booking.guestEmail != null && typeof booking.guestEmail === 'string') {
           const template = await renderTemplate('booking_confirmation', 'email', booking, language);
           if (template.success) {
             const emailResult = await sendEmail({
@@ -165,22 +190,22 @@ export const sendBookingConfirmation = async (
               text: template.text ?? ''
             });
             
-            results[channel] = {
+            setChannelResult(results, channel, {
               status: 'sent',
               messageId: emailResult.messageId ?? generateDeliveryId(),
               recipient: booking.guestEmail
-            };
+            });
             hasSuccess = true;
           } else {
-            results[channel] = {
+            setChannelResult(results, channel, {
               status: 'failed',
               error: template.error,
               recipient: booking.guestEmail
-            };
+            });
           }
         }
         
-        if (channel === 'sms' && booking.guestPhone && typeof booking.guestPhone === 'string') {
+        if (channel === 'sms' && booking.guestPhone != null && typeof booking.guestPhone === 'string') {
           const template = await renderTemplate('booking_confirmation', 'sms', booking, language);
           if (template.success) {
             const smsResult = await sendSMS({
@@ -188,18 +213,18 @@ export const sendBookingConfirmation = async (
               message: template.message ?? 'Booking confirmed'
             });
             
-            results[channel] = {
+            setChannelResult(results, channel, {
               status: 'sent',
               messageId: smsResult.messageId ?? generateDeliveryId(),
               recipient: booking.guestPhone
-            };
+            });
             hasSuccess = true;
           } else {
-            results[channel] = {
+            setChannelResult(results, channel, {
               status: 'failed',
               error: template.error,
               recipient: booking.guestPhone
-            };
+            });
           }
         }
       } catch (error) {
@@ -209,11 +234,11 @@ export const sendBookingConfirmation = async (
         const recipient = channel === 'email' ? 
           (booking.guestEmail ?? 'unknown') : 
           (booking.guestPhone ?? 'unknown');
-        results[channel] = {
+        setChannelResult(results, channel, {
           status: 'failed',
           error: errorMessage,
           recipient
-        };
+        });
       }
     }
 
@@ -248,7 +273,7 @@ export const sendBookingReminder = async (
     });
 
     // Check if booking is in the past
-    if (booking.hoursUntil !== undefined && booking.hoursUntil < 0) {
+    if (typeof booking.hoursUntil === 'number' && booking.hoursUntil < 0) {
       return {
         success: false,
         error: 'Cannot send reminder for past booking',
@@ -268,7 +293,7 @@ export const sendBookingReminder = async (
 
     // Validate channels
     const channelError = validateChannels(booking, channels);
-    if (channelError) {
+    if (channelError != null && channelError !== '') {
       return {
         success: false,
         error: channelError,
@@ -283,7 +308,7 @@ export const sendBookingReminder = async (
     // Process each channel
     for (const channel of channels) {
       try {
-        if (channel === 'email' && booking.guestEmail && typeof booking.guestEmail === 'string') {
+        if (channel === 'email' && booking.guestEmail != null && typeof booking.guestEmail === 'string') {
           const template = await renderTemplate('booking_reminder', 'email', booking, language);
           if (template.success) {
             const emailResult = await sendEmail({
@@ -293,16 +318,16 @@ export const sendBookingReminder = async (
               text: template.text ?? ''
             });
             
-            results[channel] = {
+            setChannelResult(results, channel, {
               status: 'sent',
               messageId: emailResult.messageId ?? generateDeliveryId(),
               recipient: booking.guestEmail
-            };
+            });
             hasSuccess = true;
           }
         }
         
-        if (channel === 'sms' && booking.guestPhone && typeof booking.guestPhone === 'string') {
+        if (channel === 'sms' && booking.guestPhone != null && typeof booking.guestPhone === 'string') {
           const template = await renderTemplate('booking_reminder', 'sms', booking, language);
           if (template.success) {
             const smsResult = await sendSMS({
@@ -310,11 +335,11 @@ export const sendBookingReminder = async (
               message: template.message ?? 'Booking reminder'
             });
             
-            results[channel] = {
+            setChannelResult(results, channel, {
               status: 'sent',
               messageId: smsResult.messageId ?? generateDeliveryId(),
               recipient: booking.guestPhone
-            };
+            });
             hasSuccess = true;
           }
         }
@@ -360,7 +385,7 @@ export const sendCancellationConfirmation = async (
 
     for (const channel of channels) {
       try {
-        if (channel === 'email' && booking.guestEmail && typeof booking.guestEmail === 'string') {
+        if (channel === 'email' && booking.guestEmail != null && typeof booking.guestEmail === 'string') {
           const template = await renderTemplate('cancellation_confirmation', 'email', booking, language);
           if (template.success) {
             const emailResult = await sendEmail({
@@ -370,11 +395,11 @@ export const sendCancellationConfirmation = async (
               text: template.text ?? ''
             });
             
-            results[channel] = {
+            setChannelResult(results, channel, {
               status: 'sent',
               messageId: emailResult.messageId ?? generateDeliveryId(),
               recipient: booking.guestEmail
-            };
+            });
             hasSuccess = true;
           }
         }
@@ -494,13 +519,13 @@ export const cancelReminder = async (jobId: string): Promise<ReminderCancellatio
 };
 
 // Track delivery status
-export const trackDelivery = async (deliveryId: string): Promise<DeliveryTracking> => {
+export const trackDelivery = (deliveryId: string): Promise<DeliveryTracking> => {
   try {
     logInfo('Tracking delivery', { deliveryId });
     
     // Mock implementation - in reality this would query a database
     // and integrate with webhook data from email/SMS providers
-    return {
+    return Promise.resolve({
       deliveryId,
       channels: {
         email: {
@@ -511,21 +536,21 @@ export const trackDelivery = async (deliveryId: string): Promise<DeliveryTrackin
       },
       createdAt: new Date(),
       updatedAt: new Date()
-    };
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Error tracking delivery', { error: errorMessage });
-    throw new Error(errorMessage);
+    return Promise.reject(new Error(errorMessage));
   }
 };
 
 // Get delivery statistics
-export const getDeliveryStats = async (filter: DeliveryStatsFilter): Promise<DeliveryStats> => {
+export const getDeliveryStats = (filter: DeliveryStatsFilter): Promise<DeliveryStats> => {
   try {
     logInfo('Getting delivery stats', filter);
     
     // Mock implementation - in reality this would query analytics database
-    return {
+    return Promise.resolve({
       totalSent: 1250,
       delivered: 1180,
       bounced: 45,
@@ -539,11 +564,11 @@ export const getDeliveryStats = async (filter: DeliveryStatsFilter): Promise<Del
         startDate: filter.startDate,
         endDate: filter.endDate
       }
-    };
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Error getting delivery stats', { error: errorMessage });
-    throw new Error(errorMessage);
+    return Promise.reject(new Error(errorMessage));
   }
 };
 

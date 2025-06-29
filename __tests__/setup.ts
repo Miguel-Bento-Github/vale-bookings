@@ -94,4 +94,6 @@ jest.mock('bcryptjs', () => ({
     return hash === `hashed_${password}`;
   }),
   genSalt: jest.fn(async () => 'mock-salt')
-})); 
+}));
+
+ 

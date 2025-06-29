@@ -202,6 +202,14 @@ const getConfig = (req: Request, res: Response): void => {
         enableReminders: true,
         showMap: true
       },
+      validation: {
+        minPasswordLength: 8,
+        requireEmailVerification: true
+      },
+      i18n: {
+        defaultLanguage: 'en',
+        supportedLanguages: ['en', 'es', 'fr']
+      },
       localization: {
         defaultLanguage: 'en',
         supportedLanguages: ['en', 'es', 'fr'],

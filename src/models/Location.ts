@@ -38,6 +38,11 @@ const LocationSchema: Schema = new Schema(
       type: CoordinatesSchema,
       required: [true, 'Coordinates are required']
     },
+    services: {
+      type: [String],
+      default: [],
+      index: true
+    },
     isActive: {
       type: Boolean,
       default: true

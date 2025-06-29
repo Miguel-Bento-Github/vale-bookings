@@ -20,8 +20,8 @@ type ApiKeyModel = typeof ApiKey & {
   cleanupExpired(): Promise<{ deletedCount: number }>;
 };
 
-// Cast once using unknown to avoid any
-const ApiKeyModel = ApiKey as unknown as ApiKeyModel;
+// Cast once to a properly typed model to avoid `any` usage
+const ApiKeyTyped = ApiKey as unknown as ApiKeyModel;
 
 /**
  * Extract API key from request
@@ -29,19 +29,19 @@ const ApiKeyModel = ApiKey as unknown as ApiKeyModel;
 export const extractApiKey = (req: Request): string | null => {
   // Check Authorization header
   const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
+  if (authHeader?.startsWith('Bearer ') === true) {
     return authHeader.substring(7);
   }
   
   // Check X-API-Key header
-  const apiKeyHeader = req.headers['x-api-key'] as string;
-  if (apiKeyHeader) {
+  const apiKeyHeader = req.headers['x-api-key'] as string | undefined;
+  if (apiKeyHeader !== undefined && apiKeyHeader !== '') {
     return apiKeyHeader;
   }
   
   // Check query parameter (less secure, but sometimes needed)
-  const queryApiKey = req.query.apiKey as string;
-  if (queryApiKey) {
+  const queryApiKey = req.query.apiKey as string | undefined;
+  if (queryApiKey !== undefined && queryApiKey !== '') {
     return queryApiKey;
   }
   
@@ -54,7 +54,7 @@ export const extractApiKey = (req: Request): string | null => {
 export const extractOrigin = (req: Request): string | null => {
   // Check Origin header
   const origin = req.headers.origin;
-  if (origin) {
+  if (origin !== undefined && origin !== '') {
     try {
       const url = new URL(origin);
       return url.hostname;
@@ -65,7 +65,7 @@ export const extractOrigin = (req: Request): string | null => {
   
   // Check Referer header as fallback
   const referer = req.headers.referer;
-  if (referer) {
+  if (referer !== undefined && referer !== '') {
     try {
       const url = new URL(referer);
       return url.hostname;
@@ -89,14 +89,14 @@ export const validateApiKey = async (rawKey: string): Promise<IApiKeyWithMethods
     
     const prefix = rawKey.substring(0, 8);
     
-    // Find API key by prefix
-    const apiKey = await ApiKeyModel.findByPrefix(prefix);
-    if (!apiKey) {
+    // Find API key by prefix - using any for static method access
+    const apiKey = await ApiKeyTyped.findByPrefix(prefix);
+    if (apiKey === null) {
       return null;
     }
     
     // Check if key is active and not expired
-    if (!apiKey.isActive || apiKey.isExpired) {
+    if (apiKey.isActive !== true || apiKey.isExpired === true) {
       return null;
     }
     
@@ -122,7 +122,7 @@ export const validateRequest = async (req: Request): Promise<{
 }> => {
   // Extract API key
   const rawKey = extractApiKey(req);
-  if (!rawKey) {
+  if (rawKey === null || rawKey === '') {
     return {
       isValid: false,
       error: 'API key is required',
@@ -132,7 +132,7 @@ export const validateRequest = async (req: Request): Promise<{
   
   // Validate API key
   const apiKey = await validateApiKey(rawKey);
-  if (!apiKey) {
+  if (apiKey === null) {
     return {
       isValid: false,
       error: 'Invalid API key',
@@ -142,7 +142,7 @@ export const validateRequest = async (req: Request): Promise<{
   
   // Extract and validate domain
   const domain = extractOrigin(req);
-  if (!domain) {
+  if (domain === null || domain === '') {
     return {
       isValid: false,
       error: 'Origin domain is required',
@@ -195,7 +195,7 @@ export const generateApiKey = async (params: {
   interface ApiKeyWithRaw extends IApiKeyWithMethods { _rawKey: string }
   const rawKey = (savedKey as unknown as ApiKeyWithRaw)._rawKey;
   
-  if (!rawKey) {
+  if (rawKey === undefined || rawKey === '') {
     throw new Error('Failed to generate API key');
   }
   
@@ -216,14 +216,14 @@ export const rotateApiKey = async (
   rawKey: string;
 }> => {
   const oldKey = await ApiKey.findById(apiKeyId) as IApiKeyWithMethods;
-  if (!oldKey) {
+  if (oldKey === null) {
     throw new Error('API key not found');
   }
   
   const rawKey = await oldKey.rotate(createdBy);
   const newKey = await ApiKey.findOne({ rotatedFrom: oldKey._id }) as IApiKeyWithMethods;
   
-  if (!newKey) {
+  if (newKey === null) {
     throw new Error('Failed to create rotated key');
   }
   
@@ -237,7 +237,7 @@ export const rotateApiKey = async (
  */
 export const revokeApiKey = async (apiKeyId: string): Promise<IApiKeyWithMethods> => {
   const apiKey = await ApiKey.findById(apiKeyId) as IApiKeyWithMethods;
-  if (!apiKey) {
+  if (apiKey === null) {
     throw new Error('API key not found');
   }
   
@@ -252,39 +252,39 @@ export const revokeApiKey = async (apiKeyId: string): Promise<IApiKeyWithMethods
 /**
  * List active API keys
  */
-export const listActiveKeys = async (filters?: {
+export const listActiveKeys = (filters?: {
   createdBy?: string;
   domain?: string;
   tag?: string;
 }): Promise<IApiKeyWithMethods[]> => {
   const query: Record<string, unknown> = { isActive: true };
   
-  if (filters?.createdBy) {
+  if (filters?.createdBy !== undefined && filters.createdBy !== '') {
     query.createdBy = filters.createdBy;
   }
   
-  if (filters?.domain) {
+  if (filters?.domain !== undefined && filters.domain !== '') {
     query.domainWhitelist = filters.domain;
   }
   
-  if (filters?.tag) {
+  if (filters?.tag !== undefined && filters.tag !== '') {
     query.tags = filters.tag;
   }
   
-  return ApiKeyModel.findActive().where(query);
+  return ApiKeyTyped.findActive().where(query);
 };
 
 /**
  * Clean up expired API keys
  */
 export const cleanupExpiredKeys = async (): Promise<number> => {
-  const result = await ApiKeyModel.cleanupExpired();
+  const result = await ApiKeyTyped.cleanupExpired();
   
-  if (result.deletedCount > 0) {
-    logInfo(`Cleaned up ${result.deletedCount} expired API keys`);
+  if ((result.deletedCount ?? 0) > 0) {
+    logInfo(`Cleaned up ${result.deletedCount ?? 0} expired API keys`);
   }
   
-  return result.deletedCount;
+  return result.deletedCount ?? 0;
 };
 
 // Export all functions as a single object for backward compatibility

@@ -1,0 +1,541 @@
+import request from 'supertest';
+import app from '../../src/app';
+import { ApiKey } from '../../src/models/ApiKey';
+import { GuestBooking } from '../../src/models/GuestBooking';
+import Location from '../../src/models/Location';
+import { generateSecureToken, hash } from '../../src/utils/encryption';
+
+describe('Widget Performance Tests', () => {
+  let validApiKey: string;
+  let testLocation: any;
+
+  beforeAll(async () => {
+    // Generate a valid API key for testing
+    validApiKey = generateSecureToken(32);
+    const hashedKey = hash(validApiKey);
+    
+    await ApiKey.create({
+      name: 'Performance Test Widget Key',
+      key: hashedKey,
+      keyPrefix: validApiKey.substring(0, 8),
+      domainWhitelist: ['https://example.com'],
+      isActive: true,
+      createdBy: 'test-user',
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    });
+
+    // Create test location
+    testLocation = await Location.create({
+      name: 'Performance Test Location',
+      address: '123 Test St',
+      coordinates: { latitude: 40.7128, longitude: -74.0060 },
+      services: ['haircut'],
+      isActive: true
+    });
+  });
+
+  afterAll(async () => {
+    await ApiKey.deleteMany({});
+    await GuestBooking.deleteMany({});
+    await Location.deleteMany({});
+  });
+
+  describe('Load Testing', () => {
+    it('should handle 100 concurrent location searches', async () => {
+      const requests = Array(100).fill(null).map(() => 
+        request(app)
+          .get('/api/widget/v1/locations')
+          .set('X-API-Key', validApiKey)
+          .set('Origin', 'https://example.com')
+      );
+
+      const startTime = Date.now();
+      const responses = await Promise.all(requests);
+      const endTime = Date.now();
+
+      const successfulResponses = responses.filter(r => r.status === 200);
+      const avgResponseTime = (endTime - startTime) / 100;
+
+      expect(successfulResponses.length).toBeGreaterThan(90); // Allow for some rate limiting
+      expect(avgResponseTime).toBeLessThan(100); // Average response time under 100ms
+    });
+
+    it('should handle 50 concurrent booking creations', async () => {
+      const bookingData = {
+        locationId: testLocation._id.toString(),
+        serviceId: 'haircut',
+        date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        time: '10:00',
+        duration: 60,
+        guestInfo: {
+          firstName: 'Test',
+          lastName: 'User',
+          email: 'test@example.com',
+          phone: '+1234567890'
+        },
+        gdprConsent: {
+          consentGiven: true,
+          consentVersion: '1.0',
+          consentTimestamp: new Date().toISOString()
+        }
+      };
+
+      const requests = Array(50).fill(null).map((_, index) => 
+        request(app)
+          .post('/api/widget/v1/bookings')
+          .set('X-API-Key', validApiKey)
+          .set('Origin', 'https://example.com')
+          .send({
+            ...bookingData,
+            guestInfo: {
+              ...bookingData.guestInfo,
+              email: `test${index}@example.com`
+            }
+          })
+      );
+
+      const startTime = Date.now();
+      const responses = await Promise.all(requests);
+      const endTime = Date.now();
+
+      const successfulResponses = responses.filter(r => r.status === 201);
+      const avgResponseTime = (endTime - startTime) / 50;
+
+      expect(successfulResponses.length).toBeGreaterThan(40); // Allow for some rate limiting
+      expect(avgResponseTime).toBeLessThan(200); // Average response time under 200ms
+    });
+  });
+
+  describe('Response Time Benchmarks', () => {
+    it('should respond to config requests within 50ms', async () => {
+      const startTime = Date.now();
+      const response = await request(app)
+        .get('/api/widget/v1/config')
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://example.com');
+      const endTime = Date.now();
+
+      expect(response.status).toBe(200);
+      expect(endTime - startTime).toBeLessThan(50);
+    });
+
+    it('should respond to location searches within 100ms', async () => {
+      const startTime = Date.now();
+      const response = await request(app)
+        .get('/api/widget/v1/locations?service=haircut')
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://example.com');
+      const endTime = Date.now();
+
+      expect(response.status).toBe(200);
+      expect(endTime - startTime).toBeLessThan(100);
+    });
+  });
+
+  describe('Memory Usage', () => {
+    it('should not leak memory during repeated requests', async () => {
+      const initialMemory = process.memoryUsage().heapUsed;
+
+      // Make 1000 requests
+      for (let i = 0; i < 10; i++) {
+        await Promise.all(
+          Array(100).fill(null).map(() => 
+            request(app)
+              .get('/api/widget/v1/config')
+              .set('X-API-Key', validApiKey)
+              .set('Origin', 'https://example.com')
+          )
+        );
+      }
+
+      // Force garbage collection if available
+      if (global.gc) {
+        global.gc();
+      }
+
+      const finalMemory = process.memoryUsage().heapUsed;
+      const memoryIncrease = finalMemory - initialMemory;
+
+      // Memory increase should be less than 50MB
+      expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024);
+    });
+  });
+
+  describe('Response Time Performance', () => {
+    it('should respond to config requests within 200ms', async () => {
+      const start = Date.now();
+      
+      const response = await request(app)
+        .get('/api/widget/v1/config')
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://perf.example.com');
+
+      const responseTime = Date.now() - start;
+      
+      expect(response.status).toBe(200);
+      expect(responseTime).toBeLessThan(200);
+    });
+
+    it('should respond to location queries within 300ms', async () => {
+      const start = Date.now();
+      
+      const response = await request(app)
+        .get('/api/widget/v1/locations')
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://perf.example.com');
+
+      const responseTime = Date.now() - start;
+      
+      expect(response.status).toBe(200);
+      expect(responseTime).toBeLessThan(300);
+    });
+
+    it('should respond to availability queries within 400ms', async () => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dateStr = tomorrow.toISOString().split('T')[0];
+
+      const start = Date.now();
+      
+      const response = await request(app)
+        .get(`/api/widget/v1/locations/${testLocation._id}/availability?date=${dateStr}&service=haircut`)
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://perf.example.com');
+
+      const responseTime = Date.now() - start;
+      
+      expect(response.status).toBe(200);
+      expect(responseTime).toBeLessThan(400);
+    });
+
+    it('should create bookings within 500ms', async () => {
+      const bookingData = {
+        locationId: testLocation._id.toString(),
+        serviceId: 'haircut',
+        date: new Date().toISOString().split('T')[0],
+        time: '10:00',
+        duration: 60,
+        guestInfo: {
+          firstName: 'Performance',
+          lastName: 'Test',
+          email: 'perf@example.com',
+          phone: '+1234567890'
+        },
+        gdprConsent: {
+          consentGiven: true,
+          consentVersion: '1.0',
+          consentTimestamp: new Date().toISOString()
+        }
+      };
+
+      const start = Date.now();
+      
+      const response = await request(app)
+        .post('/api/widget/v1/bookings')
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://perf.example.com')
+        .send(bookingData);
+
+      const responseTime = Date.now() - start;
+      
+      expect(response.status).toBe(201);
+      expect(responseTime).toBeLessThan(500);
+    });
+  });
+
+  describe('Concurrent Request Handling', () => {
+    it('should handle 20 concurrent config requests efficiently', async () => {
+      const concurrentRequests = 20;
+      const promises = [];
+
+      const start = Date.now();
+
+      for (let i = 0; i < concurrentRequests; i++) {
+        promises.push(
+          request(app)
+            .get('/api/widget/v1/config')
+            .set('X-API-Key', validApiKey)
+            .set('Origin', 'https://perf.example.com')
+        );
+      }
+
+      const responses = await Promise.all(promises);
+      const totalTime = Date.now() - start;
+
+      // All requests should succeed
+      responses.forEach(response => {
+        expect(response.status).toBe(200);
+      });
+
+      // Average response time should be reasonable
+      const avgResponseTime = totalTime / concurrentRequests;
+      expect(avgResponseTime).toBeLessThan(100);
+    });
+
+    it('should handle 10 concurrent booking creation requests', async () => {
+      const concurrentRequests = 10;
+      const promises = [];
+
+      const start = Date.now();
+
+      for (let i = 0; i < concurrentRequests; i++) {
+        const bookingData = {
+          locationId: testLocation._id.toString(),
+          serviceId: 'haircut',
+          date: new Date().toISOString().split('T')[0],
+          time: '10:00',
+          duration: 60,
+          guestInfo: {
+            firstName: 'Concurrent',
+            lastName: `User${i}`,
+            email: `concurrent${i}@example.com`,
+            phone: '+1234567890'
+          },
+          gdprConsent: {
+            consentGiven: true,
+            consentVersion: '1.0',
+            consentTimestamp: new Date().toISOString()
+          }
+        };
+
+        promises.push(
+          request(app)
+            .post('/api/widget/v1/bookings')
+            .set('X-API-Key', validApiKey)
+            .set('Origin', 'https://perf.example.com')
+            .send(bookingData)
+        );
+      }
+
+      const responses = await Promise.all(promises);
+      const totalTime = Date.now() - start;
+
+      // All requests should succeed
+      const successfulResponses = responses.filter(r => r.status === 201);
+      expect(successfulResponses.length).toBe(concurrentRequests);
+
+      // Total time should be reasonable
+      expect(totalTime).toBeLessThan(3000); // 3 seconds for 10 bookings
+
+      // All booking references should be unique
+      const references = successfulResponses.map(r => r.body.data.referenceNumber);
+      const uniqueReferences = new Set(references);
+      expect(uniqueReferences.size).toBe(references.length);
+    });
+  });
+
+  describe('Memory Usage Performance', () => {
+    it('should not leak memory during sustained operations', async () => {
+      const initialMemory = process.memoryUsage();
+
+      // Perform 50 operations
+      for (let i = 0; i < 50; i++) {
+        await request(app)
+          .get('/api/widget/v1/config')
+          .set('X-API-Key', validApiKey)
+          .set('Origin', 'https://perf.example.com');
+
+        // Force garbage collection every 10 requests if available
+        if (i % 10 === 0 && global.gc) {
+          global.gc();
+        }
+      }
+
+      const finalMemory = process.memoryUsage();
+
+      // Memory usage should not increase significantly
+      const memoryIncrease = finalMemory.heapUsed - initialMemory.heapUsed;
+      const increasePercentage = (memoryIncrease / initialMemory.heapUsed) * 100;
+
+      expect(increasePercentage).toBeLessThan(50); // Less than 50% increase
+    });
+  });
+
+  describe('Database Query Performance', () => {
+    it('should efficiently query locations with indexes', async () => {
+      // Create additional test locations for performance testing
+      const locations = [];
+      for (let i = 0; i < 20; i++) {
+        locations.push({
+          name: `Perf Location ${i}`,
+          address: `${i} Performance St, Test City, TC 12345`,
+          coordinates: { 
+            lat: 40.7128 + (Math.random() - 0.5) * 0.1, 
+            lng: -74.0060 + (Math.random() - 0.5) * 0.1 
+          },
+          services: ['haircut', 'styling'],
+          isActive: true,
+          operatingHours: {
+            monday: { open: '09:00', close: '17:00' },
+            tuesday: { open: '09:00', close: '17:00' },
+            wednesday: { open: '09:00', close: '17:00' },
+            thursday: { open: '09:00', close: '17:00' },
+            friday: { open: '09:00', close: '17:00' },
+            saturday: { open: '10:00', close: '16:00' },
+            sunday: { open: '10:00', close: '16:00' }
+          }
+        });
+      }
+
+      await Location.insertMany(locations);
+
+      const start = Date.now();
+
+      const response = await request(app)
+        .get('/api/widget/v1/locations?service=haircut&page=1&limit=10')
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://perf.example.com');
+
+      const queryTime = Date.now() - start;
+
+      expect(response.status).toBe(200);
+      expect(queryTime).toBeLessThan(150); // Should be fast with proper indexes
+      expect(response.body.data.locations.length).toBeLessThanOrEqual(10);
+    });
+
+    it('should efficiently perform geo-spatial queries', async () => {
+      const start = Date.now();
+
+      const response = await request(app)
+        .get('/api/widget/v1/locations?lat=40.7128&lng=-74.0060&radius=5')
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://perf.example.com');
+
+      const queryTime = Date.now() - start;
+
+      expect(response.status).toBe(200);
+      expect(queryTime).toBeLessThan(200); // Geo queries might be slightly slower
+    });
+  });
+
+  describe('Encryption Performance', () => {
+    it('should encrypt/decrypt PII data efficiently', async () => {
+      const testData = 'test@example.com';
+      const iterations = 20;
+
+      const start = Date.now();
+
+      for (let i = 0; i < iterations; i++) {
+        const encrypted = await hash(testData);
+        const decrypted = await hash(encrypted);
+        
+        expect(decrypted).toBe(testData);
+      }
+
+      const totalTime = Date.now() - start;
+      const avgTimePerOperation = totalTime / iterations;
+
+      // Should be fast - less than 10ms per encrypt/decrypt cycle
+      expect(avgTimePerOperation).toBeLessThan(10);
+    });
+
+    it('should hash data efficiently for secure comparison', async () => {
+      const testData = 'test-api-key-12345';
+      const iterations = 10;
+
+      const start = Date.now();
+
+      for (let i = 0; i < iterations; i++) {
+        await hash(testData);
+      }
+
+      const totalTime = Date.now() - start;
+      const avgTimePerOperation = totalTime / iterations;
+
+      // Hashing should be fast but secure
+      expect(avgTimePerOperation).toBeLessThan(20);
+    });
+  });
+
+  describe('Rate Limiting Performance', () => {
+    it('should efficiently handle rate limit checks', async () => {
+      const requests = [];
+      const start = Date.now();
+
+      // Make requests up to the rate limit
+      for (let i = 0; i < 15; i++) {
+        requests.push(
+          request(app)
+            .get('/api/widget/v1/config')
+            .set('X-API-Key', validApiKey)
+            .set('Origin', 'https://perf.example.com')
+        );
+      }
+
+      const responses = await Promise.all(requests);
+      const totalTime = Date.now() - start;
+
+      // All requests should be processed quickly
+      expect(totalTime).toBeLessThan(1500); // 1.5 seconds for 15 requests
+
+      // Most requests should succeed (within rate limit)
+      const successfulRequests = responses.filter(r => r.status === 200);
+      expect(successfulRequests.length).toBeGreaterThan(10);
+    });
+  });
+
+  describe('API Response Size Optimization', () => {
+    it('should return optimally sized responses', async () => {
+      const response = await request(app)
+        .get('/api/widget/v1/config')
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://perf.example.com');
+
+      const responseSize = JSON.stringify(response.body).length;
+
+      expect(response.status).toBe(200);
+      expect(responseSize).toBeLessThan(5000); // Config should be under 5KB
+    });
+
+    it('should efficiently paginate location results', async () => {
+      const response = await request(app)
+        .get('/api/widget/v1/locations?limit=5')
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://perf.example.com');
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.locations.length).toBeLessThanOrEqual(5);
+      expect(response.body.data.pagination).toBeDefined();
+      
+      const responseSize = JSON.stringify(response.body).length;
+      expect(responseSize).toBeLessThan(10000); // Paginated results should be reasonable
+    });
+  });
+
+  describe('Error Handling Performance', () => {
+    it('should handle validation errors efficiently', async () => {
+      const invalidBookingData = {
+        locationId: 'invalid',
+        serviceId: 'haircut',
+        // Missing required fields
+      };
+
+      const start = Date.now();
+
+      const response = await request(app)
+        .post('/api/widget/v1/bookings')
+        .set('X-API-Key', validApiKey)
+        .set('Origin', 'https://perf.example.com')
+        .send(invalidBookingData);
+
+      const responseTime = Date.now() - start;
+
+      expect(response.status).toBe(400);
+      expect(responseTime).toBeLessThan(100); // Error responses should be very fast
+    });
+
+    it('should handle authentication errors efficiently', async () => {
+      const start = Date.now();
+
+      const response = await request(app)
+        .get('/api/widget/v1/config')
+        .set('X-API-Key', 'invalid-key')
+        .set('Origin', 'https://perf.example.com');
+
+      const responseTime = Date.now() - start;
+
+      expect(response.status).toBe(401);
+      expect(responseTime).toBeLessThan(50); // Auth errors should be very fast
+    });
+  });
+}); 

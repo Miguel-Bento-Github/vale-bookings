@@ -63,7 +63,7 @@ const cleanupInterval = setInterval(() => {
  * Generate rate limit key
  */
 const generateKey = (identifier: string, endpoint?: string): string => {
-  if (endpoint) {
+  if (endpoint != null && endpoint !== '') {
     return `${identifier}:${endpoint}`;
   }
   return identifier;
@@ -74,7 +74,7 @@ const generateKey = (identifier: string, endpoint?: string): string => {
  */
 const isIPBlocked = (ip: string): boolean => {
   const blockedUntil = blockedIPs.get(ip);
-  if (!blockedUntil) return false;
+  if (blockedUntil == null) return false;
   
   if (blockedUntil > new Date()) {
     return true;
@@ -147,9 +147,11 @@ export const checkRateLimit = async (
     
     // Calculate when the rate limit will reset
     let resetAt = new Date(now + config.windowMs);
-    if (oldestRequest.length >= 2 && typeof oldestRequest[1] === 'string') {
-      const oldestTimestamp = parseInt(oldestRequest[1]);
-      resetAt = new Date(oldestTimestamp + config.windowMs);
+    if (Array.isArray(oldestRequest) && oldestRequest.length >= 2 && oldestRequest[1] != null) {
+      const tsParsed = Number(oldestRequest[1]);
+      if (!Number.isNaN(tsParsed)) {
+        resetAt = new Date(tsParsed + config.windowMs);
+      }
     }
     
     // Check if limit exceeded
@@ -191,16 +193,15 @@ export const checkRateLimit = async (
  * Get client IP address
  */
 const getClientIP = (req: Request): string => {
-  // Check various headers for real IP
-  const forwardedFor = req.headers['x-forwarded-for'];
-  if (forwardedFor !== undefined && forwardedFor !== null) {
-    const ips = (forwardedFor as string).split(',').map(ip => ip.trim());
-    return ips[0] ?? 'unknown';
+  const forwardedForHeader = req.headers['x-forwarded-for'];
+  if (typeof forwardedForHeader === 'string' && forwardedForHeader.trim() !== '') {
+    const ips = forwardedForHeader.split(',').map(ip => ip.trim());
+    if (ips.length > 0 && ips[0] !== '') return ips[0] ?? 'unknown';
   }
 
-  const realIP = req.headers['x-real-ip'] as string;
-  if (realIP !== undefined && realIP !== null && realIP !== '') {
-    return realIP;
+  const realIPHeader = req.headers['x-real-ip'];
+  if (typeof realIPHeader === 'string' && realIPHeader.trim() !== '') {
+    return realIPHeader;
   }
 
   return req.ip ?? req.socket?.remoteAddress ?? 'unknown';
@@ -225,7 +226,7 @@ const trackAbuse = async (ip: string, apiKeyPrefix?: string): Promise<void> => {
       blockIP(ip);
       await redis.del(abuseKey);
       
-      if (apiKeyPrefix) {
+      if (apiKeyPrefix != null && apiKeyPrefix !== '') {
         logWarning(`Potential abuse detected from IP ${ip} using API key ${apiKeyPrefix}`);
       }
     }
@@ -269,7 +270,8 @@ export const createApiKeyMiddleware = (): (
         let endpointConfig: RateLimitConfig | undefined = undefined;
         
         if (apiKey.rateLimits?.endpoints instanceof Map) {
-          endpointConfig = apiKey.rateLimits.endpoints.get(endpoint);
+          const endpointValue: unknown = apiKey.rateLimits.endpoints.get(endpoint);
+          endpointConfig = endpointValue as RateLimitConfig | undefined;
         }
         
         const config = endpointConfig ?? apiKey.rateLimits?.global ?? RATE_LIMIT_DEFAULTS.GLOBAL;
@@ -287,7 +289,7 @@ export const createApiKeyMiddleware = (): (
         res.setHeader('X-RateLimit-Reset', result.resetAt.toISOString());
 
         if (!result.allowed) {
-          if (result.retryAfter !== undefined) {
+          if (typeof result.retryAfter === 'number') {
             res.setHeader('Retry-After', result.retryAfter);
           }
           
@@ -348,7 +350,9 @@ export const createIPMiddleware = (
         res.setHeader('X-RateLimit-Reset', result.resetAt.toISOString());
 
         if (!result.allowed) {
-          res.setHeader('Retry-After', result.retryAfter!);
+          if (typeof result.retryAfter === 'number') {
+            res.setHeader('Retry-After', result.retryAfter);
+          }
           
           // Block IP after too many violations
           await trackAbuse(clientIP);
@@ -387,7 +391,7 @@ export const createEmailMiddleware = (config: RateLimitConfig = {
       try {
         const requestBody = req.body as { guestEmail?: string };
         const email = requestBody.guestEmail?.toLowerCase();
-        if (!email || typeof email !== 'string') {
+        if (email == null || typeof email !== 'string' || email === '') {
           return next();
         }
 
@@ -449,9 +453,11 @@ export const getUsage = async (
     const oldestRequest = await redis.zrange(key, 0, 0, 'WITHSCORES');
     
     let resetAt = new Date(now + config.windowMs);
-    if (oldestRequest && oldestRequest.length >= 2 && oldestRequest[1]) {
-      const oldestTimestamp = parseInt(oldestRequest[1]);
-      resetAt = new Date(oldestTimestamp + config.windowMs);
+    if (Array.isArray(oldestRequest) && oldestRequest.length >= 2 && oldestRequest[1] != null) {
+      const tsParsed = Number(oldestRequest[1]);
+      if (!Number.isNaN(tsParsed)) {
+        resetAt = new Date(tsParsed + config.windowMs);
+      }
     }
 
     return {

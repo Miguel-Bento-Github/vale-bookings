@@ -11,7 +11,7 @@ export * from './user';
 export * from './location';
 export * from './booking';
 export * from './schedule';
-export * from './payment';
+export * from './payment'; 
 
 // Export all widget types
 export * from './widget';

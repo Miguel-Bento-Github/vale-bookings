@@ -59,13 +59,13 @@ const getQueueConfig = (): QueueConfig => {
   };
 };
 
-// Generate unique job ID
-const generateJobId = (): string => {
-  return `job_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-};
+// Generate unique job ID (currently unused but kept for future use)
+// const generateJobId = (): string => {
+//   return `job_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+// };
 
 // Mock Bull Queue implementation
-const scheduleWithBull = async (
+const scheduleWithBull = (
   jobId: string,
   scheduledFor: Date,
   jobType: string,
@@ -93,24 +93,24 @@ const scheduleWithBull = async (
     
     logInfo('Job scheduled successfully with Bull', { jobId, scheduledFor });
     
-    return {
+    return Promise.resolve({
       success: true,
       jobId,
       scheduledFor
-    };
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown Bull error';
     logError('Bull job scheduling failed', { error: errorMessage, jobId });
     
-    return {
+    return Promise.resolve({
       success: false,
       error: errorMessage
-    };
+    });
   }
 };
 
 // Mock Agenda implementation
-const scheduleWithAgenda = async (
+const scheduleWithAgenda = (
   jobId: string,
   scheduledFor: Date,
   jobType: string,
@@ -138,19 +138,19 @@ const scheduleWithAgenda = async (
     
     logInfo('Job scheduled successfully with Agenda', { jobId, scheduledFor });
     
-    return {
+    return Promise.resolve({
       success: true,
       jobId,
       scheduledFor
-    };
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown Agenda error';
     logError('Agenda job scheduling failed', { error: errorMessage, jobId });
     
-    return {
+    return Promise.resolve({
       success: false,
       error: errorMessage
-    };
+    });
   }
 };
 
@@ -189,10 +189,10 @@ export const scheduleJob = async (
     case 'agenda':
       return await scheduleWithAgenda(jobId, scheduledFor, jobType, data);
     default:
-      logError('Unsupported queue provider', { provider: config.provider });
+      logError('Unsupported queue provider', { provider: String(config.provider) });
       return {
         success: false,
-        error: `Unsupported queue provider: ${config.provider}`
+        error: `Unsupported queue provider: ${String(config.provider)}`
       };
     }
   } catch (error) {
@@ -207,21 +207,21 @@ export const scheduleJob = async (
 };
 
 // Cancel a scheduled job
-export const cancelJob = async (jobId: string): Promise<boolean> => {
+export const cancelJob = (jobId: string): Promise<boolean> => {
   try {
     logInfo('Cancelling job', { jobId });
     
     // Check if job exists in mock storage
     const job = mockJobs.get(jobId);
-    if (!job) {
+    if (job == null) {
       logWarning('Job not found for cancellation', { jobId });
-      return false;
+      return Promise.resolve(false);
     }
     
     // Check if job can be cancelled
     if (job.status === 'completed' || job.status === 'failed') {
       logWarning('Cannot cancel completed or failed job', { jobId, status: job.status });
-      return false;
+      return Promise.resolve(false);
     }
     
     // In real implementation, you would:
@@ -233,16 +233,16 @@ export const cancelJob = async (jobId: string): Promise<boolean> => {
     job.updatedAt = new Date();
     
     logInfo('Job cancelled successfully', { jobId });
-    return true;
+    return Promise.resolve(true);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Job cancellation failed', { error: errorMessage, jobId });
-    return false;
+    return Promise.resolve(false);
   }
 };
 
 // Get job status
-export const getJobStatus = async (jobId: string): Promise<{
+export const getJobStatus = (jobId: string): Promise<{
   exists: boolean;
   status?: string;
   scheduledFor?: Date;
@@ -253,29 +253,29 @@ export const getJobStatus = async (jobId: string): Promise<{
     logInfo('Getting job status', { jobId });
     
     const job = mockJobs.get(jobId);
-    if (!job) {
-      return { exists: false };
+    if (job == null) {
+      return Promise.resolve({ exists: false });
     }
     
-    return {
+    return Promise.resolve({
       exists: true,
       status: job.status,
       scheduledFor: job.scheduledFor,
       data: job.data
-    };
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Getting job status failed', { error: errorMessage, jobId });
     
-    return {
+    return Promise.resolve({
       exists: false,
       error: errorMessage
-    };
+    });
   }
 };
 
 // List jobs (for debugging/monitoring)
-export const listJobs = async (options: {
+export const listJobs = (options: {
   status?: string;
   type?: string;
   limit?: number;
@@ -298,11 +298,11 @@ export const listJobs = async (options: {
     let jobs = Array.from(mockJobs.values());
     
     // Apply filters
-    if (status) {
+    if (status != null && status !== '') {
       jobs = jobs.filter(job => job.status === status);
     }
     
-    if (type) {
+    if (type != null && type !== '') {
       jobs = jobs.filter(job => job.type === type);
     }
     
@@ -319,18 +319,18 @@ export const listJobs = async (options: {
         createdAt: job.createdAt
       }));
     
-    return {
+    return Promise.resolve({
       jobs: paginatedJobs,
       total
-    };
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Listing jobs failed', { error: errorMessage });
     
-    return {
+    return Promise.resolve({
       jobs: [],
       total: 0
-    };
+    });
   }
 };
 
@@ -382,7 +382,7 @@ export const processJob = async (jobId: string): Promise<boolean> => {
 };
 
 // Clean up completed/failed jobs
-export const cleanupJobs = async (olderThanDays: number = 7): Promise<number> => {
+export const cleanupJobs = (olderThanDays: number = 7): Promise<number> => {
   try {
     logInfo('Cleaning up old jobs', { olderThanDays });
     
@@ -402,16 +402,16 @@ export const cleanupJobs = async (olderThanDays: number = 7): Promise<number> =>
     }
     
     logInfo('Job cleanup completed', { cleanedCount, olderThanDays });
-    return cleanedCount;
+    return Promise.resolve(cleanedCount);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Job cleanup failed', { error: errorMessage });
-    return 0;
+    return Promise.resolve(0);
   }
 };
 
 // Get queue health status
-export const getQueueHealth = async (): Promise<{
+export const getQueueHealth = (): Promise<{
   healthy: boolean;
   provider: string;
   jobCounts: {
@@ -441,16 +441,16 @@ export const getQueueHealth = async (): Promise<{
     
     logInfo('Queue health check', { provider: config.provider, jobCounts });
     
-    return {
+    return Promise.resolve({
       healthy: true,
       provider: config.provider,
       jobCounts
-    };
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Queue health check failed', { error: errorMessage });
     
-    return {
+    return Promise.resolve({
       healthy: false,
       provider: 'unknown',
       jobCounts: {
@@ -461,6 +461,6 @@ export const getQueueHealth = async (): Promise<{
         cancelled: 0
       },
       error: errorMessage
-    };
+    });
   }
 }; 
