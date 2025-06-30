@@ -62,7 +62,6 @@ const guestBookingSchema = new Schema<IGuestBooking>({
   // Booking reference
   referenceNumber: {
     type: String,
-    required: true,
     unique: true,
     index: true
   },
@@ -196,44 +195,40 @@ guestBookingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Pre-save middleware for encryption
 guestBookingSchema.pre('save', function(this: IGuestBooking, next): void {
-  // Encrypt PII fields if they are being modified
-  if (this.isModified('guestEmail') && this.guestEmail !== undefined) {
-    this.guestEmail = encryptionService.encrypt(this.guestEmail);
+  try {
+    // Encrypt PII fields if they are being modified
+    if (this.isModified('guestEmail') && this.guestEmail !== undefined) {
+      this.guestEmail = encryptionService.encrypt(this.guestEmail);
+    }
+    if (this.isModified('guestPhone') && this.guestPhone !== undefined) {
+      this.guestPhone = encryptionService.encrypt(this.guestPhone);
+    }
+
+    // Set default expiration for GDPR compliance (30 days after booking date)
+    if (this.isNew === true && this.expiresAt === undefined) {
+      const expirationDate = new Date(this.bookingDate);
+      expirationDate.setDate(
+        expirationDate.getDate() + DATA_RETENTION_PERIODS.GUEST_BOOKING
+      );
+      this.expiresAt = expirationDate;
+    }
+
+    // Audit trail for status changes
+    if (this.isModified('status')) {
+      const auditEntry: AuditTrailEntry = {
+        action: AUDIT_ACTIONS.STATUS_CHANGE,
+        timestamp: new Date(),
+        previousValue: this.get('status', null, { getters: false }) as string,
+        newValue: this.status,
+        userId: 'system', // In real implementation, this would be the user ID
+        metadata: { reason: 'Status update' }
+      };
+      this.auditTrail.push(auditEntry);
+    }
+    next();
+  } catch (err) {
+    next(err as Error);
   }
-  
-  if (this.isModified('guestPhone') && this.guestPhone !== undefined) {
-    this.guestPhone = encryptionService.encrypt(this.guestPhone);
-  }
-  
-  // Generate reference number if new booking
-  if (this.isNew === true && this.referenceNumber === undefined) {
-    this.referenceNumber = encryptionService.generateReferenceNumber();
-  }
-  
-  // Set default expiration for GDPR compliance (30 days after booking date)
-  if (this.isNew === true && this.expiresAt === undefined) {
-    const expirationDate = new Date(this.bookingDate);
-    expirationDate.setDate(
-      expirationDate.getDate() + DATA_RETENTION_PERIODS.GUEST_BOOKING
-    );
-    this.expiresAt = expirationDate;
-  }
-  
-  // Audit trail for status changes
-  if (this.isModified('status')) {
-    const auditEntry: AuditTrailEntry = {
-      action: AUDIT_ACTIONS.STATUS_CHANGE,
-      timestamp: new Date(),
-      previousValue: this.get('status', null, { getters: false }) as string,
-      newValue: this.status,
-      userId: 'system', // In real implementation, this would be the user ID
-      metadata: { reason: 'Status update' }
-    };
-    
-    this.auditTrail.push(auditEntry);
-  }
-  
-  next();
 });
 
 // Pre-update middleware to track changes

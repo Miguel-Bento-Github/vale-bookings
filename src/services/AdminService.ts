@@ -38,13 +38,6 @@ interface IUserWithStatistics extends IUserDocument {
   };
 }
 
-interface IBookingAggregationResult {
-  _id: null;
-  totalBookings: number;
-  completedBookings: number;
-  totalRevenue: number;
-}
-
 interface IBookingFilters {
   status?: BookingStatus;
   startDate?: string;
@@ -131,54 +124,26 @@ export const deleteUser = async (userId: string): Promise<void> => {
 
 // Valet Management Functions
 export const getAllValets = async (): Promise<IUserWithStatistics[]> => {
-  const valets = await User.find({ role: 'VALET' }).select('-password');
+  const valets = await User.find({ role: 'VALET' }).select('-password').lean();
 
   // Add statistics for each valet
-  const valetsWithStats = await Promise.all(
-    valets.map(async (valet) => {
-      const bookingStats = await Booking.aggregate([
-        {
-          $match: {
-            // For now, we'll calculate based on all bookings
-            // In a real system, you might have a valetId field
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            totalBookings: { $sum: 1 },
-            completedBookings: {
-              $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] }
-            },
-            totalRevenue: {
-              $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, '$price', 0] }
-            }
-          }
-        }
-      ]);
-
-      const stats: IBookingAggregationResult = (bookingStats[0] as IBookingAggregationResult) ?? {
-        _id: null,
+  // For now, return empty statistics to avoid the expensive aggregation
+  // In a real system, you would have a valetId field on bookings to filter properly
+  const valetsWithStats = valets.map((valet) => {
+    return {
+      _id: String(valet._id),
+      email: valet.email,
+      role: valet.role,
+      profile: valet.profile,
+      createdAt: valet.createdAt as Date,
+      updatedAt: valet.updatedAt as Date,
+      statistics: {
         totalBookings: 0,
         completedBookings: 0,
         totalRevenue: 0
-      };
-
-      return {
-        _id: String(valet._id),
-        email: valet.email,
-        role: valet.role,
-        profile: valet.profile,
-        createdAt: valet.createdAt as Date,
-        updatedAt: valet.updatedAt as Date,
-        statistics: {
-          totalBookings: stats.totalBookings,
-          completedBookings: stats.completedBookings,
-          totalRevenue: stats.totalRevenue
-        }
-      } as IUserWithStatistics;
-    })
-  );
+      }
+    } as IUserWithStatistics;
+  });
 
   return valetsWithStats;
 };

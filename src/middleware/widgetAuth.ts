@@ -23,7 +23,7 @@ export const extractApiKey = async (req: Request, res: Response, next: NextFunct
     if (apiKey === null || apiKey === undefined || apiKey === '') {
       res.status(401).json({
         success: false,
-        error: 'API key is required',
+        error: 'Authentication required',
         errorCode: WIDGET_ERROR_CODES.INVALID_API_KEY
       });
       return;
@@ -34,7 +34,7 @@ export const extractApiKey = async (req: Request, res: Response, next: NextFunct
     if (!keyData) {
       res.status(401).json({
         success: false,
-        error: 'Invalid API key',
+        error: 'Invalid authentication credentials',
         errorCode: WIDGET_ERROR_CODES.INVALID_API_KEY
       });
       return;

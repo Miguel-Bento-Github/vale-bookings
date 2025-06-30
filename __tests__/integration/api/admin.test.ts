@@ -1,5 +1,3 @@
-// import { Application } from 'express';
-// import mongoose from 'mongoose';
 import request from 'supertest';
 
 import app from '../../../src/index';
@@ -320,7 +318,7 @@ describe('Admin API Integration Tests', () => {
 
         expect(response.body.success).toBe(true);
         expect(response.body.data.name).toBe(locationData.name);
-        expect(response.body.data.coordinates).toEqual(locationData.coordinates);
+        expect(response.body.data.coordinates).toMatchObject(locationData.coordinates);
       });
 
       it('should validate coordinate ranges', async () => {

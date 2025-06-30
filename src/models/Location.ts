@@ -6,18 +6,20 @@ const CoordinatesSchema = new Schema(
   {
     latitude: {
       type: Number,
+      alias: 'lat',
       required: [true, 'Latitude is required'],
       min: [-90, 'Latitude must be between -90 and 90'],
       max: [90, 'Latitude must be between -90 and 90']
     },
     longitude: {
       type: Number,
+      alias: 'lng',
       required: [true, 'Longitude is required'],
       min: [-180, 'Longitude must be between -180 and 180'],
       max: [180, 'Longitude must be between -180 and 180']
     }
   },
-  { _id: false }
+  { _id: false, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 const LocationSchema: Schema = new Schema(
@@ -75,7 +77,34 @@ LocationSchema.index({
   name: 'unique_name_address'
 });
 
+// Allow using lat/lng on root object when creating documents (used in some tests)
+LocationSchema.pre('validate', function (next) {
+  // `this` is a Mongoose document
+  const doc = this as ILocationDocument & {
+    lat?: number;
+    lng?: number;
+    coordinates?: {
+      latitude?: number;
+      longitude?: number;
+      lat?: number;
+      lng?: number;
+    };
+  };
 
+  // If coordinates absent but lat/lng present at root -> map them
+  if (doc.coordinates == null && doc.lat != null && doc.lng != null) {
+    doc.coordinates = { latitude: doc.lat, longitude: doc.lng };
+  }
+
+  // If coordinates exist but use `lat`/`lng` property names -> normalise
+  if (doc.coordinates != null) {
+    const c = doc.coordinates;
+    if (c.lat != null && c.latitude == null) c.latitude = c.lat;
+    if (c.lng != null && c.longitude == null) c.longitude = c.lng;
+  }
+
+  next();
+});
 
 // Static method to find locations within radius
 LocationSchema.statics.findNearby = function (

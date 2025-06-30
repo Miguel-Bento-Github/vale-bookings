@@ -474,7 +474,8 @@ describe('Middleware Tests', () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: 'Invalid JSON payload'
+        error: 'Invalid JSON payload',
+        errorCode: 'BAD_REQUEST'
       });
     });
 
@@ -487,7 +488,8 @@ describe('Middleware Tests', () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: 'Invalid JSON payload'
+        error: 'Invalid JSON payload',
+        errorCode: 'BAD_REQUEST'
       });
     });
 
@@ -500,7 +502,8 @@ describe('Middleware Tests', () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: 'Invalid JSON payload'
+        error: 'Invalid content type',
+        errorCode: 'BAD_REQUEST'
       });
     });
   });

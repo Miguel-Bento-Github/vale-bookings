@@ -7,6 +7,7 @@ import { logInfo, logWarning, logError } from '../utils/logger';
 
 // Extend IApiKey with custom methods
 interface IApiKeyWithMethods extends IApiKey {
+  validateKey(rawKey: string): boolean;
   validateDomain(domain: string): boolean;
   incrementUsage(endpoint?: string): Promise<IApiKeyWithMethods>;
   rotate(createdBy: string): Promise<string>;
@@ -57,7 +58,8 @@ export const extractOrigin = (req: Request): string | null => {
   if (origin !== undefined && origin !== '') {
     try {
       const url = new URL(origin);
-      return url.hostname;
+      const domain = url.hostname.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      return domain;
     } catch {
       return null;
     }
@@ -68,7 +70,8 @@ export const extractOrigin = (req: Request): string | null => {
   if (referer !== undefined && referer !== '') {
     try {
       const url = new URL(referer);
-      return url.hostname;
+      const domain = url.hostname.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      return domain;
     } catch {
       return null;
     }
@@ -89,7 +92,7 @@ export const validateApiKey = async (rawKey: string): Promise<IApiKeyWithMethods
     
     const prefix = rawKey.substring(0, 8);
     
-    // Find API key by prefix - using any for static method access
+    // Find API key by prefix
     const apiKey = await ApiKeyTyped.findByPrefix(prefix);
     if (apiKey === null) {
       return null;
@@ -100,9 +103,10 @@ export const validateApiKey = async (rawKey: string): Promise<IApiKeyWithMethods
       return null;
     }
     
-    // For now, we trust the prefix match since we can't reverse the hash
-    // In production, you might want to implement a different validation strategy
-    // such as storing a separate validation hash
+    // Validate the full key using the instance method
+    if (!apiKey.validateKey(rawKey)) {
+      return null;
+    }
     
     return apiKey;
   } catch (error) {
@@ -125,7 +129,7 @@ export const validateRequest = async (req: Request): Promise<{
   if (rawKey === null || rawKey === '') {
     return {
       isValid: false,
-      error: 'API key is required',
+      error: 'Authentication required',
       errorCode: WIDGET_ERROR_CODES.INVALID_API_KEY
     };
   }
@@ -135,7 +139,7 @@ export const validateRequest = async (req: Request): Promise<{
   if (apiKey === null) {
     return {
       isValid: false,
-      error: 'Invalid API key',
+      error: 'Invalid authentication credentials',
       errorCode: WIDGET_ERROR_CODES.INVALID_API_KEY
     };
   }

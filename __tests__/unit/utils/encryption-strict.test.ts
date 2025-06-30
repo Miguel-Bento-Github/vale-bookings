@@ -158,8 +158,17 @@ describe('Encryption Service - Strict Type Safety', () => {
       const salt1 = 'salt1';
       const salt2 = 'salt2';
       
+      console.log('DEBUG: Input data:', data);
+      console.log('DEBUG: Salt1:', salt1);
+      console.log('DEBUG: Salt2:', salt2);
+      
       const hashed1 = hash(data, salt1);
       const hashed2 = hash(data, salt2);
+      
+      console.log('DEBUG: Hashed1:', hashed1);
+      console.log('DEBUG: Hashed2:', hashed2);
+      console.log('DEBUG: Are they equal?', hashed1 === hashed2);
+      console.log('DEBUG: Hex decode hashed1:', Buffer.from(hashed1, 'hex').toString());
 
       expect(hashed1).not.toBe(hashed2);
       expect(typeof hashed1).toBe('string');

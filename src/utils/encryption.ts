@@ -1,7 +1,8 @@
 import crypto from 'crypto';
+
 import { v4 as uuidv4 } from 'uuid';
 
-import { ENCRYPTION_CONFIG, API_KEY_CONFIG, REFERENCE_NUMBER_CONFIG } from '../constants/widget';
+import { ENCRYPTION_CONFIG, API_KEY_CONFIG } from '../constants/widget';
 
 /**
  * Encryption utility for PII fields using functional programming

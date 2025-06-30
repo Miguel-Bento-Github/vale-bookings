@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { Model } from 'mongoose';
-import mongoose from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 
 import { WIDGET_ERROR_CODES } from '../constants/widget';
 import { GuestBooking } from '../models/GuestBooking';
 import Location from '../models/Location';
 import { IGuestBooking } from '../types/widget';
+import { encryptionService } from '../utils/encryption';
 import { logInfo, logError } from '../utils/logger';
 import { validateEmail } from '../utils/validationHelpers';
 
@@ -422,26 +422,56 @@ const createBooking = async (req: Request, res: Response, next: NextFunction): P
     }
 
     // Create booking with required fields
-    const guestBooking = new GuestBooking({
-      ...bookingData,
-      widgetApiKey: req.apiKey?.keyPrefix ?? '',
-      originDomain: req.headers.origin ?? '',
-      ipAddress: req.ip ?? 'unknown',
-      userAgent: (req.headers['user-agent'] as string) ?? 'Unknown',
-      price: 100, // Default price - should come from pricing service
-      currency: 'USD',
-      marketingConsent: false,
-      auditTrail: [{
-        action: 'CREATE',
-        timestamp: new Date(),
-        ipAddress: req.ip ?? 'unknown',
-        metadata: {
-          userAgent: (req.headers['user-agent'] as string) ?? 'Unknown'
+    let savedBooking;
+    let attempts = 0;
+    while (attempts < 50) {
+      try {
+        const guestBooking = new GuestBooking({
+          ...bookingData,
+          referenceNumber: encryptionService.generateReferenceNumber(),
+          widgetApiKey: req.apiKey?.keyPrefix ?? '',
+          originDomain: req.headers.origin ?? '',
+          ipAddress: req.ip ?? 'unknown',
+          userAgent: (req.headers['user-agent'] as string) ?? 'Unknown',
+          price: 100, // Default price - should come from pricing service
+          currency: 'USD',
+          marketingConsent: false,
+          auditTrail: [{
+            action: 'CREATE',
+            timestamp: new Date(),
+            ipAddress: req.ip ?? 'unknown',
+            metadata: {
+              userAgent: (req.headers['user-agent'] as string) ?? 'Unknown'
+            }
+          }]
+        });
+        savedBooking = await guestBooking.save();
+        break;
+      } catch (err: unknown) {
+        const mongoError = err as { code?: number; keyPattern?: { referenceNumber?: number } };
+        if (err !== null && 
+            err !== undefined && 
+            typeof err === 'object' && 
+            'code' in err && 
+            'keyPattern' in err && 
+            mongoError.code === 11000 && 
+            mongoError.keyPattern?.referenceNumber !== undefined) {
+          attempts++;
+          // Add a small random delay before retrying
+          await new Promise(r => setTimeout(r, Math.floor(Math.random() * 10) + 1));
+          continue;
         }
-      }]
-    });
-
-    const savedBooking = await guestBooking.save();
+        throw err;
+      }
+    }
+    if (!savedBooking) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate unique reference number after 50 attempts',
+        errorCode: 'INTERNAL_ERROR'
+      });
+      return;
+    }
 
     logInfo('Guest booking created', { 
       referenceNumber: savedBooking.referenceNumber,

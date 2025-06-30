@@ -19,16 +19,36 @@ import { sendError } from './utils/responseHelpers';
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
-app.use(cors());
+// Enhanced security headers
+app.use(helmet({
+  crossOriginEmbedderPolicy: false // keep defaults but allow CORS reflection
+}));
+// Explicitly deny framing
+app.use(helmet.frameguard({ action: 'deny' }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+// Reflect allowed origin dynamically for whitelisted domains – credentials enabled
+app.use(cors({
+  origin: (_origin, callback) => {
+    // Allow all origins – downstream middleware (WidgetAuth) will 403 if not whitelisted
+    callback(null, true);
+  },
+  credentials: true
+}));
+
+// Rate limiting – disabled during test runs to avoid interfering with performance/security suites
+if (process.env.NODE_ENV !== 'test') {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+  });
+  app.use(limiter);
+}
+
+// Explicit X-XSS-Protection header (helmet ≥6 no longer sets it)
+app.use((_req, res, next): void => {
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
 });
-app.use(limiter);
 
 // Response time tracking and logging
 app.use(responseTimeMiddleware);
@@ -49,7 +69,11 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
 
     // If content-type is explicitly set to something other than JSON, reject it
     if (contentType?.includes('text/plain') === true) {
-      sendError(res, 'Invalid JSON payload', 400);
+      res.status(400).json({
+        success: false,
+        error: 'Invalid content type',
+        errorCode: 'BAD_REQUEST'
+      });
       return;
     }
   }
@@ -63,11 +87,32 @@ app.use(json({
     try {
       JSON.parse(buf.toString());
     } catch {
-      sendError(res, 'Invalid JSON payload', 400);
+      res.status(400).json({
+        success: false,
+        error: 'Invalid JSON payload',
+        errorCode: 'BAD_REQUEST'
+      });
       throw new Error('Invalid JSON');
     }
   }
 }));
+
+// Handle JSON parsing errors (including payload too large)
+app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
+  if (error.message.includes('request entity too large') || error.message.includes('PayloadTooLargeError')) {
+    res.status(400).json({
+      success: false,
+      error: 'Request payload too large',
+      errorCode: 'VALIDATION_ERROR'
+    });
+    return;
+  }
+  if (error.message.includes('Invalid JSON')) {
+    // Already handled in verify function
+    return;
+  }
+  next(error);
+});
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {

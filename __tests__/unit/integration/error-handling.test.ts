@@ -322,7 +322,8 @@ describe('Error Handling Tests', () => {
 
       expect(response.body).toEqual({
         success: false,
-        message: 'Invalid JSON payload'
+        error: 'Invalid content type',
+        errorCode: 'BAD_REQUEST'
       });
     });
 

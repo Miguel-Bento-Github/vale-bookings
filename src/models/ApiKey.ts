@@ -164,10 +164,9 @@ apiKeySchema.pre('save', function(this: IApiKey, next): void {
   // Generate and hash API key if new
   if (this.isNew && this.key == null) {
     const rawKey = encryptionService.generateSecureToken(API_KEY_CONFIG.KEY_LENGTH);
-    const salt = encryptionService.generateSecureToken(16);
     
-    // Store hashed key
-    this.key = encryptionService.hash(rawKey, salt);
+    // Store hashed key (without salt for simplicity in validation)
+    this.key = encryptionService.hash(rawKey);
     
     // Store prefix for identification
     this.keyPrefix = rawKey.substring(0, API_KEY_CONFIG.PREFIX_LENGTH);
@@ -193,11 +192,13 @@ apiKeySchema.methods.validateKey = function(this: IApiKey, rawKey: string): bool
     return false;
   }
   
-  // Since we can't reverse the hash, we need to implement a different strategy
-  // In production, you might want to use a different approach like storing
-  // a separate validation hash or using bcrypt
-  // For now, we'll assume the key validation happens at a higher level
-  return true;
+  // Hash the provided key and compare with stored hash
+  try {
+    const hashedProvidedKey = encryptionService.hash(rawKey);
+    return hashedProvidedKey === this.key;
+  } catch {
+    return false;
+  }
 };
 
 apiKeySchema.methods.validateDomain = function(this: IApiKey, domain: string): boolean {
@@ -210,11 +211,19 @@ apiKeySchema.methods.validateDomain = function(this: IApiKey, domain: string): b
   }
   
   return this.domainWhitelist.some((whitelistedDomain: string) => {
-    if (this.allowWildcardSubdomains === true && whitelistedDomain.startsWith('*.')) {
-      const baseDomain = whitelistedDomain.substring(2);
+    // Normalize by stripping protocol prefixes and trailing slashes
+    const cleanedWhitelistedDomain = whitelistedDomain
+      .replace(/^https?:\/\//, '')
+      .replace(/\/$/, '');
+    
+    // Handle wildcard subdomains
+    if (cleanedWhitelistedDomain.startsWith('*.')) {
+      const baseDomain = cleanedWhitelistedDomain.slice(2);
       return domain === baseDomain || domain.endsWith(`.${baseDomain}`);
     }
-    return domain === whitelistedDomain;
+
+    // Exact match
+    return domain === cleanedWhitelistedDomain;
   });
 };
 

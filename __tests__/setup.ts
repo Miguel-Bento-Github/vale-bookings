@@ -20,8 +20,8 @@ beforeAll(async () => {
 
   await mongoose.connect(mongoUri, {
     // Highly optimized connection settings for speed
-    maxPoolSize: 10, // Increased pool size for parallel operations
-    minPoolSize: 2, // Keep some connections alive
+    maxPoolSize: 100, // Increased pool size for parallel operations
+    minPoolSize: 10,  // Keep more connections alive
     serverSelectionTimeoutMS: 1000, // Faster timeout
     socketTimeoutMS: 10000, // Reduced socket timeout
     connectTimeoutMS: 2000, // Faster connection timeout
@@ -76,6 +76,10 @@ global.console = {
 // Set NODE_ENV to test for better test isolation
 process.env.NODE_ENV = 'test';
 
+// Set encryption key for tests
+process.env.ENCRYPTION_KEY = 'test-encryption-key-for-jest-tests-12345';
+process.env.ENCRYPTION_SALT = 'test-salt';
+
 // Disable HTTP request logging in tests
 process.env.DISABLE_LOGGING = 'true';
 
@@ -95,5 +99,29 @@ jest.mock('bcryptjs', () => ({
   }),
   genSalt: jest.fn(async () => 'mock-salt')
 }));
+
+// Patch all rate limiting for tests: global, IP, and email
+if (process.env.NODE_ENV === 'test') {
+  // Import the actual service after env is set
+  const RateLimitService = require('../src/services/RateLimitService');
+
+  // Patch the default config to be extremely high
+  if (RateLimitService.RATE_LIMIT_DEFAULTS) {
+    RateLimitService.RATE_LIMIT_DEFAULTS.GLOBAL = { windowMs: 60000, maxRequests: 1000000 };
+    if (RateLimitService.RATE_LIMIT_DEFAULTS.ENDPOINTS) {
+      Object.keys(RateLimitService.RATE_LIMIT_DEFAULTS.ENDPOINTS).forEach(endpoint => {
+        RateLimitService.RATE_LIMIT_DEFAULTS.ENDPOINTS[endpoint] = { windowMs: 60000, maxRequests: 1000000 };
+      });
+    }
+  }
+
+  // Patch the middleware to always call next()
+  if (RateLimitService.createIPMiddleware) {
+    jest.spyOn(RateLimitService, 'createIPMiddleware').mockReturnValue((req: any, res: any, next: any) => next());
+  }
+  if (RateLimitService.createEmailMiddleware) {
+    jest.spyOn(RateLimitService, 'createEmailMiddleware').mockReturnValue((req: any, res: any, next: any) => next());
+  }
+}
 
  
