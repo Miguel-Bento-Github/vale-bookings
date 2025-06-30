@@ -43,6 +43,8 @@ afterAll(async () => {
   if (mongoServer) {
     await mongoServer.stop({ doCleanup: true, force: true });
   }
+
+  // Clean up any remaining handles (RateLimitService is mocked, so no cleanup needed)
 }, 10000);
 
 afterEach(async () => {
@@ -100,28 +102,6 @@ jest.mock('bcryptjs', () => ({
   genSalt: jest.fn(async () => 'mock-salt')
 }));
 
-// Patch all rate limiting for tests: global, IP, and email
-if (process.env.NODE_ENV === 'test') {
-  // Import the actual service after env is set
-  const RateLimitService = require('../src/services/RateLimitService');
-
-  // Patch the default config to be extremely high
-  if (RateLimitService.RATE_LIMIT_DEFAULTS) {
-    RateLimitService.RATE_LIMIT_DEFAULTS.GLOBAL = { windowMs: 60000, maxRequests: 1000000 };
-    if (RateLimitService.RATE_LIMIT_DEFAULTS.ENDPOINTS) {
-      Object.keys(RateLimitService.RATE_LIMIT_DEFAULTS.ENDPOINTS).forEach(endpoint => {
-        RateLimitService.RATE_LIMIT_DEFAULTS.ENDPOINTS[endpoint] = { windowMs: 60000, maxRequests: 1000000 };
-      });
-    }
-  }
-
-  // Patch the middleware to always call next()
-  if (RateLimitService.createIPMiddleware) {
-    jest.spyOn(RateLimitService, 'createIPMiddleware').mockReturnValue((req: any, res: any, next: any) => next());
-  }
-  if (RateLimitService.createEmailMiddleware) {
-    jest.spyOn(RateLimitService, 'createEmailMiddleware').mockReturnValue((req: any, res: any, next: any) => next());
-  }
-}
+// Note: RateLimitService is mocked in rateLimitMockSetup.ts, so we don't need to import it here
 
  

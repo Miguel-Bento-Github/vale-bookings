@@ -33,7 +33,40 @@ jest.mock('../src/services/RateLimitService', () => {
     createEmailMiddleware: () => (_req: any, _res: any, next: any) => next(),
 
     // API-key middleware simply calls next() so tests aren't blocked by missing usage bookkeeping
-    createApiKeyMiddleware: () => (_req: any, _res: any, next: any) => next()
+    createApiKeyMiddleware: () => (_req: any, _res: any, next: any) => next(),
+
+    // Mock initialize, close, and other methods
+    initialize: jest.fn(() => {}),
+    close: jest.fn(async () => {}),
+    resetRateLimit: jest.fn(async () => {}),
+    getUsage: jest.fn(async () => ({
+      used: 0,
+      limit: 1000,
+      remaining: 1000,
+      resetAt: new Date(Date.now() + 60000)
+    })),
+
+    // Mock rateLimitService object
+    rateLimitService: {
+      checkRateLimit: jest.fn(async () => ({
+        allowed: true,
+        limit: 1000,
+        remaining: 1000,
+        resetAt: new Date(Date.now() + 60000)
+      })),
+      createApiKeyMiddleware: () => (_req: any, _res: any, next: any) => next(),
+      createIPMiddleware: () => (_req: any, _res: any, next: any) => next(),
+      createEmailMiddleware: () => (_req: any, _res: any, next: any) => next(),
+      resetRateLimit: jest.fn(async () => {}),
+      getUsage: jest.fn(async () => ({
+        used: 0,
+        limit: 1000,
+        remaining: 1000,
+        resetAt: new Date(Date.now() + 60000)
+      })),
+      close: jest.fn(async () => {}),
+      initialize: jest.fn(() => {})
+    }
   };
 });
 
