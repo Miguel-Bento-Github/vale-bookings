@@ -299,19 +299,16 @@ describe('Widget Security Tests', () => {
       const bookingData = {
         locationId: testLocation._id.toString(),
         serviceId: 'haircut',
-        date: new Date().toISOString().split('T')[0],
-        time: '10:00',
+        bookingDate: new Date().toISOString().split('T')[0],
+        bookingTime: '10:00',
         duration: 60,
-        guestInfo: {
-          firstName: 'John',
-          lastName: 'Doe',
-          email: 'john.doe@test.com',
-          phone: '+1234567890'
-        },
+        guestEmail: 'john.doe@test.com',
+        guestName: 'John Doe',
+        guestPhone: '+1234567890',
         gdprConsent: {
-          consentGiven: true,
-          consentVersion: '1.0',
-          consentTimestamp: new Date().toISOString()
+          version: '1.0',
+          acceptedAt: new Date().toISOString(),
+          ipAddress: '127.0.0.1'
         }
       };
 
@@ -333,8 +330,8 @@ describe('Widget Security Tests', () => {
         expect(booking.guestEmail).toBeDefined();
         expect(booking.guestPhone).toBeDefined();
         // Raw values should be encrypted
-        expect(booking.guestEmail).not.toBe(bookingData.guestInfo.email);
-        expect(booking.guestPhone).not.toBe(bookingData.guestInfo.phone);
+        expect(booking.guestEmail).not.toBe(bookingData.guestEmail);
+        expect(booking.guestPhone).not.toBe(bookingData.guestPhone);
       }
     });
 
