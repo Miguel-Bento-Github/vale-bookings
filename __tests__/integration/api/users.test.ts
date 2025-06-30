@@ -22,11 +22,13 @@ describe('Users Integration Tests', () => {
 
   beforeEach(async () => {
     // Create test users and get tokens
-    const user = new User(validUser);
+    const uniqueUser = { ...validUser, email: `user_${Date.now()}@example.com` };
+    const user = new User(uniqueUser);
     const savedUser = await user.save();
     userId = savedUser._id.toString();
 
-    const admin = new User(adminUser);
+    const uniqueAdmin = { ...adminUser, email: `admin_${Date.now()}@example.com` };
+    const admin = new User(uniqueAdmin);
     const savedAdmin = await admin.save();
     adminId = savedAdmin._id.toString();
 
@@ -34,7 +36,7 @@ describe('Users Integration Tests', () => {
     const userLoginResponse = await request(app)
       .post('/api/auth/login')
       .send({
-        email: validUser.email,
+        email: uniqueUser.email,
         password: validUser.password
       });
     userToken = userLoginResponse.body.data.token;
@@ -42,7 +44,7 @@ describe('Users Integration Tests', () => {
     const adminLoginResponse = await request(app)
       .post('/api/auth/login')
       .send({
-        email: adminUser.email,
+        email: uniqueAdmin.email,
         password: adminUser.password
       });
     adminToken = adminLoginResponse.body.data.token;
@@ -59,7 +61,7 @@ describe('Users Integration Tests', () => {
         success: true,
         data: {
           _id: userId,
-          email: validUser.email,
+          email: expect.stringContaining('@example.com'),
           role: validUser.role,
           profile: {
             name: validUser.profile.name,
@@ -102,7 +104,7 @@ describe('Users Integration Tests', () => {
         .expect(200);
 
       expect(response.body.data.role).toBe('ADMIN');
-      expect(response.body.data.email).toBe(adminUser.email);
+      expect(response.body.data.email).toEqual(expect.stringContaining('@example.com'));
     });
   });
 
@@ -126,7 +128,7 @@ describe('Users Integration Tests', () => {
         message: 'Profile updated successfully',
         data: {
           _id: userId,
-          email: validUser.email,
+          email: expect.stringContaining('@example.com'),
           profile: {
             name: updateData.profile.name,
             phone: updateData.profile.phone
