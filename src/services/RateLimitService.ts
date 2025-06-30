@@ -139,7 +139,7 @@ export const checkRateLimit = async (
     
     const results = await pipeline.exec();
     
-    if (results === null || results === undefined) {
+    if (results == null) {
       throw new Error('Redis pipeline execution failed');
     }
     
@@ -252,7 +252,7 @@ export const createApiKeyMiddleware = (): (
     Promise.resolve().then(async () => {
       try {
         const apiKey = req.apiKey;
-        if (apiKey === undefined) {
+        if (typeof apiKey === 'undefined') {
           res.status(401).json({
             error: 'API key required',
             errorCode: WIDGET_ERROR_CODES.INVALID_API_KEY

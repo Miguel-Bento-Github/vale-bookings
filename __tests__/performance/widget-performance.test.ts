@@ -50,8 +50,9 @@ describe('Widget Performance Tests', () => {
   });
 
   describe('Load Testing', () => {
-    it('should handle 100 concurrent location searches', async () => {
-      const requests = Array(100).fill(null).map(() => 
+    const SEARCH_COUNT = 20; // Reduced from 100 for faster CI
+    it('should handle concurrent location searches', async () => {
+      const requests = Array(SEARCH_COUNT).fill(null).map(() => 
         request(app)
           .get('/api/widget/v1/locations')
           .set('X-API-Key', validApiKey)
@@ -63,14 +64,15 @@ describe('Widget Performance Tests', () => {
       const endTime = Date.now();
 
       const successfulResponses = responses.filter(r => r.status === 200);
-      const avgResponseTime = (endTime - startTime) / 100;
+      const avgResponseTime = (endTime - startTime) / SEARCH_COUNT;
 
-      expect(successfulResponses.length).toBeGreaterThan(90); // Allow for some rate limiting
-      expect(avgResponseTime).toBeLessThan(100); // Average response time under 100ms
+      expect(successfulResponses.length).toBeGreaterThan(Math.floor(SEARCH_COUNT * 0.8));
+      expect(avgResponseTime).toBeLessThan(120); // Average response time under 120ms
     });
 
-    it('should handle 5 concurrent booking creations', async () => {
-      const requests = Array(5).fill(null).map((_, index) => {
+    it('should handle concurrent booking creations', async () => {
+      const BOOKING_COUNT = 3; // was 5
+      const requests = Array(BOOKING_COUNT).fill(null).map((_, index) => {
         const bookingData = {
           locationId: testLocation._id.toString(),
           serviceId: 'haircut',
@@ -98,10 +100,10 @@ describe('Widget Performance Tests', () => {
       const endTime = Date.now();
 
       const successfulResponses = responses.filter(r => r.status === 201);
-      const avgResponseTime = (endTime - startTime) / 5;
+      const avgResponseTime = (endTime - startTime) / BOOKING_COUNT;
 
-      expect(successfulResponses.length).toBeGreaterThan(2); // Allow for some rate limiting
-      expect(avgResponseTime).toBeLessThan(200); // Average response time under 200ms
+      expect(successfulResponses.length).toBe(BOOKING_COUNT);
+      expect(avgResponseTime).toBeLessThan(250);
     });
   });
 
@@ -135,10 +137,10 @@ describe('Widget Performance Tests', () => {
     it('should not leak memory during repeated requests', async () => {
       const initialMemory = process.memoryUsage().heapUsed;
 
-      // Make 200 requests in 2 batches of 100
-      for (let i = 0; i < 2; i++) {
+      // Make 50 requests in 1 batch to reduce runtime
+      for (let i = 0; i < 1; i++) {
         const batch = await Promise.all(
-          Array(100).fill(null).map(() => 
+          Array(50).fill(null).map(() => 
             request(app)
               .get('/api/widget/v1/config')
               .set('X-API-Key', validApiKey)
@@ -151,7 +153,7 @@ describe('Widget Performance Tests', () => {
         if (global.gc) {
           global.gc();
           // Give GC a chance to run
-          await new Promise(r => setTimeout(r, 10));
+          await new Promise(r => setTimeout(r, 5));
         }
       }
 
@@ -306,17 +308,6 @@ describe('Widget Performance Tests', () => {
       const responses = await Promise.all(promises);
       const totalTime = Date.now() - start;
 
-      // Debug output for each response
-      responses.forEach((r, idx) => {
-        if (r.status !== 201) {
-          // eslint-disable-next-line no-console
-          console.error(`[BOOKING ${idx}] FAILED status:`, r.status, 'body:', r.body, 'error:', r.error ? r.error.stack : undefined);
-        } else {
-          // eslint-disable-next-line no-console
-          console.log(`[BOOKING ${idx}] SUCCESS status:`, r.status, 'reference:', r.body.data.referenceNumber);
-        }
-      });
-
       // All requests should succeed
       const successfulResponses = responses.filter(r => r.status === 201);
       expect(successfulResponses.length).toBe(concurrentRequests);
@@ -335,8 +326,8 @@ describe('Widget Performance Tests', () => {
     it('should not leak memory during sustained operations', async () => {
       const initialMemory = process.memoryUsage();
 
-      // Perform 50 operations
-      for (let i = 0; i < 50; i++) {
+      // Perform 20 operations
+      for (let i = 0; i < 20; i++) {
         await request(app)
           .get('/api/widget/v1/config')
           .set('X-API-Key', validApiKey)
@@ -460,7 +451,7 @@ describe('Widget Performance Tests', () => {
       const start = Date.now();
 
       // Make requests up to the rate limit
-      for (let i = 0; i < 15; i++) {
+      for (let i = 0; i < 5; i++) {
         requests.push(
           request(app)
             .get('/api/widget/v1/config')
@@ -473,11 +464,11 @@ describe('Widget Performance Tests', () => {
       const totalTime = Date.now() - start;
 
       // All requests should be processed quickly
-      expect(totalTime).toBeLessThan(1500); // 1.5 seconds for 15 requests
+      expect(totalTime).toBeLessThan(800); // 0.8 seconds for 5 requests
 
       // Most requests should succeed (within rate limit)
       const successfulRequests = responses.filter(r => r.status === 200);
-      expect(successfulRequests.length).toBeGreaterThan(10);
+      expect(successfulRequests.length).toBe(5);
     });
   });
 

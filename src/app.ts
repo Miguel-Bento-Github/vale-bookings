@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import cors from 'cors';
 import express, { Request, Response, NextFunction, json } from 'express';
 import { rateLimit } from 'express-rate-limit';
-import helmet from 'helmet';
+import helmet, { frameguard } from 'helmet';
 
 import adminRoutes from './routes/admin';
 import authRoutes from './routes/auth';
@@ -24,7 +24,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false // keep defaults but allow CORS reflection
 }));
 // Explicitly deny framing
-app.use(helmet.frameguard({ action: 'deny' }));
+app.use(frameguard({ action: 'deny' }));
 
 // Reflect allowed origin dynamically for whitelisted domains – credentials enabled
 app.use(cors({

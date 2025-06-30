@@ -1,3 +1,5 @@
+import { timingSafeEqual } from 'crypto';
+
 import { Schema, model } from 'mongoose';
 
 import { 
@@ -195,7 +197,15 @@ apiKeySchema.methods.validateKey = function(this: IApiKey, rawKey: string): bool
   // Hash the provided key and compare with stored hash
   try {
     const hashedProvidedKey = encryptionService.hash(rawKey);
-    return hashedProvidedKey === this.key;
+    const providedBuffer = Buffer.from(hashedProvidedKey, 'hex');
+    const storedBuffer = Buffer.from(this.key ?? '', 'hex');
+
+    // Avoid leaking length info
+    if (providedBuffer.length !== storedBuffer.length) {
+      return false;
+    }
+
+    return timingSafeEqual(providedBuffer, storedBuffer);
   } catch {
     return false;
   }

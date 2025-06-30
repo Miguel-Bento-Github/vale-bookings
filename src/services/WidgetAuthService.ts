@@ -30,7 +30,7 @@ const ApiKeyTyped = ApiKey as unknown as ApiKeyModel;
 export const extractApiKey = (req: Request): string | null => {
   // Check Authorization header
   const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ') === true) {
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
   
@@ -94,12 +94,12 @@ export const validateApiKey = async (rawKey: string): Promise<IApiKeyWithMethods
     
     // Find API key by prefix
     const apiKey = await ApiKeyTyped.findByPrefix(prefix);
-    if (apiKey === null) {
+    if (!apiKey) {
       return null;
     }
     
     // Check if key is active and not expired
-    if (apiKey.isActive !== true || apiKey.isExpired === true) {
+    if (!apiKey.isActive || apiKey.isExpired) {
       return null;
     }
     
@@ -126,7 +126,7 @@ export const validateRequest = async (req: Request): Promise<{
 }> => {
   // Extract API key
   const rawKey = extractApiKey(req);
-  if (rawKey === null || rawKey === '') {
+  if (rawKey == null || rawKey === '') {
     return {
       isValid: false,
       error: 'Authentication required',
@@ -136,7 +136,7 @@ export const validateRequest = async (req: Request): Promise<{
   
   // Validate API key
   const apiKey = await validateApiKey(rawKey);
-  if (apiKey === null) {
+  if (typeof apiKey === 'undefined' || apiKey === null) {
     return {
       isValid: false,
       error: 'Invalid authentication credentials',
@@ -146,7 +146,7 @@ export const validateRequest = async (req: Request): Promise<{
   
   // Extract and validate domain
   const domain = extractOrigin(req);
-  if (domain === null || domain === '') {
+  if (domain == null || domain === '') {
     return {
       isValid: false,
       error: 'Origin domain is required',
@@ -241,7 +241,7 @@ export const rotateApiKey = async (
  */
 export const revokeApiKey = async (apiKeyId: string): Promise<IApiKeyWithMethods> => {
   const apiKey = await ApiKey.findById(apiKeyId) as IApiKeyWithMethods;
-  if (apiKey === null) {
+  if (typeof apiKey === 'undefined' || apiKey === null) {
     throw new Error('API key not found');
   }
   
