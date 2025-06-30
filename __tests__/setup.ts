@@ -57,7 +57,7 @@ afterEach(async () => {
       Object.values(collections).map(async (collection) => {
         try {
           await collection.deleteMany({});
-        } catch (error) {
+        } catch {
           // Collection might not exist, ignore errors
         }
       })

@@ -142,13 +142,28 @@ module.exports = {
     {
       files: ['**/__tests__/**/*.ts', '**/*.test.ts'],
       rules: {
-        // Relax some rules for test files
+        // Relax strict safety and security rules inside test files for readability/mocking
         '@typescript-eslint/no-unsafe-assignment': 'off',
         '@typescript-eslint/no-unsafe-member-access': 'off',
         '@typescript-eslint/no-unsafe-call': 'off',
         '@typescript-eslint/no-misused-promises': 'off',
+        '@typescript-eslint/no-unsafe-return': 'off',
+        '@typescript-eslint/await-thenable': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/explicit-module-boundary-types': 'off',
+        '@typescript-eslint/strict-boolean-expressions': 'off',
+        '@typescript-eslint/no-unsafe-enum-comparison': 'off',
+        'require-await': 'off',
+        '@typescript-eslint/require-await': 'off',
+        'import/order': 'off',
+        'max-len': 'off',
+        'comma-dangle': 'off',
+        'node/no-extraneous-import': 'off',
+        'node/no-missing-require': 'off',
+        '@typescript-eslint/no-require-imports': 'off',
         'security/detect-object-injection': 'off',
-        'security/detect-non-literal-fs-filename': 'off',
+        'security/detect-non-literal-fs-filename': 'off'
       },
     },
   ],
