@@ -501,8 +501,6 @@ describe('Widget Security Tests', () => {
       // Generate 20 reference numbers directly
       for (let i = 0; i < 20; i++) {
         const ref = generateReferenceNumber();
-        // eslint-disable-next-line no-console
-        console.log(`[REFGEN] ${ref}`);
         references.push(ref);
       }
 

@@ -117,7 +117,14 @@ export const decrypt = (encryptedData: string): string => {
  * Hash data using SHA-256 (for non-reversible data like API keys)
  */
 export const hash = (data: string, salt?: string): string => {
-  const dataToHash = salt !== undefined ? `${data}${salt}` : data;
+  if (data === null || data === undefined) {
+    throw new Error('Data to hash cannot be null or undefined');
+  }
+  
+  // Handle empty string properly - it should still produce a hash
+  // If salt is provided, concatenate it with the data
+  const dataToHash = salt !== undefined && salt !== '' ? `${data}${salt}` : data;
+  
   return crypto
     .createHash(API_KEY_CONFIG.HASH_ALGORITHM)
     .update(dataToHash)
@@ -137,13 +144,11 @@ export const generateSecureToken = (length: number = 32): string => {
 export const generateReferenceNumber = (): string => {
   const { LENGTH, CHARSET, PREFIX } = REFERENCE_NUMBER_CONFIG;
   let reference = PREFIX;
-  
   for (let i = 0; i < LENGTH - PREFIX.length; i++) {
     const randomIndex = crypto.randomInt(0, CHARSET.length);
     const char = CHARSET.charAt(randomIndex);
     reference += char;
   }
-  
   return reference;
 };
 
@@ -151,6 +156,10 @@ export const generateReferenceNumber = (): string => {
  * Timing-safe comparison for tokens
  */
 export const timingSafeCompare = (a: string, b: string): boolean => {
+  if (a === null || a === undefined || b === null || b === undefined) {
+    throw new Error('Comparison strings cannot be null or undefined');
+  }
+  
   if (a.length !== b.length) {
     return false;
   }
