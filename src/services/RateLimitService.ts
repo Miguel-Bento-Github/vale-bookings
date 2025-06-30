@@ -43,21 +43,26 @@ const initializeRedis = (redisInstance?: Redis): Redis => {
   return redis;
 };
 
-// Initialize Redis
-initializeRedis();
+// Initialize Redis only if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  initializeRedis();
+}
 
 // Blocked IPs storage
 const blockedIPs: Map<string, Date> = new Map();
 
-// Clean up blocked IPs periodically
-const cleanupInterval = setInterval(() => {
-  const now = new Date();
-  for (const [ip, blockedUntil] of blockedIPs.entries()) {
-    if (blockedUntil <= now) {
-      blockedIPs.delete(ip);
+// Clean up blocked IPs periodically - only in non-test environments
+let cleanupInterval: NodeJS.Timeout | null = null;
+if (process.env.NODE_ENV !== 'test') {
+  cleanupInterval = setInterval(() => {
+    const now = new Date();
+    for (const [ip, blockedUntil] of blockedIPs.entries()) {
+      if (blockedUntil <= now) {
+        blockedIPs.delete(ip);
+      }
     }
-  }
-}, 60000); // Every minute
+  }, 60000); // Every minute
+}
 
 /**
  * Generate rate limit key
@@ -481,8 +486,13 @@ export const getUsage = async (
  * Close Redis connection
  */
 export const close = async (): Promise<void> => {
-  clearInterval(cleanupInterval);
-  await redis.quit();
+  if (cleanupInterval !== null) {
+    clearInterval(cleanupInterval);
+    cleanupInterval = null;
+  }
+  if (redis !== undefined) {
+    await redis.quit();
+  }
   logInfo('Rate limiting service closed');
 };
 
