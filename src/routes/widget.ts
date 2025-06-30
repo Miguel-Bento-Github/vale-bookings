@@ -85,4 +85,17 @@ router.get('/bookings/:reference',
   asyncHandler(widgetController.getBooking)
 );
 
+// Catch-all 404 for debugging
+router.use((req, res) => {
+  // Log unmatched requests and params
+  // eslint-disable-next-line no-console
+  console.error('DEBUG 404:', req.method, req.originalUrl, req.params);
+  res.status(404).json({
+    success: false,
+    error: 'Not found',
+    errorCode: 'NOT_FOUND',
+    params: req.params
+  });
+});
+
 export default router; 
