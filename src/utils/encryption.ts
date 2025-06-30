@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 import { ENCRYPTION_CONFIG, API_KEY_CONFIG, REFERENCE_NUMBER_CONFIG } from '../constants/widget';
 
@@ -139,17 +140,15 @@ export const generateSecureToken = (length: number = 32): string => {
 };
 
 /**
- * Generate reference number
+ * Generate reference number (UUIDv4-based, 7 chars after 'W')
  */
 export const generateReferenceNumber = (): string => {
-  const { LENGTH, CHARSET, PREFIX } = REFERENCE_NUMBER_CONFIG;
-  let reference = PREFIX;
-  for (let i = 0; i < LENGTH - PREFIX.length; i++) {
-    const randomIndex = crypto.randomInt(0, CHARSET.length);
-    const char = CHARSET.charAt(randomIndex);
-    reference += char;
-  }
-  return reference;
+  const PREFIX = 'W';
+  // Generate a UUIDv4, remove dashes, take first 7 uppercase alphanumeric chars, excluding I, O, 1
+  const uuid = uuidv4().replace(/-/g, '').toUpperCase();
+  // Filter to alphanumeric only, then remove I, O, 1
+  const ref = uuid.replace(/[^A-Z0-9]/g, '').replace(/[IO1]/g, '').slice(0, 7);
+  return PREFIX + ref;
 };
 
 /**
