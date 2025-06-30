@@ -156,7 +156,6 @@ module.exports = {
         '@typescript-eslint/no-unsafe-enum-comparison': 'off',
         'require-await': 'off',
         '@typescript-eslint/require-await': 'off',
-        'import/order': 'off',
         'max-len': 'off',
         'comma-dangle': 'off',
         'node/no-extraneous-import': 'off',

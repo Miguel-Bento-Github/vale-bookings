@@ -5,7 +5,6 @@ import {
   scheduleReminder,
   cancelReminder
 } from '../../../src/services/NotificationService';
-
 import type { BookingNotificationData } from '../../../src/types/notification';
 
 const baseBooking: BookingNotificationData = {

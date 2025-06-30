@@ -6,7 +6,6 @@ import {
   trackDelivery,
   getDeliveryStats
 } from '../../../src/services/NotificationService';
-
 import type { BookingNotificationData, DeliveryStatsFilter } from '../../../src/types/notification';
 
 const bookingBase: BookingNotificationData = {

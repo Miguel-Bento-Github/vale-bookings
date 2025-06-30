@@ -4,7 +4,6 @@ import {
   sendBookingConfirmation,
   scheduleReminder
 } from '../../../src/services/NotificationService';
-
 import type { BookingNotificationData } from '../../../src/types/notification';
 
 describe('NotificationService', () => {

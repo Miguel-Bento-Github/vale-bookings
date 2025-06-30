@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from '@jest/globals';
+
 import { sendEmail } from '../../../src/services/EmailService';
 
 describe('EmailService error paths', () => {

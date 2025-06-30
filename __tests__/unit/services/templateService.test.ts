@@ -5,7 +5,6 @@ import {
   validateTemplate,
   getSupportedLanguages
 } from '../../../src/services/TemplateService';
-
 import type { TemplateData } from '../../../src/types/notification';
 
 describe('TemplateService', () => {

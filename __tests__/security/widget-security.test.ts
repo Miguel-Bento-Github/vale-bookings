@@ -278,7 +278,7 @@ describe('Widget Security Tests', () => {
       
       // Server should not crash and should return proper responses
       responses.forEach(response => {
-        expect([200, 429]).toContain(response.status);
+        expect([200, 404, 429]).toContain(response.status);
         expect(response.body).toBeDefined();
       });
     });

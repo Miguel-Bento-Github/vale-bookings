@@ -1,9 +1,9 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import type { Request, Response, NextFunction } from 'express';
 
+import { WIDGET_ERROR_CODES } from '../../../src/constants/widget';
 import * as rateLimitServiceModule from '../../../src/services/RateLimitService';
 
-import { WIDGET_ERROR_CODES } from '../../../src/constants/widget';
 
 // Mock logger to avoid noise
 jest.mock('../../../src/utils/logger', () => ({
