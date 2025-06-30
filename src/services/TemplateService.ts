@@ -314,11 +314,16 @@ const simplifyTemplate = (template: string, data: TemplateData): string => {
 
 // Safe accessor for template types
 const getSafeTemplateType = (templateType: string): { email?: ChannelTemplates; sms?: ChannelTemplates; } | null => {
-  if (Object.prototype.hasOwnProperty.call(BUILT_IN, templateType)) {
-    const result = (BUILT_IN as Record<string, { email?: ChannelTemplates; sms?: ChannelTemplates; }>)[templateType];
-    return result ?? null;
+  switch (templateType) {
+  case 'booking_confirmation':
+    return BUILT_IN.booking_confirmation ?? null;
+  case 'booking_reminder':
+    return BUILT_IN.booking_reminder ?? null;
+  case 'cancellation_confirmation':
+    return BUILT_IN.cancellation_confirmation ?? null;
+  default:
+    return null;
   }
-  return null;
 };
 
 // Safe accessor for channel groups

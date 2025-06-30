@@ -56,30 +56,29 @@ describe('Widget API Integration Tests', () => {
 
   // Re-create test fixtures before each test since the global test setup clears collections
   beforeEach(async () => {
-    // Ensure API Key exists
-    const existingKey = await ApiKey.findOne({ keyPrefix: validApiKey.substring(0, 8) });
-    if (existingKey == null) {
-      const hashedKey = hash(validApiKey);
-      await ApiKey.create({
-        name: 'Test Widget Key',
-        key: hashedKey,
-        keyPrefix: validApiKey.substring(0, 8),
-        domainWhitelist: ['example.com', '*.example.com'],
-        allowWildcardSubdomains: true,
-        isActive: true,
-        rateLimits: {
-          global: { windowMs: 60000, maxRequests: 10000 },
-          endpoints: {
-            '/api/widget/v1/bookings': { windowMs: 60000, maxRequests: 10000 },
-            '/api/widget/v1/locations': { windowMs: 60000, maxRequests: 10000 },
-            '/api/widget/v1/availability': { windowMs: 60000, maxRequests: 10000 },
-            '/api/widget/v1/config': { windowMs: 60000, maxRequests: 10000 }
-          }
-        },
-        createdBy: 'test-user',
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      });
-    }
+    // Generate a fresh API key per test to avoid side-effects between suites
+    validApiKey = generateSecureToken(32);
+
+    const hashedKey = hash(validApiKey);
+    await ApiKey.create({
+      name: 'Test Widget Key',
+      key: hashedKey,
+      keyPrefix: validApiKey.substring(0, 8),
+      domainWhitelist: ['example.com', '*.example.com'],
+      allowWildcardSubdomains: true,
+      isActive: true,
+      rateLimits: {
+        global: { windowMs: 60000, maxRequests: 10000 },
+        endpoints: {
+          '/api/widget/v1/bookings': { windowMs: 60000, maxRequests: 10000 },
+          '/api/widget/v1/locations': { windowMs: 60000, maxRequests: 10000 },
+          '/api/widget/v1/availability': { windowMs: 60000, maxRequests: 10000 },
+          '/api/widget/v1/config': { windowMs: 60000, maxRequests: 10000 }
+        }
+      },
+      createdBy: 'test-user',
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    });
 
     // Ensure at least one active location
     testLocation = (await Location.findOne()) as TestLocation;
