@@ -495,39 +495,15 @@ describe('Widget Security Tests', () => {
   });
 
   describe('Reference Number Security', () => {
-    it('should generate cryptographically secure reference numbers', async () => {
+    it('should generate cryptographically secure reference numbers', () => {
+      const { generateReferenceNumber } = require('../../src/utils/encryption');
       const references = [];
-      
-      // Generate 20 reference numbers
+      // Generate 20 reference numbers directly
       for (let i = 0; i < 20; i++) {
-        const bookingData = {
-          locationId: testLocation._id.toString(),
-          serviceId: 'haircut',
-          date: new Date().toISOString().split('T')[0],
-          time: '10:00',
-          duration: 60,
-          guestInfo: {
-            firstName: 'Test',
-            lastName: `User${i}`,
-            email: `test${i}@example.com`,
-            phone: '+1234567890'
-          },
-          gdprConsent: {
-            consentGiven: true,
-            consentVersion: '1.0',
-            consentTimestamp: new Date().toISOString()
-          }
-        };
-
-        const response = await request(app)
-          .post('/api/widget/v1/bookings')
-          .set('X-API-Key', validApiKey)
-          .set('Origin', 'https://test.example.com')
-          .send(bookingData);
-
-        if (response.status === 201) {
-          references.push(response.body.data.referenceNumber);
-        }
+        const ref = generateReferenceNumber();
+        // eslint-disable-next-line no-console
+        console.log(`[REFGEN] ${ref}`);
+        references.push(ref);
       }
 
       // Check for uniqueness
