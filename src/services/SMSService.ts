@@ -283,7 +283,7 @@ export const getSMSServiceStatus = (): Promise<{
     const isSnsValid = config.provider === 'sns' && 
       config.apiKey != null && config.apiKey !== '' && 
       config.region != null && config.region !== '';
-    const isConfigValid = !!(hasFromNumber && (isTwilioValid ?? isSnsValid));
+    const isConfigValid = !!(hasFromNumber && (isTwilioValid || isSnsValid));
     
     return Promise.resolve({
       provider: config.provider,
