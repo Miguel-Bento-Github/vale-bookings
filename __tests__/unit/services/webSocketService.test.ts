@@ -82,14 +82,10 @@ describe('WebSocketService', () => {
 
     it('should emit booking update when server is initialized', () => {
       const server = getWebSocketServer();
-      if (!server) {
-        throw new Error('Server should be initialized');
-      }
-      const mockRoom = {
+      if (!server) throw new Error('Server not initialized');
+      const emitSpy = jest.spyOn(server, 'to').mockReturnValue({
         emit: jest.fn()
-      };
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const emitSpy = jest.spyOn(server, 'to').mockReturnValue(mockRoom as any);
+      } as unknown as ReturnType<typeof server.to>);
 
       const updateData = {
         bookingId: 'booking123',
@@ -151,14 +147,10 @@ describe('WebSocketService', () => {
 
     it('should emit location update when server is initialized', () => {
       const server = getWebSocketServer();
-      if (!server) {
-        throw new Error('Server should be initialized');
-      }
-      const mockRoom = {
+      if (!server) throw new Error('Server not initialized');
+      const toSpy = jest.spyOn(server, 'to').mockReturnValue({
         emit: jest.fn()
-      };
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const toSpy = jest.spyOn(server, 'to').mockReturnValue(mockRoom as any);
+      } as unknown as ReturnType<typeof server.to>);
       const emitSpy = jest.spyOn(server, 'emit').mockImplementation();
 
       const updateData = {
@@ -202,14 +194,10 @@ describe('WebSocketService', () => {
 
     it('should send notification to specific user', () => {
       const server = getWebSocketServer();
-      if (!server) {
-        throw new Error('Server should be initialized');
-      }
-      const mockRoom = {
+      if (!server) throw new Error('Server not initialized');
+      const emitSpy = jest.spyOn(server, 'to').mockReturnValue({
         emit: jest.fn()
-      };
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const emitSpy = jest.spyOn(server, 'to').mockReturnValue(mockRoom as any);
+      } as unknown as ReturnType<typeof server.to>);
 
       const notificationData = {
         userId: 'user123',
@@ -271,9 +259,7 @@ describe('WebSocketService', () => {
 
     it('should handle errors in emitBookingUpdate gracefully', () => {
       const server = getWebSocketServer();
-      if (!server) {
-        throw new Error('Server should be initialized');
-      }
+      if (!server) throw new Error('Server not initialized');
       jest.spyOn(server, 'to').mockImplementation(() => {
         throw new Error('Mock error');
       });
@@ -296,9 +282,7 @@ describe('WebSocketService', () => {
 
     it('should handle errors in emitLocationUpdate gracefully', () => {
       const server = getWebSocketServer();
-      if (!server) {
-        throw new Error('Server should be initialized');
-      }
+      if (!server) throw new Error('Server not initialized');
       jest.spyOn(server, 'to').mockImplementation(() => {
         throw new Error('Mock error');
       });
@@ -316,9 +300,7 @@ describe('WebSocketService', () => {
 
     it('should handle errors in sendUserNotification gracefully', () => {
       const server = getWebSocketServer();
-      if (!server) {
-        throw new Error('Server should be initialized');
-      }
+      if (!server) throw new Error('Server not initialized');
       jest.spyOn(server, 'to').mockImplementation(() => {
         throw new Error('Mock error');
       });
