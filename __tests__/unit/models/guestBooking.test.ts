@@ -239,8 +239,8 @@ describe('GuestBooking Model', () => {
       
       expect(updatedBooking.auditTrail).toHaveLength(1);
       if (updatedBooking.auditTrail && updatedBooking.auditTrail.length > 0) {
-        expect(updatedBooking.auditTrail[0].action).toBe(AUDIT_ACTIONS.STATUS_CHANGE);
-        expect(updatedBooking.auditTrail[0].newValue).toBe(GUEST_BOOKING_STATUSES.CONFIRMED);
+        expect(updatedBooking.auditTrail[0]?.action).toBe(AUDIT_ACTIONS.STATUS_CHANGE);
+        expect(updatedBooking.auditTrail[0]?.newValue).toBe(GUEST_BOOKING_STATUSES.CONFIRMED);
       }
     });
 
@@ -365,7 +365,7 @@ describe('GuestBooking Model', () => {
       
       expect(expiredBookings).toHaveLength(1);
       if (expiredBookings.length > 0) {
-        expect(expiredBookings[0]._id.toString()).toBe(booking._id.toString());
+        expect(expiredBookings[0]?._id.toString()).toBe(booking._id.toString());
       }
     });
 
@@ -453,7 +453,7 @@ describe('GuestBooking Model', () => {
         
         const updatedBooking = await savedBooking.addAuditEntry(auditEntry);
         if (updatedBooking.auditTrail && updatedBooking.auditTrail.length > 0) {
-          expect(updatedBooking.auditTrail[updatedBooking.auditTrail.length - 1].action).toBe(action);
+          expect(updatedBooking.auditTrail[updatedBooking.auditTrail.length - 1]?.action).toBe(action);
         }
       }
     });

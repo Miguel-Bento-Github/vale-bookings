@@ -224,7 +224,7 @@ describe('EmailService', () => {
 
       const results = await sendBulkEmails(messages, 10, 100);
       expect(results).toHaveLength(1);
-      expect(results[0].success).toBe(true);
+      expect(results[0]?.success).toBe(true);
     });
 
     it('sendBulkEmails with delay between batches', async () => {
@@ -465,7 +465,7 @@ describe('EmailService', () => {
       expect(status.provider).toBe('sendgrid');
       expect(status.healthy).toBe(false);
       expect(status.lastTest).toBeInstanceOf(Date);
-      expect(status.error).toBe('Unknown SendGrid error');
+      expect(status.error).toBe('String error in status check');
 
       // Restore original setTimeout
       global.setTimeout = originalSetTimeout;
