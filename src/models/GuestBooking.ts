@@ -4,7 +4,8 @@ import {
   GUEST_BOOKING_STATUSES, 
   DATA_RETENTION_PERIODS,
   AUDIT_ACTIONS,
-  GDPR_CONSENT_VERSIONS 
+  GDPR_CONSENT_VERSIONS,
+  REFERENCE_NUMBER_CONFIG
 } from '../constants/widget';
 import { IGuestBooking, GDPRConsent, AuditTrailEntry } from '../types/widget';
 import { encryptionService } from '../utils/encryption';
@@ -196,6 +197,17 @@ guestBookingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 // Pre-save middleware for encryption
 guestBookingSchema.pre('save', function(this: IGuestBooking, next): void {
   try {
+    // Generate reference number for new bookings
+    if (this.isNew && !this.referenceNumber) {
+      const timestamp = Date.now().toString(36); // Convert timestamp to base36
+      const randomChars = Array.from(
+        { length: REFERENCE_NUMBER_CONFIG.LENGTH - REFERENCE_NUMBER_CONFIG.PREFIX.length - timestamp.length },
+        () => REFERENCE_NUMBER_CONFIG.CHARSET[Math.floor(Math.random() * REFERENCE_NUMBER_CONFIG.CHARSET.length)]
+      ).join('');
+      
+      this.referenceNumber = REFERENCE_NUMBER_CONFIG.PREFIX + timestamp + randomChars;
+    }
+
     // Encrypt PII fields if they are being modified
     if (this.isModified('guestEmail') && this.guestEmail !== undefined) {
       this.guestEmail = encryptionService.encrypt(this.guestEmail);
