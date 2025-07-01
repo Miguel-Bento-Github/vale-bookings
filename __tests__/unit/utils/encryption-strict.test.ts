@@ -160,7 +160,7 @@ describe('Encryption Service - Strict Type Safety', () => {
       
       const hashed1 = hash(data, salt1);
       const hashed2 = hash(data, salt2);
-      
+
       expect(hashed1).not.toBe(hashed2);
       expect(typeof hashed1).toBe('string');
       expect(typeof hashed2).toBe('string');
