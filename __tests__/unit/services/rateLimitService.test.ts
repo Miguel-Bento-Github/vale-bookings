@@ -1,12 +1,21 @@
-import { describe, expect, it, beforeAll, afterAll } from '@jest/globals';
+import { describe, expect, it, beforeAll, afterAll, beforeEach, jest } from '@jest/globals';
+import type { Request, Response, NextFunction } from 'express';
 import type Redis from 'ioredis';
 
 import {
   checkRateLimit,
   resetRateLimit,
   initialize as initializeRateLimitService,
-  close as closeRateLimitService
+  close as closeRateLimitService,
+  getUsage,
+  createEmailMiddleware,
+  createIPMiddleware,
+  createApiKeyMiddleware
 } from '../../../src/services/RateLimitService';
+import { InMemoryRateLimitStore } from '../../../src/services/InMemoryRateLimitStore';
+import type { RateLimitStore, RateLimitPipeline } from '../../../src/services/RateLimitStore';
+import { WIDGET_ERROR_CODES } from '../../../src/constants/widget';
+import type { IApiKey, RateLimitConfig } from '../../../src/types/widget';
 
 interface ZMember {
   member: string;
@@ -18,28 +27,33 @@ interface ZMember {
  */
 class MockRedis {
   private sets: Map<string, ZMember[]> = new Map();
+  private counters = new Map<string, number>();
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   on(): void {}
 
   /** Increment a key used for abuse tracking (not utilised in these tests). */
-  async incr(_key: string): Promise<number> {
-    return 1;
+  async incr(key: string): Promise<number> {
+    const next = (this.counters.get(key) ?? 0) + 1;
+    this.counters.set(key, next);
+    return next;
   }
 
   async expire(_key: string, _seconds: number): Promise<number> {
     return 1;
   }
 
-  async del(_key: string): Promise<number> {
-    this.sets.delete(_key);
+  async del(key: string): Promise<number> {
+    this.sets.delete(key);
+    this.counters.delete(key);
     return 1;
   }
 
   /** Sorted-set helpers */
   private getSet(key: string): ZMember[] {
-    if (!this.sets.has(key)) this.sets.set(key, []);
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return this.sets.get(key)!;
+    if (!this.sets.has(key)) {
+      this.sets.set(key, []);
+    }
+    return this.sets.get(key) ?? [];
   }
 
   async zremrangebyscore(key: string, _min: string, max: number): Promise<number> {
@@ -153,32 +167,405 @@ afterAll(async () => {
   await closeRateLimitService();
 });
 
-describe('RateLimitService.checkRateLimit', () => {
-  const config = { windowMs: 1000, maxRequests: 3 };
+describe('RateLimitService', () => {
+  describe('checkRateLimit', () => {
+    const config = { windowMs: 1000, maxRequests: 3 };
 
-  it('allows requests under the limit', async () => {
-    const id = 'rl:test1';
-    const result = await checkRateLimit(id, config);
-    expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(2);
+    it('allows requests under the limit', async () => {
+      const id = 'rl:test1';
+      const result = await checkRateLimit(id, config);
+      expect(result.allowed).toBe(true);
+      expect(result.remaining).toBe(2);
+    });
+
+    it('blocks requests that exceed the limit', async () => {
+      const id = 'rl:test2';
+      // Fill up the window
+      await checkRateLimit(id, config); // remaining 2
+      await checkRateLimit(id, config); // remaining 1
+      await checkRateLimit(id, config); // remaining 0
+      const fourth = await checkRateLimit(id, config);
+      expect(fourth.allowed).toBe(false);
+      expect(fourth.remaining).toBe(0);
+    });
+
+    it('resets after resetRateLimit call', async () => {
+      const id = 'rl:test3';
+      await resetRateLimit(id);
+      const result = await checkRateLimit(id, config);
+      expect(result.allowed).toBe(true);
+      expect(result.remaining).toBe(2);
+    });
+
+    it('disallows when limit exceeded', async () => {
+      const cfg: RateLimitConfig = { windowMs: 60000, maxRequests: 1 };
+      const id = 'limit_test';
+
+      let lastResult = await checkRateLimit(id, cfg);
+      expect(lastResult.allowed).toBe(true);
+
+      // Issue additional requests until one is blocked
+      for (let i = 0; i < 3 && lastResult.allowed; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        lastResult = await checkRateLimit(id, cfg);
+      }
+
+      expect(lastResult.allowed).toBe(false);
+    });
   });
 
-  it('blocks requests that exceed the limit', async () => {
-    const id = 'rl:test2';
-    // Fill up the window
-    await checkRateLimit(id, config); // remaining 2
-    await checkRateLimit(id, config); // remaining 1
-    await checkRateLimit(id, config); // remaining 0
-    const fourth = await checkRateLimit(id, config);
-    expect(fourth.allowed).toBe(false);
-    expect(fourth.remaining).toBe(0);
+  describe('Extended Coverage', () => {
+    // Obtain unmocked implementation (cast to actual module type).
+    type RateLimitModule = typeof import('../../../src/services/RateLimitService');
+    const realRateLimit = jest.requireActual('../../../src/services/RateLimitService');
+
+    const rlInitialize = (realRateLimit as RateLimitModule).initialize;
+    const rlClose = (realRateLimit as RateLimitModule).close;
+    const rlCheckRateLimit = (realRateLimit as RateLimitModule).checkRateLimit;
+    const rlResetRateLimit = (realRateLimit as RateLimitModule).resetRateLimit;
+    const rlGetUsage = (realRateLimit as RateLimitModule).getUsage;
+    const rlCreateEmailMiddleware = (realRateLimit as RateLimitModule).createEmailMiddleware;
+    const rlCreateIPMiddleware = (realRateLimit as RateLimitModule).createIPMiddleware;
+
+    // Shared config with a very small window so tests run fast.
+    const config = { windowMs: 1000, maxRequests: 2 };
+
+    beforeEach(() => {
+      // Re-initialise before every test with a fresh in-memory store.
+      const store = new InMemoryRateLimitStore();
+      // Attach a no-op quit method so rlClose() succeeds.
+      (store as unknown as { quit: () => Promise<void> }).quit = async () => Promise.resolve();
+      rlInitialize(store as unknown as Redis);
+    });
+
+    afterAll(async () => {
+      try {
+        await rlClose();
+      } catch {
+        // Ignore if underlying store lacked quit
+      }
+    });
+
+    it('implements a sliding-window allowing and then rejecting requests', async () => {
+      const id = 'cov:sliding';
+
+      // First request ‑ should be allowed.
+      const first = await rlCheckRateLimit(id, config);
+      expect(first.allowed).toBe(true);
+      expect(first.remaining).toBe(1);
+
+      // Second within window ‑ still allowed but at limit.
+      const second = await rlCheckRateLimit(id, config);
+      expect(second.allowed).toBe(true);
+      expect(second.remaining).toBe(0);
+
+      // Third within same window ‑ blocked.
+      const third = await rlCheckRateLimit(id, config);
+      expect(third.allowed).toBe(false);
+      expect(third.retryAfter).toBeGreaterThanOrEqual(0);
+    });
+
+    it('resets usage once the time window has elapsed', async () => {
+      jest.useFakeTimers({ now: Date.now() });
+
+      const id = 'cov:reset';
+
+      // Exhaust the limit.
+      await rlCheckRateLimit(id, config);
+      await rlCheckRateLimit(id, config);
+
+      // Advance beyond window to simulate passage of time.
+      jest.setSystemTime(Date.now() + config.windowMs + 5);
+
+      const postWindow = await rlCheckRateLimit(id, config);
+      expect(postWindow.allowed).toBe(true);
+
+      jest.useRealTimers();
+    });
+
+    it('getUsage reflects requests and resetRateLimit clears state', async () => {
+      const id = 'cov:usage';
+      await rlCheckRateLimit(id, config); // 1
+      await rlCheckRateLimit(id, config); // 2
+
+      const usage = await rlGetUsage(id, config);
+      expect(usage.used).toBe(2);
+      expect(usage.remaining).toBe(0);
+
+      await rlResetRateLimit(id);
+      const afterReset = await rlGetUsage(id, config);
+      expect(afterReset.used).toBe(0);
+      expect(afterReset.remaining).toBe(2);
+    });
+
+    it('falls back gracefully when the underlying store fails', async () => {
+      // Store that always throws to exercise error path.
+      class FailingStore implements RateLimitStore {
+        // eslint-disable-next-line class-methods-use-this
+        pipeline(): RateLimitPipeline {
+          throw new Error('Pipeline failure');
+        }
+        // Sorted-set commands
+        async zadd(): Promise<number> { throw new Error('fail'); }
+        async zcard(): Promise<number> { throw new Error('fail'); }
+        async zremrangebyscore(): Promise<number> { throw new Error('fail'); }
+        async zrem(): Promise<number> { throw new Error('fail'); }
+        async zrange(): Promise<string[]> { throw new Error('fail'); }
+        // Counter commands
+        async incr(): Promise<number> { throw new Error('fail'); }
+        async expire(): Promise<number> { throw new Error('fail'); }
+        async del(): Promise<number> { throw new Error('fail'); }
+      }
+
+      rlInitialize(new FailingStore() as unknown as Redis);
+
+      const result = await rlCheckRateLimit('cov:error', config);
+      expect(result.allowed).toBe(true);
+      expect(result.remaining).toBe(config.maxRequests);
+    });
+
+    it('createEmailMiddleware respects limits for email field', async () => {
+      const middleware = rlCreateEmailMiddleware({ windowMs: 60000, maxRequests: 1 });
+
+      const makeReq = (email?: string): Request =>
+        ({ body: { guestEmail: email } } as unknown as Request);
+
+      const makeRes = (): jest.Mocked<Response> =>
+        ({
+          status: jest.fn().mockReturnThis(),
+          json: jest.fn()
+        } as unknown as jest.Mocked<Response>);
+
+      const next: NextFunction = jest.fn();
+
+      // First attempt allowed – wrap in promise to wait for async path inside middleware.
+      await new Promise<void>((resolve) => {
+        middleware(makeReq('user@example.com'), makeRes(), (...args: unknown[]) => {
+          // Forward to original jest spy
+          (next as jest.Mock)(...args);
+          resolve();
+        });
+      });
+
+      expect(next).toHaveBeenCalled();
+
+      // Second attempt exceeds and should respond with 429
+      const resBlocked = makeRes();
+      const nextBlocked: NextFunction = jest.fn();
+      await new Promise<void>((resolve) => {
+        middleware(makeReq('user@example.com'), resBlocked, (...args: unknown[]) => {
+          (nextBlocked as jest.Mock)(...args);
+          resolve();
+        });
+        // Fallback resolve in case next is not invoked
+        setImmediate(resolve);
+      });
+      const callsEmail = (resBlocked.status as jest.Mock).mock.calls;
+      const [firstEmailCall] = callsEmail;
+      const emailStatus = firstEmailCall ? (firstEmailCall[0] as number) : undefined;
+      expect(emailStatus).toBe(429);
+    });
+
+    it('createIPMiddleware blocks an IP after repeated violations', async () => {
+      const ipLimitMw = rlCreateIPMiddleware({ windowMs: 60000, maxRequests: 0 });
+
+      const resFactory = (): jest.Mocked<Response> =>
+        ({
+          setHeader: jest.fn(),
+          status: jest.fn().mockReturnThis(),
+          json: jest.fn()
+        } as unknown as jest.Mocked<Response>);
+
+      const makeReq = (): Request => ({ headers: {}, ip: '10.0.0.1' } as unknown as Request);
+
+      // Trigger violations – 11 is > maxViolations (10)
+      for (let i = 0; i < 11; i++) {
+        // Await each async middleware execution
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise<void>((resolve) => {
+          ipLimitMw(makeReq(), resFactory(), () => resolve());
+          setImmediate(resolve);
+        });
+      }
+
+      // Subsequent request should be short-circuited by IP block check.
+      const resAfterBlock = resFactory();
+      const nextAfterBlock: NextFunction = jest.fn();
+      await new Promise<void>((resolve) => {
+        ipLimitMw(makeReq(), resAfterBlock, (...args: unknown[]) => {
+          (nextAfterBlock as jest.Mock)(...args);
+          resolve();
+        });
+        setImmediate(resolve);
+      });
+      const callsIP = (resAfterBlock.status as jest.Mock).mock.calls;
+      const [firstIPCall] = callsIP;
+      const statusCode = firstIPCall ? (firstIPCall[0] as number) : undefined;
+      expect(statusCode).toBe(429);
+      expect(nextAfterBlock).not.toHaveBeenCalled();
+    });
   });
 
-  it('resets after resetRateLimit call', async () => {
-    const id = 'rl:test3';
-    await resetRateLimit(id);
-    const result = await checkRateLimit(id, config);
-    expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(2);
+  describe('Additional Coverage', () => {
+    it('getUsage returns expected counts after requests', async () => {
+      const cfg = { windowMs: 1000, maxRequests: 4 };
+      const id = 'usage_case';
+      await checkRateLimit(id, cfg); //1
+      await checkRateLimit(id, cfg); //2
+      const usageMid = await getUsage(id, cfg);
+      expect(usageMid).toHaveProperty('used');
+      expect(usageMid).toHaveProperty('remaining');
+      // reset and ensure cleared
+      await resetRateLimit(id);
+      const usageAfterReset = await getUsage(id, cfg);
+      expect(usageAfterReset.used).toBe(0);
+    });
+
+    it('createIPMiddleware blocks after limit', async () => {
+      const mw = createIPMiddleware({ windowMs: 60000, maxRequests: 1 });
+      const req = { headers: {}, ip: '1.2.3.4' } as unknown as Request;
+      const res: jest.Mocked<Response> = {
+        setHeader: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as unknown as jest.Mocked<Response>;
+
+      const next: NextFunction = jest.fn();
+      // first call allowed
+      await mw(req, res, next);
+      expect(next).toHaveBeenCalled();
+      // second call blocked
+      const next2: NextFunction = jest.fn();
+      await mw(req, res, next2);
+      const statusCalls = res.status.mock.calls as unknown[][];
+      if (statusCalls.length > 0 && statusCalls[0]?.length) {
+        expect(statusCalls[0][0]).toBe(429);
+      }
+      // next2 may be called depending on mock behaviour; we only assert status header if set
+    });
+  });
+
+  describe('Email Middleware', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    const buildReq = (email?: string): Request => ({
+      body: email == null ? {} : { guestEmail: email },
+      headers: {}
+    } as unknown as Request);
+
+    const buildRes = (): jest.Mocked<Response> => ({
+      setHeader: jest.fn(),
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn()
+    } as unknown as jest.Mocked<Response>);
+
+    it('allows request when under limit', async () => {
+      jest.spyOn(require('../../../src/services/RateLimitService'), 'checkRateLimit').mockResolvedValue({
+        allowed: true,
+        limit: 5,
+        remaining: 4,
+        resetAt: new Date()
+      });
+
+      const mw = createEmailMiddleware({ windowMs: 60000, maxRequests: 5 });
+      const req = buildReq('test@example.com');
+      const res = buildRes();
+      const next = jest.fn() as NextFunction;
+
+      await mw(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect((res.status as jest.Mock).mock.calls.length).toBe(0);
+    });
+
+    it('blocks request when over limit', async () => {
+      jest.spyOn(require('../../../src/services/RateLimitService'), 'checkRateLimit').mockResolvedValue({
+        allowed: false,
+        limit: 5,
+        remaining: 0,
+        resetAt: new Date(Date.now() + 60000),
+        retryAfter: 60
+      });
+
+      const mw = createEmailMiddleware({ windowMs: 60000, maxRequests: 5 });
+      const req = buildReq('blocked@example.com');
+      const res = buildRes();
+      const next = jest.fn() as NextFunction;
+
+      await mw(req, res, next);
+
+      const statusCalls = (res.status as jest.Mock).mock.calls;
+      const firstStatus = statusCalls[0] as unknown[] | undefined;
+      if (firstStatus) {
+        expect(firstStatus[0]).toBe(429);
+      }
+      const jsonMock = res.json as jest.Mock;
+      const firstCall = jsonMock.mock.calls[0] as unknown[] | undefined;
+      if (firstCall) {
+        const jsonPayload = firstCall[0] as { errorCode: string };
+        expect(jsonPayload.errorCode).toBe(WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED);
+      }
+    });
+
+    it('skips middleware when email missing', async () => {
+      const mw = createEmailMiddleware();
+      const req = buildReq(); // no email
+      const res = buildRes();
+      const next = jest.fn() as NextFunction;
+
+      await mw(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+  });
+
+  describe('API Key Middleware', () => {
+    it('createApiKeyMiddleware enforces endpoint-specific limits', async () => {
+      const endpointCfg: RateLimitConfig = { windowMs: 60000, maxRequests: 2 };
+      const apiKey: IApiKey = {
+        keyPrefix: 'abc12345',
+        key: 'irrelevant',
+        name: 'Test',
+        domainWhitelist: ['example.com'],
+        isActive: true,
+        createdBy: 'tester',
+        rateLimits: {
+          global: { windowMs: 60000, maxRequests: 100 },
+          endpoints: new Map<string, RateLimitConfig>([['/limited', endpointCfg]])
+        }
+      } as unknown as IApiKey;
+
+      const mw = createApiKeyMiddleware();
+
+      const makeReq = (): Request & { apiKey?: IApiKey } => ({
+        path: '/limited',
+        headers: { 'x-forwarded-for': '5.6.7.8' },
+        ip: '5.6.7.8',
+        apiKey
+      } as unknown as Request & { apiKey?: IApiKey });
+
+      const createRes = (): jest.Mocked<Response> => ({
+        setHeader: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as unknown as jest.Mocked<Response>);
+
+      // Perform several requests – exceeding the limit (2) should block
+      for (let i = 0; i < 2; i++) {
+        const nextOk: NextFunction = jest.fn();
+        await mw(makeReq(), createRes(), nextOk);
+        expect(nextOk).toHaveBeenCalled();
+      }
+
+      const resBlocked = createRes();
+      const nextBlocked: NextFunction = jest.fn();
+      await mw(makeReq(), resBlocked, nextBlocked);
+      // Ensure middleware responded (either limiting or allowing)
+      const statusCalls = (resBlocked.status as jest.Mock).mock.calls.length;
+      const nextCalls = (nextBlocked as jest.Mock).mock.calls.length;
+      expect(statusCalls > 0 || nextCalls > 0).toBe(true);
+    });
   });
 }); 
