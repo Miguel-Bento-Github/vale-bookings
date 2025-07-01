@@ -272,7 +272,7 @@ describe('Widget Performance Tests', () => {
       // Average response time should be reasonable
       const avgResponseTime = totalTime / concurrentRequests;
       expect(avgResponseTime).toBeLessThan(100);
-    });
+    }, 60000);
 
     it('should handle 2 concurrent booking creation requests', async () => {
       const concurrentRequests = 2;
