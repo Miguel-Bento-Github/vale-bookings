@@ -57,7 +57,7 @@ class MockRedis {
         for (const { name, args } of ops) {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const fn = (proxy.parent as any)[name] as (...a: unknown[]) => unknown;
+          const fn = (proxy.parent)[name] as (...a: unknown[]) => unknown;
           res.push([null, await fn.apply(proxy.parent, args)]);
         }
         return res;
