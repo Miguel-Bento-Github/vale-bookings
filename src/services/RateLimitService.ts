@@ -1,19 +1,25 @@
 import { Request, Response, NextFunction } from 'express';
 import Redis from 'ioredis';
 
+
 import { WIDGET_ERROR_CODES, RATE_LIMIT_DEFAULTS } from '../constants/widget';
 import { RateLimitConfig, IApiKey } from '../types/widget';
 import { logInfo, logWarning, logError } from '../utils/logger';
+
+import { RateLimitStore, RateLimitPipeline } from './RateLimitStore';
 
 // Configuration
 const BLOCK_DURATION = 3600000; // 1 hour
 
 // Initialize Redis connection
 let redis: Redis;
+let store: RateLimitStore;
 
 const initializeRedis = (redisInstance?: Redis): Redis => {
   if (redisInstance) {
     redis = redisInstance;
+    // Use the provided instance as the store as long as it structurally matches
+    store = redis as unknown as RateLimitStore;
     return redis;
   }
 
@@ -31,6 +37,9 @@ const initializeRedis = (redisInstance?: Redis): Redis => {
       return delay;
     }
   });
+
+  // After creating the real Redis connection, use it as the default store
+  store = redis as unknown as RateLimitStore;
 
   redis.on('error', (err: Error) => {
     logError('Redis connection error:', err);
@@ -118,8 +127,8 @@ export const checkRateLimit = async (
   const windowStart = now - config.windowMs;
 
   try {
-    // Use Redis pipeline for atomic operations
-    const pipeline = redis.pipeline();
+    // Use store pipeline for atomic operations (could be Redis or in-memory)
+    const pipeline: RateLimitPipeline = store.pipeline();
     
     // Remove old entries outside the window
     pipeline.zremrangebyscore(key, '-inf', windowStart);
@@ -162,7 +171,7 @@ export const checkRateLimit = async (
     // Check if limit exceeded
     if (requestCount > config.maxRequests) {
       // Remove the request we just added since it's over the limit
-      await redis.zrem(key, requestKey);
+      await store.zrem(key, requestKey);
       
       const retryAfter = Math.ceil((resetAt.getTime() - now) / 1000);
       
@@ -221,15 +230,15 @@ const trackAbuse = async (ip: string, apiKeyPrefix?: string): Promise<void> => {
   const maxViolations = 10;
 
   try {
-    const violations = await redis.incr(abuseKey);
+    const violations = await store.incr(abuseKey);
     
     if (violations === 1) {
-      await redis.expire(abuseKey, Math.ceil(abuseWindow / 1000));
+      await store.expire(abuseKey, Math.ceil(abuseWindow / 1000));
     }
 
     if (violations >= maxViolations) {
       blockIP(ip);
-      await redis.del(abuseKey);
+      await store.del(abuseKey);
       
       if (apiKeyPrefix != null && apiKeyPrefix !== '') {
         logWarning(`Potential abuse detected from IP ${ip} using API key ${apiKeyPrefix}`);
@@ -428,7 +437,7 @@ export const createEmailMiddleware = (config: RateLimitConfig = {
  */
 export const resetRateLimit = async (identifier: string, endpoint?: string): Promise<void> => {
   const key = generateKey(identifier, endpoint);
-  await redis.del(key);
+  await store.del(key);
   logInfo(`Rate limit reset for ${key}`);
 };
 
@@ -451,11 +460,11 @@ export const getUsage = async (
 
   try {
     // Remove old entries and count current ones
-    await redis.zremrangebyscore(key, '-inf', windowStart);
-    const used = await redis.zcard(key);
+    await store.zremrangebyscore(key, '-inf', windowStart);
+    const used = await store.zcard(key);
     
     // Get oldest request to calculate reset time
-    const oldestRequest = await redis.zrange(key, 0, 0, 'WITHSCORES');
+    const oldestRequest = await store.zrange(key, 0, 0, 'WITHSCORES');
     
     let resetAt = new Date(now + config.windowMs);
     if (Array.isArray(oldestRequest) && oldestRequest.length >= 2 && oldestRequest[1] != null) {

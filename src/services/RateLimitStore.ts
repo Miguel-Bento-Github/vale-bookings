@@ -1,8 +1,19 @@
+export type RateLimitPipeline = {
+  zremrangebyscore(key: string, min: string, max: number): RateLimitPipeline;
+  zcard(key: string): RateLimitPipeline;
+  zadd(key: string, score: number, member: string): RateLimitPipeline;
+  expire(key: string, seconds: number): RateLimitPipeline;
+  zrem(key: string, member: string): RateLimitPipeline;
+  zrange(key: string, start: number, stop: number, withScores: 'WITHSCORES'): RateLimitPipeline;
+  exec(): Promise<[null, unknown][]>;
+};
+
 export interface RateLimitStore {
   /* Sorted-set commands */
   zadd(key: string, score: number, member: string): Promise<number>;
   zcard(key: string): Promise<number>;
   zremrangebyscore(key: string, min: string, max: number): Promise<number>;
+  zrem(key: string, member: string): Promise<number>;
   zrange(key: string, start: number, stop: number, withScores: 'WITHSCORES'): Promise<string[]>;
 
   /* String / counter commands */
@@ -11,12 +22,5 @@ export interface RateLimitStore {
   del(key: string): Promise<number>;
 
   /* Pipeline – minimal subset used by RateLimitService */
-  pipeline(): {
-    zremrangebyscore(key: string, min: string, max: number): ReturnType<RateLimitStore['pipeline']>;
-    zcard(key: string): ReturnType<RateLimitStore['pipeline']>;
-    zadd(key: string, score: number, member: string): ReturnType<RateLimitStore['pipeline']>;
-    expire(key: string, seconds: number): ReturnType<RateLimitStore['pipeline']>;
-    zrange(key: string, start: number, stop: number, withScores: 'WITHSCORES'): ReturnType<RateLimitStore['pipeline']>;
-    exec(): Promise<[null, unknown][]>;
-  };
+  pipeline(): RateLimitPipeline;
 } 
