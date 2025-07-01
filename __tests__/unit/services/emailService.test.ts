@@ -226,6 +226,70 @@ describe('EmailService', () => {
       expect(results).toHaveLength(1);
       expect(results[0].success).toBe(true);
     });
+
+    it('sendBulkEmails with delay between batches', async () => {
+      const messages = Array.from({ length: 4 }).map((_, idx) => ({
+        to: `recipient${idx}@example.com`,
+        subject: `Message ${idx}`,
+        html: '<p>Body</p>',
+        text: 'Body'
+      }));
+
+      const startTime = Date.now();
+      const results = await sendBulkEmails(messages, 2, 100);
+      const endTime = Date.now();
+      
+      expect(results).toHaveLength(4);
+      expect(results.every(r => r.success)).toBe(true);
+      // Should have at least one delay (100ms) between batches
+      expect(endTime - startTime).toBeGreaterThanOrEqual(100);
+    });
+
+    it('sendBulkEmails with large batch size', async () => {
+      const messages = Array.from({ length: 3 }).map((_, idx) => ({
+        to: `recipient${idx}@example.com`,
+        subject: `Message ${idx}`,
+        html: '<p>Body</p>',
+        text: 'Body'
+      }));
+
+      const results = await sendBulkEmails(messages, 10, 50);
+      
+      expect(results).toHaveLength(3);
+      expect(results.every(r => r.success)).toBe(true);
+    });
+
+    it('sendBulkEmails with multiple batches and delay', async () => {
+      const messages = Array.from({ length: 6 }).map((_, idx) => ({
+        to: `recipient${idx}@example.com`,
+        subject: `Message ${idx}`,
+        html: '<p>Body</p>',
+        text: 'Body'
+      }));
+
+      const startTime = Date.now();
+      const results = await sendBulkEmails(messages, 2, 50);
+      const endTime = Date.now();
+      
+      expect(results).toHaveLength(6);
+      expect(results.every(r => r.success)).toBe(true);
+      // Should have at least two delays (50ms each) between 3 batches
+      expect(endTime - startTime).toBeGreaterThanOrEqual(100);
+    });
+
+    it('sendBulkEmails with exact batch size', async () => {
+      const messages = Array.from({ length: 4 }).map((_, idx) => ({
+        to: `recipient${idx}@example.com`,
+        subject: `Message ${idx}`,
+        html: '<p>Body</p>',
+        text: 'Body'
+      }));
+
+      const results = await sendBulkEmails(messages, 4, 10);
+      
+      expect(results).toHaveLength(4);
+      expect(results.every(r => r.success)).toBe(true);
+    });
   });
 
   describe('Error paths', () => {
@@ -342,7 +406,7 @@ describe('EmailService', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Unknown SendGrid error');
+      expect(result.error).toBe('String error');
 
       // Restore original setTimeout
       global.setTimeout = originalSetTimeout;
@@ -366,6 +430,60 @@ describe('EmailService', () => {
       expect(results).toHaveLength(1);
       expect(results[0]?.success).toBe(false);
       expect(results[0]?.error).toMatch(/Bulk email error/);
+
+      // Restore original setTimeout
+      global.setTimeout = originalSetTimeout;
+    });
+
+    it('handles error in getEmailServiceStatus when testEmailConfig throws', async () => {
+      // Mock testEmailConfig to throw error
+      const originalSetTimeout = global.setTimeout;
+      global.setTimeout = jest.fn().mockImplementation((_callback) => {
+        throw new Error('Status check failed');
+      }) as unknown as typeof setTimeout;
+
+      const status = await getEmailServiceStatus();
+      
+      expect(status.provider).toBe('sendgrid');
+      expect(status.healthy).toBe(false);
+      expect(status.lastTest).toBeInstanceOf(Date);
+      expect(status.error).toBe('Status check failed');
+
+      // Restore original setTimeout
+      global.setTimeout = originalSetTimeout;
+    });
+
+    it('handles non-Error object in getEmailServiceStatus', async () => {
+      // Mock testEmailConfig to throw non-Error object
+      const originalSetTimeout = global.setTimeout;
+      global.setTimeout = jest.fn().mockImplementation((_callback) => {
+        throw new Error('String error in status check');
+      }) as unknown as typeof setTimeout;
+
+      const status = await getEmailServiceStatus();
+      
+      expect(status.provider).toBe('sendgrid');
+      expect(status.healthy).toBe(false);
+      expect(status.lastTest).toBeInstanceOf(Date);
+      expect(status.error).toBe('Unknown SendGrid error');
+
+      // Restore original setTimeout
+      global.setTimeout = originalSetTimeout;
+    });
+
+    it('handles specific error in getEmailServiceStatus', async () => {
+      // Mock testEmailConfig to throw a specific error that would trigger the catch block
+      const originalSetTimeout = global.setTimeout;
+      global.setTimeout = jest.fn().mockImplementation((_callback) => {
+        throw new Error('Specific status check error');
+      }) as unknown as typeof setTimeout;
+
+      const status = await getEmailServiceStatus();
+      
+      expect(status.provider).toBe('sendgrid');
+      expect(status.healthy).toBe(false);
+      expect(status.lastTest).toBeInstanceOf(Date);
+      expect(status.error).toBe('Specific status check error');
 
       // Restore original setTimeout
       global.setTimeout = originalSetTimeout;
@@ -480,7 +598,7 @@ describe('EmailService', () => {
       expect(status.provider).toBe('sendgrid');
       expect(status.healthy).toBe(false);
       expect(status.lastTest).toBeInstanceOf(Date);
-      expect(status.error).toBe('Unknown SendGrid error');
+      expect(status.error).toBe('String error');
 
       // Restore original setTimeout
       global.setTimeout = originalSetTimeout;
