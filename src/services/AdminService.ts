@@ -130,19 +130,19 @@ export const getAllValets = async (): Promise<IUserWithStatistics[]> => {
   // For now, return empty statistics to avoid the expensive aggregation
   // In a real system, you would have a valetId field on bookings to filter properly
   const valetsWithStats = valets.map((valet) => {
-    return {
-      _id: String(valet._id),
-      email: valet.email,
-      role: valet.role,
-      profile: valet.profile,
-      createdAt: valet.createdAt as Date,
-      updatedAt: valet.updatedAt as Date,
-      statistics: {
+      return {
+        _id: String(valet._id),
+        email: valet.email,
+        role: valet.role,
+        profile: valet.profile,
+        createdAt: valet.createdAt as Date,
+        updatedAt: valet.updatedAt as Date,
+        statistics: {
         totalBookings: 0,
         completedBookings: 0,
         totalRevenue: 0
-      }
-    } as IUserWithStatistics;
+        }
+      } as IUserWithStatistics;
   });
 
   return valetsWithStats;
