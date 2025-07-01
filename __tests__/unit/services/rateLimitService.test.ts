@@ -2,6 +2,8 @@ import { describe, expect, it, beforeAll, afterAll, beforeEach, jest } from '@je
 import type { Request, Response, NextFunction } from 'express';
 import type Redis from 'ioredis';
 
+import { WIDGET_ERROR_CODES } from '../../../src/constants/widget';
+import { InMemoryRateLimitStore } from '../../../src/services/InMemoryRateLimitStore';
 import {
   checkRateLimit,
   resetRateLimit,
@@ -12,9 +14,7 @@ import {
   createIPMiddleware,
   createApiKeyMiddleware
 } from '../../../src/services/RateLimitService';
-import { InMemoryRateLimitStore } from '../../../src/services/InMemoryRateLimitStore';
 import type { RateLimitStore, RateLimitPipeline } from '../../../src/services/RateLimitStore';
-import { WIDGET_ERROR_CODES } from '../../../src/constants/widget';
 import type { IApiKey, RateLimitConfig } from '../../../src/types/widget';
 
 interface ZMember {
