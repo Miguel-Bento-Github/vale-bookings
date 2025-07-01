@@ -19,8 +19,7 @@ export class InMemoryRateLimitStore implements RateLimitStore {
     if (!this.sets.has(key)) {
       this.sets.set(key, []);
     }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return this.sets.get(key)!;
+    return this.sets.get(key) ?? [];
   }
 
   zadd(key: string, score: number, member: string): Promise<number> {
@@ -90,7 +89,6 @@ export class InMemoryRateLimitStore implements RateLimitStore {
       exec: async (): Promise<[null, unknown][]> => {
         const results: [null, unknown][] = [];
         for (const op of ops) {
-          // eslint-disable-next-line no-await-in-loop
           results.push([null, await op.fn()]);
         }
         return results;

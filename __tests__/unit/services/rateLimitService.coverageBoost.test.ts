@@ -6,20 +6,16 @@ import { InMemoryRateLimitStore } from '../../../src/services/InMemoryRateLimitS
 import type { RateLimitStore, RateLimitPipeline } from '../../../src/services/RateLimitStore';
 
 // Obtain unmocked implementation (cast to actual module type).
-// eslint-disable-next-line @typescript-eslint/consistent-type-definitions, @typescript-eslint/no-unused-vars
 type RateLimitModule = typeof import('../../../src/services/RateLimitService');
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-const realRateLimit = jest.requireActual('../../../src/services/RateLimitService') as RateLimitModule;
+const realRateLimit = jest.requireActual('../../../src/services/RateLimitService');
 
-const {
-  initialize: rlInitialize,
-  close: rlClose,
-  checkRateLimit,
-  resetRateLimit,
-  getUsage,
-  createEmailMiddleware,
-  createIPMiddleware
-} = realRateLimit;
+const rlInitialize = (realRateLimit as RateLimitModule).initialize;
+const rlClose = (realRateLimit as RateLimitModule).close;
+const checkRateLimit = (realRateLimit as RateLimitModule).checkRateLimit;
+const resetRateLimit = (realRateLimit as RateLimitModule).resetRateLimit;
+const getUsage = (realRateLimit as RateLimitModule).getUsage;
+const createEmailMiddleware = (realRateLimit as RateLimitModule).createEmailMiddleware;
+const createIPMiddleware = (realRateLimit as RateLimitModule).createIPMiddleware;
 
 // Shared config with a very small window so tests run fast.
 const config = { windowMs: 1000, maxRequests: 2 };
