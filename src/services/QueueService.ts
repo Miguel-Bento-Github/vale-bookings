@@ -3,7 +3,7 @@ import { logInfo, logWarning, logError } from '../utils/logger';
 // Queue configuration
 interface QueueConfig {
   provider: 'bull' | 'agenda';
-  redis?: {
+  redict?: {
     host: string;
     port: number;
     password?: string;
@@ -46,11 +46,11 @@ const mockJobs = new Map<string, {
 const getQueueConfig = (): QueueConfig => {
   return {
     provider: (process.env.QUEUE_PROVIDER as 'bull' | 'agenda') ?? 'bull',
-    redis: {
-      host: process.env.REDIS_HOST ?? 'localhost',
-      port: parseInt(process.env.REDIS_PORT ?? '6379'),
-      password: process.env.REDIS_PASSWORD,
-      db: parseInt(process.env.REDIS_DB ?? '0')
+    redict: {
+      host: process.env.REDICT_HOST ?? 'localhost',
+      port: parseInt(process.env.REDICT_PORT ?? '6379'),
+      password: process.env.REDICT_PASSWORD,
+      db: parseInt(process.env.REDICT_DB ?? '0')
     },
     mongodb: {
       url: process.env.MONGODB_URL ?? 'mongodb://localhost:27017/vale',

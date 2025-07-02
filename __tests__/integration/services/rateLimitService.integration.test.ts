@@ -12,10 +12,12 @@ import {
 } from '../../../src/services/RateLimitService';
 import type { RateLimitConfig, IApiKey } from '../../../src/types/widget';
 
+type Redict = Redis;
+
 interface ZMember { member: string; score: number }
 
 /**
- * Minimal in0 memory Redis mock covering commands used by RateLimitService.
+ * Minimal in0 memory Redict mock covering commands used by RateLimitService.
  * NOTE: Behaviour kept identical to previous coverage test but relocated to integration folder.
  */
 class MockRedis {
@@ -75,10 +77,10 @@ class MockRedis {
   }
 }
 
-const redisMock = new MockRedis();
+const redictMock = new MockRedis();
 
 beforeAll(() => {
-  initRateLimit(redisMock as unknown as Redis);
+  initRateLimit(redictMock as unknown as Redict);
 });
 
 afterAll(async () => {

@@ -1,25 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
 import Redis from 'ioredis';
 
-
 import { WIDGET_ERROR_CODES, RATE_LIMIT_DEFAULTS } from '../constants/widget';
 import { RateLimitConfig, IApiKey } from '../types/widget';
 import { logInfo, logWarning, logError } from '../utils/logger';
 
 import { RateLimitStore, RateLimitPipeline } from './RateLimitStore';
 
+type Redict = Redis;
+
 // Configuration
 const BLOCK_DURATION = 3600000; // 1 hour
 
-// Initialize Redis connection
-let redis: Redis;
+// Initialize Redict connection
+let redis: Redict;
 let store: RateLimitStore;
 
-const initializeRedis = (redisInstance?: Redis): Redis => {
+const initializeRedis = (redisInstance?: Redict): Redict => {
   if (redisInstance) {
     redis = redisInstance;
     // Use the provided instance as the store as long as it structurally matches
-    store = redis as unknown as RateLimitStore;
+    store = redis as RateLimitStore;
     return redis;
   }
 
@@ -28,9 +29,9 @@ const initializeRedis = (redisInstance?: Redis): Redis => {
   }
 
   redis = new Redis({
-    host: process.env.REDIS_HOST ?? 'localhost',
-    port: parseInt(process.env.REDIS_PORT ?? '6379'),
-    password: process.env.REDIS_PASSWORD,
+    host: process.env.REDICT_HOST ?? 'localhost',
+    port: parseInt(process.env.REDICT_PORT ?? '6379'),
+    password: process.env.REDICT_PASSWORD,
     keyPrefix: 'rate_limit:',
     retryStrategy: (times: number): number => {
       const delay = Math.min(times * 50, 2000);
@@ -38,21 +39,21 @@ const initializeRedis = (redisInstance?: Redis): Redis => {
     }
   });
 
-  // After creating the real Redis connection, use it as the default store
+  // After creating the real Redict connection, use it as the default store
   store = redis as unknown as RateLimitStore;
 
   redis.on('error', (err: Error) => {
-    logError('Redis connection error:', err);
+    logError('Redict connection error:', err);
   });
 
   redis.on('connect', () => {
-    logInfo('Connected to Redis for rate limiting');
+    logInfo('Connected to Redict for rate limiting');
   });
 
   return redis;
 };
 
-// Initialize Redis only if not in test environment
+// Initialize Redict only if not in test environment
 if (process.env.NODE_ENV !== 'test') {
   initializeRedis();
 }
@@ -149,7 +150,7 @@ export const checkRateLimit = async (
     const results = await pipeline.exec();
     
     if (results == null) {
-      throw new Error('Redis pipeline execution failed');
+      throw new Error('Redict pipeline execution failed');
     }
     
     // The count is before adding the new request
@@ -193,7 +194,7 @@ export const checkRateLimit = async (
   } catch (error) {
     logError('Rate limit check error:', error);
     
-    // In case of Redis failure, allow the request but log the error
+    // In case of Redict failure, allow the request but log the error
     return {
       allowed: true,
       limit: config.maxRequests,
@@ -495,7 +496,7 @@ export const getUsage = async (
 };
 
 /**
- * Close Redis connection
+ * Close Redict connection
  */
 export const close = async (): Promise<void> => {
   if (cleanupInterval !== null) {
@@ -509,9 +510,9 @@ export const close = async (): Promise<void> => {
 };
 
 /**
- * Initialize the service with a custom Redis instance (for testing)
+ * Initialize the service with a custom Redict instance (for testing)
  */
-export const initialize = (redisInstance?: Redis): void => {
+export const initialize = (redisInstance?: Redict): void => {
   initializeRedis(redisInstance);
 };
 

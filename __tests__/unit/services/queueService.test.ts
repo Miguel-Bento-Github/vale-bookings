@@ -464,8 +464,8 @@ describe('QueueService', () => {
     it('handles invalid environment variables gracefully', async () => {
       // Test with invalid environment variables
       process.env.QUEUE_PROVIDER = 'invalid';
-      process.env.REDIS_PORT = 'invalid-port';
-      process.env.REDIS_DB = 'invalid-db';
+      process.env.REDICT_PORT = 'invalid-port';
+      process.env.REDICT_DB = 'invalid-db';
       
       const result = await scheduleJob('test-job', hoursFromNow(1), 'booking_reminder', {});
       expect(result.success).toBe(false);

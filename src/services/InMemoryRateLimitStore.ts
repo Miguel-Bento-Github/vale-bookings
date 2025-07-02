@@ -8,7 +8,7 @@ interface ZMember {
 /**
  * Simple in-memory implementation of the RateLimitStore interface.
  * It is NOT suitable for production but useful for tests and dev
- * environments where Redis is unavailable.
+ * environments where Redict is unavailable.
  */
 export class InMemoryRateLimitStore implements RateLimitStore {
   private sets: Map<string, ZMember[]> = new Map();

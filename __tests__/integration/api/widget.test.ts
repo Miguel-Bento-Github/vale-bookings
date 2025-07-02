@@ -9,8 +9,10 @@ import Location from '../../../src/models/Location';
 import { initialize as initializeRateLimiting } from '../../../src/services/RateLimitService';
 import { generateSecureToken, hash } from '../../../src/utils/encryption';
 
-// Mock Redis client for testing
-interface MockRedisClient {
+type Redict = Redis;
+
+// Mock Redict client for testing
+interface MockRedictClient {
   incr: jest.MockedFunction<() => Promise<number>>;
   expire: jest.MockedFunction<() => Promise<number>>;
   ttl: jest.MockedFunction<() => Promise<number>>;
@@ -22,7 +24,7 @@ interface MockRedisClient {
   flushall: jest.MockedFunction<() => Promise<string>>;
 }
 
-const mockRedisClient: MockRedisClient = {
+const mockRedictClient: MockRedictClient = {
   incr: jest.fn().mockResolvedValue(1),
   expire: jest.fn().mockResolvedValue(1),
   ttl: jest.fn().mockResolvedValue(3600),
@@ -47,8 +49,8 @@ describe('Widget API Integration Tests', () => {
   let testLocation: TestLocation;
 
   beforeAll(() => {
-    // Initialize rate limiting with mock Redis
-    initializeRateLimiting(mockRedisClient as unknown as Redis);
+    // Initialize rate limiting with mock Redict
+    initializeRateLimiting(mockRedictClient as unknown as Redict);
 
     // Generate a valid API key for testing
     validApiKey = generateSecureToken(32);
@@ -96,7 +98,7 @@ describe('Widget API Integration Tests', () => {
     await ApiKey.deleteMany({});
     await GuestBooking.deleteMany({});
     await Location.deleteMany({});
-    await mockRedisClient.flushall();
+    await mockRedictClient.flushall();
   });
 
   describe('Authentication & Authorization', () => {

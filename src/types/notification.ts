@@ -196,7 +196,7 @@ export interface SMSConfig {
 // Queue configuration
 export interface QueueConfig {
   provider: 'bull' | 'agenda';
-  redis?: {
+  redict?: {
     host: string;
     port: number;
     password?: string;
