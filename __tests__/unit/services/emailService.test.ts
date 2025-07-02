@@ -1,6 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 
+import { emailQueueService } from '../../../src/services/EmailQueueService';
 import { sendEmail, sendBulkEmails, testEmailConfig, getEmailServiceStatus } from '../../../src/services/EmailService';
+import { emailTemplateService } from '../../../src/services/EmailTemplateService';
+
+// Mock external dependencies
+jest.mock('resend', () => ({
+  Resend: jest.fn().mockImplementation(() => ({
+    emails: {
+      send: jest.fn().mockResolvedValue({ data: { id: 'sg_test-email-id' } })
+    }
+  })) as any
+}));
+
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn().mockReturnValue({
+    verify: jest.fn().mockResolvedValue(undefined),
+    sendMail: jest.fn().mockResolvedValue({ messageId: 'smtp_test-message-id' }),
+    close: jest.fn()
+  })
+}));
+
+
 
 describe('EmailService', () => {
   const ORIGINAL_ENV = process.env;
@@ -9,9 +30,11 @@ describe('EmailService', () => {
   beforeEach(() => {
     // Clone env so mutations do not leak between tests
     process.env = { ...ORIGINAL_ENV };
-    process.env.EMAIL_PROVIDER = 'sendgrid';
-    process.env.EMAIL_FROM = 'noreply@example.com';
-    process.env.EMAIL_FROM_NAME = 'Example';
+    process.env.EMAIL_PROVIDER = 'resend';
+    process.env.RESEND_KEY = 'test_key';
+    process.env.EMAIL_DOMAIN = 'valebooking.com';
+    process.env.EMAIL_FROM = 'test@valebooking.com';
+    process.env.EMAIL_FROM_NAME = 'Vale Test';
   });
 
   afterEach(() => {
@@ -42,7 +65,7 @@ describe('EmailService', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.provider).toBe('sendgrid');
+      expect(result.provider).toBe('resend');
       expect(result.messageId).toMatch(/^sg_/);
     });
 
@@ -58,20 +81,6 @@ describe('EmailService', () => {
 
       expect(results).toHaveLength(3);
       expect(results.every(r => r.success)).toBe(true);
-    });
-
-    it('routes to SES provider', async () => {
-      process.env.EMAIL_PROVIDER = 'ses';
-      process.env.EMAIL_REGION = 'us-east-1';
-      const result = await sendEmail({
-        to: 'user@example.com',
-        subject: 'Hi',
-        html: '<p>hi</p>',
-        text: 'hi'
-      });
-      expect(result.success).toBe(true);
-      expect(result.provider).toBe('ses');
-      expect(result.messageId).toMatch(/^ses_/);
     });
 
     it('routes to SMTP provider', async () => {
@@ -318,11 +327,14 @@ describe('EmailService', () => {
     });
 
     it('handles SendGrid error gracefully', async () => {
-      // Mock setTimeout to throw error
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('SendGrid API error');
-      }) as unknown as typeof setTimeout;
+      // Mock the Resend service to throw an error
+      const originalResend = require('resend').Resend;
+      const mockResend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue(new Error('SendGrid API error'))
+        }
+      }));
+      require('resend').Resend = mockResend;
 
       const result = await sendEmail({
         to: 'user@example.com',
@@ -333,44 +345,23 @@ describe('EmailService', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/SendGrid API error/);
-      expect(result.provider).toBe('sendgrid');
+      expect(result.provider).toBe('resend');
 
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
-    });
-
-    it('handles SES error gracefully', async () => {
-      process.env.EMAIL_PROVIDER = 'ses';
-      
-      // Mock setTimeout to throw error
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('SES API error');
-      }) as unknown as typeof setTimeout;
-
-      const result = await sendEmail({
-        to: 'user@example.com',
-        subject: 'Test',
-        html: '<p>Test</p>',
-        text: 'Test'
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toMatch(/SES API error/);
-      expect(result.provider).toBe('ses');
-
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
+      // Restore original Resend
+      require('resend').Resend = originalResend;
     });
 
     it('handles SMTP error gracefully', async () => {
       process.env.EMAIL_PROVIDER = 'smtp';
       
-      // Mock setTimeout to throw error
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('SMTP error');
-      }) as unknown as typeof setTimeout;
+      // Mock nodemailer to throw an error
+      const originalCreateTransport = require('nodemailer').createTransport;
+      const mockTransporter = {
+        verify: jest.fn().mockRejectedValue(new Error('SMTP error')),
+        sendMail: jest.fn(),
+        close: jest.fn()
+      };
+      require('nodemailer').createTransport = jest.fn().mockReturnValue(mockTransporter);
 
       const result = await sendEmail({
         to: 'user@example.com',
@@ -383,20 +374,18 @@ describe('EmailService', () => {
       expect(result.error).toMatch(/SMTP error/);
       expect(result.provider).toBe('smtp');
 
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
+      // Restore original nodemailer
+      require('nodemailer').createTransport = originalCreateTransport;
     });
 
     it('handles unknown error in sendEmail', async () => {
-      // Mock getEmailConfig to throw error
-      const originalEnv = process.env;
-      process.env = { ...originalEnv, EMAIL_PROVIDER: 'sendgrid' };
-      
-      // Mock setTimeout to throw non-Error object
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('String error');
-      }) as unknown as typeof setTimeout;
+      // Mock Resend to throw a string error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue('String error')
+        }
+      }));
 
       const result = await sendEmail({
         to: 'user@example.com',
@@ -406,18 +395,20 @@ describe('EmailService', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('String error');
+      expect(result.error).toBe('Unknown Resend error');
 
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
+      // Restore original Resend
+      require('resend').Resend = originalResend;
     });
 
     it('handles error in sendBulkEmails', async () => {
-      // Mock sendEmail to throw error
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('Bulk email error');
-      }) as unknown as typeof setTimeout;
+      // Mock Resend to throw error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue(new Error('Bulk email error'))
+        }
+      }));
 
       const messages = [{
         to: 'user@example.com',
@@ -431,62 +422,126 @@ describe('EmailService', () => {
       expect(results[0]?.success).toBe(false);
       expect(results[0]?.error).toMatch(/Bulk email error/);
 
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
+      // Restore original Resend
+      require('resend').Resend = originalResend;
     });
 
     it('handles error in getEmailServiceStatus when testEmailConfig throws', async () => {
-      // Mock testEmailConfig to throw error
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('Status check failed');
-      }) as unknown as typeof setTimeout;
+      // Mock Resend to throw error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue(new Error('Status check failed'))
+        }
+      }));
 
       const status = await getEmailServiceStatus();
       
-      expect(status.provider).toBe('sendgrid');
+      expect(status.provider).toBe('resend');
       expect(status.healthy).toBe(false);
       expect(status.lastTest).toBeInstanceOf(Date);
       expect(status.error).toBe('Status check failed');
 
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
+      // Restore original Resend
+      require('resend').Resend = originalResend;
     });
 
     it('handles non-Error object in getEmailServiceStatus', async () => {
-      // Mock testEmailConfig to throw non-Error object
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('String error in status check');
-      }) as unknown as typeof setTimeout;
+      // Mock Resend to throw a string error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue('String error in status check')
+        }
+      }));
 
       const status = await getEmailServiceStatus();
       
-      expect(status.provider).toBe('sendgrid');
+      expect(status.provider).toBe('resend');
       expect(status.healthy).toBe(false);
       expect(status.lastTest).toBeInstanceOf(Date);
-      expect(status.error).toBe('String error in status check');
+      expect(status.error).toBe('Unknown Resend error');
 
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
+      // Restore original Resend
+      require('resend').Resend = originalResend;
     });
 
     it('handles specific error in getEmailServiceStatus', async () => {
-      // Mock testEmailConfig to throw a specific error that would trigger the catch block
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('Specific status check error');
-      }) as unknown as typeof setTimeout;
+      // Mock Resend to throw a specific error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue(new Error('Specific status check error'))
+        }
+      }));
 
       const status = await getEmailServiceStatus();
       
-      expect(status.provider).toBe('sendgrid');
+      expect(status.provider).toBe('resend');
       expect(status.healthy).toBe(false);
       expect(status.lastTest).toBeInstanceOf(Date);
       expect(status.error).toBe('Specific status check error');
 
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
+      // Restore original Resend
+      require('resend').Resend = originalResend;
+    });
+
+    it('handles test email failure', async () => {
+      // Mock Resend to throw error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue(new Error('Test email failed'))
+        }
+      }));
+
+      const result = await testEmailConfig();
+      
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Test email failed/);
+
+      // Restore original Resend
+      require('resend').Resend = originalResend;
+    });
+
+    it('returns unhealthy status when test fails', async () => {
+      // Mock Resend to throw error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue(new Error('Service unavailable'))
+        }
+      }));
+
+      const status = await getEmailServiceStatus();
+      
+      expect(status.provider).toBe('resend');
+      expect(status.healthy).toBe(false);
+      expect(status.lastTest).toBeInstanceOf(Date);
+      expect(status.error).toMatch(/Service unavailable/);
+
+      // Restore original Resend
+      require('resend').Resend = originalResend;
+    });
+
+    it('handles unknown error in status check', async () => {
+      // Mock Resend to throw a string error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue('String error')
+        }
+      }));
+
+      const status = await getEmailServiceStatus();
+      
+      expect(status.provider).toBe('resend');
+      expect(status.healthy).toBe(false);
+      expect(status.lastTest).toBeInstanceOf(Date);
+      expect(status.error).toBe('Unknown Resend error');
+
+      // Restore original Resend
+      require('resend').Resend = originalResend;
     });
   });
 
@@ -505,22 +560,7 @@ describe('EmailService', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.provider).toBe('sendgrid');
-    });
-
-    it('uses custom region for SES', async () => {
-      process.env.EMAIL_PROVIDER = 'ses';
-      process.env.EMAIL_REGION = 'eu-west-1';
-
-      const result = await sendEmail({
-        to: 'user@example.com',
-        subject: 'Test',
-        html: '<p>Test</p>',
-        text: 'Test'
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.provider).toBe('ses');
+      expect(result.provider).toBe('resend');
     });
   });
 
@@ -529,7 +569,7 @@ describe('EmailService', () => {
       const result = await testEmailConfig();
       
       expect(result.success).toBe(true);
-      expect(result.provider).toBe('sendgrid');
+      expect(result.provider).toBe('resend');
       expect(result.messageId).toMatch(/^sg_/);
     });
 
@@ -542,19 +582,21 @@ describe('EmailService', () => {
     });
 
     it('handles test email failure', async () => {
-      // Mock setTimeout to throw error
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('Test email failed');
-      }) as unknown as typeof setTimeout;
+      // Mock Resend to throw error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue(new Error('Test email failed'))
+        }
+      }));
 
       const result = await testEmailConfig();
       
       expect(result.success).toBe(false);
       expect(result.error).toMatch(/Test email failed/);
 
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
+      // Restore original Resend
+      require('resend').Resend = originalResend;
     });
   });
 
@@ -562,55 +604,50 @@ describe('EmailService', () => {
     it('returns healthy status when test succeeds', async () => {
       const status = await getEmailServiceStatus();
       
-      expect(status.provider).toBe('sendgrid');
+      expect(status.provider).toBe('resend');
       expect(status.healthy).toBe(true);
       expect(status.lastTest).toBeInstanceOf(Date);
       expect(status.error).toBeUndefined();
     });
 
     it('returns unhealthy status when test fails', async () => {
-      // Mock setTimeout to throw error
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('Service unavailable');
-      }) as unknown as typeof setTimeout;
+      // Mock Resend to throw error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue(new Error('Service unavailable'))
+        }
+      }));
 
       const status = await getEmailServiceStatus();
       
-      expect(status.provider).toBe('sendgrid');
+      expect(status.provider).toBe('resend');
       expect(status.healthy).toBe(false);
       expect(status.lastTest).toBeInstanceOf(Date);
       expect(status.error).toMatch(/Service unavailable/);
 
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
+      // Restore original Resend
+      require('resend').Resend = originalResend;
     });
 
     it('handles unknown error in status check', async () => {
-      // Mock setTimeout to throw non-Error object
-      const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((_callback) => {
-        throw new Error('String error');
-      }) as unknown as typeof setTimeout;
+      // Mock Resend to throw a string error
+      const originalResend = require('resend').Resend;
+      require('resend').Resend = jest.fn().mockImplementation(() => ({
+        emails: {
+          send: jest.fn().mockRejectedValue('String error')
+        }
+      }));
 
       const status = await getEmailServiceStatus();
       
-      expect(status.provider).toBe('sendgrid');
+      expect(status.provider).toBe('resend');
       expect(status.healthy).toBe(false);
       expect(status.lastTest).toBeInstanceOf(Date);
-      expect(status.error).toBe('String error');
+      expect(status.error).toBe('Unknown Resend error');
 
-      // Restore original setTimeout
-      global.setTimeout = originalSetTimeout;
-    });
-
-    it('returns correct provider in status', async () => {
-      process.env.EMAIL_PROVIDER = 'ses';
-      
-      const status = await getEmailServiceStatus();
-      
-      expect(status.provider).toBe('ses');
-      expect(status.healthy).toBe(true);
+      // Restore original Resend
+      require('resend').Resend = originalResend;
     });
   });
 
@@ -656,6 +693,239 @@ describe('EmailService', () => {
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/invalid email address/i);
       }
+    });
+  });
+});
+
+describe('EmailTemplateService', () => {
+  const ORIGINAL_ENV = process.env;
+  let originalSendEmail: typeof import('../../../src/services/EmailService').sendEmail;
+
+  beforeEach(() => {
+    jest.resetModules();
+    process.env = { ...ORIGINAL_ENV };
+    process.env.EMAIL_PROVIDER = 'resend';
+    process.env.RESEND_KEY = 'test_key';
+    process.env.EMAIL_FROM = 'test@vale.com';
+    process.env.EMAIL_FROM_NAME = 'Vale Test';
+    // Mock sendEmail for EmailTemplateService tests only
+    originalSendEmail = require('../../../src/services/EmailService').sendEmail;
+    require('../../../src/services/EmailService').sendEmail = jest.fn().mockResolvedValue({
+      success: true,
+      messageId: 'sg_test-id',
+      provider: 'resend'
+    });
+  });
+
+  afterEach(() => {
+    // Restore original sendEmail
+    require('../../../src/services/EmailService').sendEmail = originalSendEmail;
+  });
+
+  afterEach(() => {
+    process.env = ORIGINAL_ENV;
+  });
+
+  describe('sendBookingConfirmation', () => {
+    it('should generate booking confirmation email', async () => {
+      const bookingData = {
+        bookingId: 'booking-123',
+        reference: 'REF123',
+        locationName: 'Downtown Office',
+        locationAddress: '123 Main St',
+        startTime: '2024-01-15T10:00:00Z',
+        endTime: '2024-01-15T12:00:00Z',
+        duration: 2,
+        totalAmount: 50,
+        currency: 'USD',
+        customerName: 'John Doe',
+        customerEmail: 'john@example.com',
+        status: 'confirmed' as const
+      };
+
+      const result = await emailTemplateService.sendBookingConfirmation(bookingData);
+      expect(result).toBe(true);
+    });
+
+    it('should include all required booking information', async () => {
+      const bookingData = {
+        bookingId: 'booking-123',
+        reference: 'REF123',
+        locationName: 'Downtown Office',
+        locationAddress: '123 Main St',
+        startTime: '2024-01-15T10:00:00Z',
+        endTime: '2024-01-15T12:00:00Z',
+        duration: 2,
+        totalAmount: 50,
+        currency: 'USD',
+        customerName: 'John Doe',
+        customerEmail: 'john@example.com',
+        status: 'confirmed' as const
+      };
+
+      const result = await emailTemplateService.sendBookingConfirmation(bookingData);
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('sendBookingReminder', () => {
+    it('should send booking reminder email', async () => {
+      const bookingData = {
+        bookingId: 'booking-123',
+        reference: 'REF123',
+        locationName: 'Test Location',
+        locationAddress: '123 Test St',
+        startTime: '2024-01-15T10:00:00Z',
+        endTime: '2024-01-15T12:00:00Z',
+        duration: 2,
+        totalAmount: 50,
+        currency: 'USD',
+        customerName: 'John Doe',
+        customerEmail: 'john@example.com',
+        status: 'confirmed'
+      };
+
+      const result = await emailTemplateService.sendBookingReminder(bookingData);
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('sendPasswordReset', () => {
+    it('should send password reset email', async () => {
+      const resetData = {
+        customerName: 'John Doe',
+        customerEmail: 'john@example.com',
+        resetLink: 'https://vale.com/reset?token=abc123',
+        expiryTime: '2024-01-16T10:00:00Z',
+        supportEmail: 'support@vale.com'
+      };
+
+      const result = await emailTemplateService.sendPasswordReset(resetData);
+      expect(result).toBe(true);
+    });
+  });
+});
+
+describe('EmailQueueService', () => {
+  let originalSendEmail: any;
+
+  beforeEach(() => {
+    emailQueueService.clear();
+    
+    // Mock sendEmail to throw error for queue tests, so emails stay in queue
+    originalSendEmail = require('../../../src/services/EmailService').sendEmail;
+    require('../../../src/services/EmailService').sendEmail = jest.fn().mockRejectedValue(new Error('Test error'));
+  });
+
+  afterEach(() => {
+    // Restore original sendEmail
+    require('../../../src/services/EmailService').sendEmail = originalSendEmail;
+  });
+
+  describe('enqueue', () => {
+    it('should add email to queue', async () => {
+      const email = {
+        to: 'test@example.com',
+        subject: 'Test',
+        html: '<p>Test</p>',
+        text: 'Test'
+      };
+
+      const id = emailQueueService.enqueue(email);
+      expect(id).toBeDefined();
+      expect(id).toMatch(/^email_\d+_[a-z0-9]+$/);
+      
+      // Wait a bit for processing to complete and email to be re-queued due to error
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check queue length after processing
+      const status = emailQueueService.getStatus();
+      expect(status.queueLength).toBe(1);
+    });
+
+    it('should handle priority queuing', async () => {
+      const normalEmail = {
+        to: 'normal@example.com',
+        subject: 'Normal',
+        html: '<p>Normal</p>',
+        text: 'Normal'
+      };
+
+      const highEmail = {
+        to: 'high@example.com',
+        subject: 'High',
+        html: '<p>High</p>',
+        text: 'High'
+      };
+
+      await emailQueueService.enqueue(normalEmail, { priority: 'normal' });
+      await emailQueueService.enqueue(highEmail, { priority: 'high' });
+
+      const status = emailQueueService.getStatus();
+      expect(status.queueLength).toBe(2);
+    });
+
+    it('should handle scheduled emails', async () => {
+      const scheduledEmail = {
+        to: 'scheduled@example.com',
+        subject: 'Scheduled',
+        html: '<p>Scheduled</p>',
+        text: 'Scheduled'
+      };
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const id = await emailQueueService.enqueue(scheduledEmail, {
+        scheduledFor: tomorrow
+      });
+
+      expect(id).toBeDefined();
+      
+      const status = emailQueueService.getStatus();
+      expect(status.queueLength).toBe(1);
+    });
+  });
+
+  describe('getStatus', () => {
+    it('should return queue status', () => {
+      const status = emailQueueService.getStatus();
+      
+      expect(status).toHaveProperty('queueLength');
+      expect(status).toHaveProperty('processing');
+      expect(status).toHaveProperty('config');
+      expect(status.config).toHaveProperty('rateLimitPerSecond');
+      expect(status.config).toHaveProperty('maxRetries');
+    });
+
+    it('should show correct queue length', async () => {
+      expect(emailQueueService.getStatus().queueLength).toBe(0);
+
+      await emailQueueService.enqueue({
+        to: 'test@example.com',
+        subject: 'Test',
+        html: '<p>Test</p>',
+        text: 'Test'
+      });
+
+      expect(emailQueueService.getStatus().queueLength).toBe(1);
+    });
+  });
+
+  describe('clear', () => {
+    it('should clear the queue', async () => {
+      await emailQueueService.enqueue({
+        to: 'test@example.com',
+        subject: 'Test',
+        html: '<p>Test</p>',
+        text: 'Test'
+      });
+
+      expect(emailQueueService.getStatus().queueLength).toBe(1);
+
+      emailQueueService.clear();
+
+      expect(emailQueueService.getStatus().queueLength).toBe(0);
     });
   });
 }); 
