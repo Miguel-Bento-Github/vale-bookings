@@ -1,7 +1,6 @@
 import type { Job } from 'agenda';
 import { Agenda } from 'agenda';
 import Bull from 'bull';
-import mongoose from 'mongoose';
 
 import { logInfo, logWarning, logError } from '../utils/logger';
 
@@ -138,23 +137,30 @@ const initializeAgenda = (): Agenda => {
       _processEvery: 0,
       _defaultLockLifetime: 1000,
       _definitions: {},
-      on: () => {},
-      removeAllListeners: () => {},
-      define: () => {},
-      schedule: async (scheduledFor: Date, jobType: string, data: JobData) => ({
+      on: (): void => {},
+      removeAllListeners: (): void => {},
+      define: (): void => {},
+      schedule: (
+        scheduledFor: Date,
+        jobType: string,
+        data: JobData
+      ): Promise<{
+        attrs: { _id: string; name: string; data: JobData; nextRunAt: Date };
+        save: () => void;
+      }> => Promise.resolve({
         attrs: {
           _id: `test-job-${Date.now()}`,
           name: jobType,
           data,
           nextRunAt: scheduledFor
         },
-        save: async () => {}
+        save: (): void => {}
       }),
-      jobs: async () => [],
-      cancel: async () => 0,
-      start: async () => {},
-      stop: async () => {},
-      close: async () => {}
+      jobs: (): Promise<never[]> => Promise.resolve([]),
+      cancel: (): Promise<number> => Promise.resolve(0),
+      start: (): Promise<void> => Promise.resolve(),
+      stop: (): Promise<void> => Promise.resolve(),
+      close: (): Promise<void> => Promise.resolve()
     };
     
     agendaInstance = mockAgenda as unknown as Agenda;
