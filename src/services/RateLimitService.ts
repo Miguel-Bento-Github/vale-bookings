@@ -114,11 +114,14 @@ export const checkRateLimit = async (
   const key = generateKey(identifier, endpoint);
   const now = Date.now();
   const windowStart = now - config.windowMs;
-  const s = store;
-  if (!s) throw new Error('RateLimit store is not initialized');
+  
+  if (store == null) {
+    throw new Error('RateLimit store is not initialized');
+  }
+  
   try {
     // Use store pipeline for atomic operations (could be Redict or in-memory)
-    const pipeline: RateLimitPipeline = s.pipeline();
+    const pipeline: RateLimitPipeline = store.pipeline();
     
     // Remove old entries outside the window
     pipeline.zremrangebyscore(key, '-inf', windowStart);
@@ -161,7 +164,7 @@ export const checkRateLimit = async (
     // Check if limit exceeded
     if (requestCount > config.maxRequests) {
       // Remove the request we just added since it's over the limit
-      await s.zrem(key, requestKey);
+      await store.zrem(key, requestKey);
       
       const retryAfter = Math.ceil((resetAt.getTime() - now) / 1000);
       
@@ -210,22 +213,39 @@ const getClientIP = (req: Request): string => {
     return realIPHeader;
   }
 
-  return req.ip ?? req.socket?.remoteAddress ?? 'unknown';
+  if (typeof req.ip === 'string' && req.ip.trim() !== '') {
+    return req.ip;
+  }
+  const remoteAddress = req.socket?.remoteAddress;
+  if (remoteAddress == null) {
+    return 'unknown';
+  }
+  if (typeof remoteAddress === 'string') {
+    if (remoteAddress.trim() !== '') {
+      return remoteAddress;
+    }
+  }
+  return 'unknown';
 };
 
 /**
  * Track abuse and potentially block IP
  */
 const trackAbuse = async (ip: string, apiKeyPrefix?: string): Promise<void> => {
-  const key = apiKeyPrefix ? `abuse:${apiKeyPrefix}:${ip}` : `abuse:${ip}`;
+  const key = typeof apiKeyPrefix === 'string' && apiKeyPrefix.trim() !== '' 
+    ? `abuse:${apiKeyPrefix}:${ip}` 
+    : `abuse:${ip}`;
   const now = Date.now();
   const windowStart = now - 3600000; // 1 hour
-  const s = store;
-  if (!s) throw new Error('RateLimit store is not initialized');
+  
+  if (store == null) {
+    throw new Error('RateLimit store is not initialized');
+  }
+  
   try {
-    await s.zremrangebyscore(key, '-inf', windowStart);
-    await s.zadd(key, now, `${now}-${Math.random()}`);
-    await s.expire(key, 3600);
+    await store.zremrangebyscore(key, '-inf', windowStart);
+    await store.zadd(key, now, `${now}-${Math.random()}`);
+    await store.expire(key, 3600);
   } catch (error) {
     logError('trackAbuse error:', error);
   }
@@ -431,9 +451,12 @@ export const createEmailMiddleware = (config: RateLimitConfig = {
  */
 export const resetRateLimit = async (identifier: string, endpoint?: string): Promise<void> => {
   const key = generateKey(identifier, endpoint);
-  const s = store;
-  if (!s) throw new Error('RateLimit store is not initialized');
-  await s.del(key);
+  
+  if (store == null) {
+    throw new Error('RateLimit store is not initialized');
+  }
+  
+  await store.del(key);
   logInfo(`Rate limit reset for ${key}`);
 };
 
@@ -453,17 +476,20 @@ export const getUsage = async (
   const key = generateKey(identifier, endpoint);
   const now = Date.now();
   const windowStart = now - config.windowMs;
-  const s = store;
-  if (!s) throw new Error('RateLimit store is not initialized');
+  
+  if (store == null) {
+    throw new Error('RateLimit store is not initialized');
+  }
+  
   try {
     // Remove old entries outside the window
-    await s.zremrangebyscore(key, '-inf', windowStart);
+    await store.zremrangebyscore(key, '-inf', windowStart);
     
     // Count current requests in the window
-    const used = await s.zcard(key);
+    const used = await store.zcard(key);
     
     // Get oldest request to calculate reset time
-    const oldestRequest = await s.zrange(key, 0, 0, 'WITHSCORES');
+    const oldestRequest = await store.zrange(key, 0, 0, 'WITHSCORES');
     
     let resetAt = new Date(now + config.windowMs);
     if (Array.isArray(oldestRequest) && oldestRequest.length >= 2 && oldestRequest[1] != null) {
@@ -493,14 +519,18 @@ export const getUsage = async (
 /**
  * Close Redict connection
  */
-export const close = async (): Promise<void> => {
+export const close = async (customRedict?: Redict | null): Promise<void> => {
   if (cleanupInterval !== null) {
     clearInterval(cleanupInterval);
     cleanupInterval = null;
   }
-  if (redict !== undefined && redict !== null) {
-    await redict.quit();
-    redict = null;
+  const targetRedict = customRedict ?? redict;
+  
+  if (targetRedict !== undefined && targetRedict !== null) {
+    await targetRedict.quit();
+    if (!customRedict) {
+      redict = null;
+    }
   }
   logInfo('Rate limiting service closed');
 };
@@ -512,6 +542,17 @@ export const initialize = (redictInstance?: Redict): void => {
   initializeRedict(redictInstance);
 };
 
+// Test-only reset function to clear global state
+export const __resetForTest = (): void => {
+  store = null;
+  redict = null;
+  cleanupInterval = null;
+};
+
+// Test-only getter and setter for redict (for testing purposes only)
+export const __setRedictForTest = (instance: Redict | null): void => { redict = instance; };
+export const __getRedictForTest = (): Redict | null => redict;
+
 // Export all functions as a single object for backward compatibility
 export const rateLimitService = {
   checkRateLimit,
@@ -522,11 +563,4 @@ export const rateLimitService = {
   getUsage,
   close,
   initialize
-};
-
-// Test-only reset function to clear global state
-export const __resetForTest = (): void => {
-  store = null;
-  redict = null;
-  cleanupInterval = null;
 }; 
