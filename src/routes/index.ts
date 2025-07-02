@@ -7,6 +7,7 @@ import locationRoutes from './locations';
 import paymentRoutes from './payments';
 import scheduleRoutes from './schedules';
 import userRoutes from './users';
+import webhookRoutes from './webhooks';
 
 const router = Router();
 
@@ -17,5 +18,6 @@ router.use('/bookings', bookingRoutes);
 router.use('/schedules', scheduleRoutes);
 router.use('/admin', adminRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/webhooks', webhookRoutes);
 
 export default router; 
