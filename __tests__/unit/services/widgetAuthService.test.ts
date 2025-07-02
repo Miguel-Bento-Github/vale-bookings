@@ -24,49 +24,65 @@ interface MockApiKey {
   isExpired: boolean;
   validateKey: (raw: string) => boolean;
   validateDomain: (domain: string) => boolean;
-  incrementUsage: () => Promise<MockApiKey>;
+  incrementUsage: jest.MockedFunction<() => Promise<MockApiKey>>;
   rotate: (createdBy: string) => Promise<string>;
-  save: () => Promise<MockApiKey>;
+  save: jest.MockedFunction<() => Promise<MockApiKey>>;
+  _rawKey?: string;
 }
 
 // Reusable mock document instance
 let mockDoc: MockApiKey;
 let mockNewDoc: MockApiKey;
 
-const createMockDoc = (): MockApiKey => ({
-  _id: 'api-key-123',
-  keyPrefix: 'abcd1234',
-  isActive: true,
-  isExpired: false,
-  validateKey: (raw: string): boolean => raw === 'abcd1234-SECRET',
-  validateDomain: (d: string): boolean => d === 'example.com',
-  incrementUsage: async (): Promise<MockApiKey> => mockDoc,
-  rotate: async (): Promise<string> => 'new-raw-key-123',
-  save: jest.fn().mockResolvedValue(mockDoc)
-});
+const createMockDoc = (): MockApiKey => {
+  const doc = {
+    _id: 'api-key-123',
+    keyPrefix: 'abcd1234',
+    isActive: true,
+    isExpired: false,
+    validateKey: (raw: string): boolean => raw === 'abcd1234-SECRET',
+    validateDomain: (d: string): boolean => d === 'example.com',
+    incrementUsage: jest.fn(),
+    rotate: async (): Promise<string> => 'new-raw-key-123',
+    save: jest.fn()
+  } as MockApiKey;
+  
+  doc.incrementUsage.mockResolvedValue(doc);
+  doc.save.mockResolvedValue(doc);
+  return doc;
+};
 
-const createMockNewDoc = (): MockApiKey => ({
-  _id: 'api-key-456',
-  keyPrefix: 'efgh5678',
-  isActive: true,
-  isExpired: false,
-  validateKey: (raw: string): boolean => raw === 'efgh5678-SECRET',
-  validateDomain: (d: string): boolean => d === 'example.com',
-  incrementUsage: async (): Promise<MockApiKey> => mockNewDoc,
-  rotate: async (): Promise<string> => 'new-raw-key-456',
-  save: jest.fn().mockResolvedValue(mockNewDoc)
-});
+const createMockNewDoc = (): MockApiKey => {
+  const doc = {
+    _id: 'api-key-456',
+    keyPrefix: 'efgh5678',
+    isActive: true,
+    isExpired: false,
+    validateKey: (raw: string): boolean => raw === 'efgh5678-SECRET',
+    validateDomain: (d: string): boolean => d === 'example.com',
+    incrementUsage: jest.fn(),
+    rotate: async (): Promise<string> => 'new-raw-key-456',
+    save: jest.fn()
+  } as MockApiKey;
+  
+  doc.incrementUsage.mockResolvedValue(doc);
+  doc.save.mockResolvedValue(doc);
+  return doc;
+};
 
 jest.mock('../../../src/models/ApiKey', () => {
-  const m = jest.fn().mockImplementation(() => ({
+  const mockConstructor = jest.fn().mockImplementation(() => ({
     save: jest.fn()
-  })) as jest.Mock & Record<string, unknown>;
-  m.findByPrefix = jest.fn();
-  m.findById = jest.fn();
-  m.findOne = jest.fn();
-  m.findActive = jest.fn();
-  m.cleanupExpired = jest.fn();
-  return { ApiKey: m };
+  }));
+  
+  // Add static methods
+  (mockConstructor as any).findByPrefix = jest.fn();
+  (mockConstructor as any).findById = jest.fn();
+  (mockConstructor as any).findOne = jest.fn();
+  (mockConstructor as any).findActive = jest.fn();
+  (mockConstructor as any).cleanupExpired = jest.fn();
+  
+  return { ApiKey: mockConstructor };
 });
 
 // Mock logger
@@ -110,7 +126,7 @@ describe('WidgetAuthService helpers', () => {
     });
     
     ApiKey.findActive.mockReturnValue({
-      where: jest.fn().mockResolvedValue([mockDoc, mockNewDoc])
+      where: jest.fn().mockResolvedValue([mockDoc, mockNewDoc] as unknown as never)
     });
     
     ApiKey.cleanupExpired.mockResolvedValue({ deletedCount: 5 });
@@ -280,7 +296,7 @@ describe('WidgetAuthService helpers', () => {
     });
 
     it('handles incrementUsage errors gracefully', async () => {
-      mockDoc.incrementUsage = jest.fn().mockRejectedValue(new Error('Usage update failed'));
+      mockDoc.incrementUsage.mockRejectedValue(new Error('Usage update failed'));
       const req = buildReq('abcd1234-SECRET', 'https://example.com');
       const res = await validateRequest(req);
       expect(res.isValid).toBe(true);
@@ -290,9 +306,10 @@ describe('WidgetAuthService helpers', () => {
   describe('generateApiKey', () => {
     it('generates new API key successfully', async () => {
       const { ApiKey } = require('../../../src/models/ApiKey');
-      const mockSavedKey = { ...mockDoc, _rawKey: 'generated-raw-key-123' };
-      const mockInstance = { save: jest.fn().mockResolvedValue(mockSavedKey) };
-      ApiKey.mockImplementation(() => mockInstance);
+      const mockSavedKey = { ...mockDoc, _rawKey: 'generated-raw-key-123' } as MockApiKey;
+      const saveMock: jest.Mock = jest.fn().mockResolvedValue(mockSavedKey as unknown as never);
+      const mockInstance = { save: saveMock };
+      (ApiKey as jest.Mock).mockImplementation(() => mockInstance);
 
       const result = await generateApiKey({
         name: 'Test Key',
@@ -306,9 +323,10 @@ describe('WidgetAuthService helpers', () => {
 
     it('throws error when raw key is missing', async () => {
       const { ApiKey } = require('../../../src/models/ApiKey');
-      const mockSavedKey = { ...mockDoc, _rawKey: undefined };
-      const mockInstance = { save: jest.fn().mockResolvedValue(mockSavedKey) };
-      ApiKey.mockImplementation(() => mockInstance);
+      const mockSavedKey = { ...mockDoc, _rawKey: undefined } as MockApiKey;
+      const saveMock: jest.Mock = jest.fn().mockResolvedValue(mockSavedKey as unknown as never);
+      const mockInstance = { save: saveMock };
+      (ApiKey as jest.Mock).mockImplementation(() => mockInstance);
 
       await expect(generateApiKey({
         name: 'Test Key',
@@ -319,9 +337,10 @@ describe('WidgetAuthService helpers', () => {
 
     it('throws error when raw key is empty', async () => {
       const { ApiKey } = require('../../../src/models/ApiKey');
-      const mockSavedKey = { ...mockDoc, _rawKey: '' };
-      const mockInstance = { save: jest.fn().mockResolvedValue(mockSavedKey) };
-      ApiKey.mockImplementation(() => mockInstance);
+      const mockSavedKey = { ...mockDoc, _rawKey: '' } as MockApiKey;
+      const saveMock: jest.Mock = jest.fn().mockResolvedValue(mockSavedKey as unknown as never);
+      const mockInstance = { save: saveMock };
+      (ApiKey as jest.Mock).mockImplementation(() => mockInstance);
 
       await expect(generateApiKey({
         name: 'Test Key',
@@ -332,9 +351,10 @@ describe('WidgetAuthService helpers', () => {
 
     it('sets default allowWildcardSubdomains to false', async () => {
       const { ApiKey } = require('../../../src/models/ApiKey');
-      const mockSavedKey = { ...mockDoc, _rawKey: 'generated-raw-key-123' };
-      const mockInstance = { save: jest.fn().mockResolvedValue(mockSavedKey) };
-      ApiKey.mockImplementation(() => mockInstance);
+      const mockSavedKey = { ...mockDoc, _rawKey: 'generated-raw-key-123' } as MockApiKey;
+      const saveMock: jest.Mock = jest.fn().mockResolvedValue(mockSavedKey as unknown as never);
+      const mockInstance = { save: saveMock };
+      (ApiKey as jest.Mock).mockImplementation(() => mockInstance);
 
       await generateApiKey({
         name: 'Test Key',
@@ -402,28 +422,24 @@ describe('WidgetAuthService helpers', () => {
     it('lists active keys with createdBy filter', async () => {
       const { ApiKey } = require('../../../src/models/ApiKey');
       await listActiveKeys({ createdBy: 'admin@test.com' });
-
       expect(ApiKey.findActive).toHaveBeenCalled();
     });
 
     it('lists active keys with domain filter', async () => {
       const { ApiKey } = require('../../../src/models/ApiKey');
       await listActiveKeys({ domain: 'example.com' });
-
       expect(ApiKey.findActive).toHaveBeenCalled();
     });
 
     it('lists active keys with tag filter', async () => {
       const { ApiKey } = require('../../../src/models/ApiKey');
       await listActiveKeys({ tag: 'production' });
-
       expect(ApiKey.findActive).toHaveBeenCalled();
     });
 
     it('handles empty filter values', async () => {
       const { ApiKey } = require('../../../src/models/ApiKey');
       await listActiveKeys({ createdBy: '', domain: '', tag: '' });
-
       expect(ApiKey.findActive).toHaveBeenCalled();
     });
   });
