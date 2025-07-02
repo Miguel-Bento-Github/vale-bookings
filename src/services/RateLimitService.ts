@@ -456,9 +456,11 @@ export const getUsage = async (
   const s = store;
   if (!s) throw new Error('RateLimit store is not initialized');
   try {
+    // Remove old entries outside the window
     await s.zremrangebyscore(key, '-inf', windowStart);
-    await s.zadd(key, now, `${now}-${Math.random()}`);
-    await s.expire(key, 3600);
+    
+    // Count current requests in the window
+    const used = await s.zcard(key);
     
     // Get oldest request to calculate reset time
     const oldestRequest = await s.zrange(key, 0, 0, 'WITHSCORES');
@@ -472,9 +474,9 @@ export const getUsage = async (
     }
 
     return {
-      used: 0,
+      used,
       limit: config.maxRequests,
-      remaining: Math.max(0, config.maxRequests - 0),
+      remaining: Math.max(0, config.maxRequests - used),
       resetAt
     };
   } catch (error) {
