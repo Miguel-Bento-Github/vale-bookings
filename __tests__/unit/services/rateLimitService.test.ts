@@ -12,7 +12,11 @@ import {
   getUsage,
   createEmailMiddleware,
   createIPMiddleware,
-  createApiKeyMiddleware
+  createApiKeyMiddleware,
+  initialize,
+  close,
+  __resetForTest,
+  validateApiKeyPresence
 } from '../../../src/services/RateLimitService';
 import type { RateLimitStore, RateLimitPipeline } from '../../../src/services/RateLimitStore';
 import type { IApiKey, RateLimitConfig } from '../../../src/types/widget';
@@ -165,6 +169,11 @@ beforeAll(() => {
 
 afterAll(async () => {
   await closeRateLimitService();
+});
+
+beforeEach(() => {
+  // Reset global state before each test
+  __resetForTest();
 });
 
 describe('RateLimitService', () => {
@@ -566,6 +575,272 @@ describe('RateLimitService', () => {
       const statusCalls = (resBlocked.status as jest.Mock).mock.calls.length;
       const nextCalls = (nextBlocked as jest.Mock).mock.calls.length;
       expect(statusCalls > 0 || nextCalls > 0).toBe(true);
+    });
+
+    it('handles middleware errors gracefully', async () => {
+      const mw = createApiKeyMiddleware();
+      const req = { 
+        path: '/test', 
+        headers: {}, 
+        ip: '1.2.3.4',
+        apiKey: { keyPrefix: 'test', rateLimits: {} } as IApiKey
+      } as unknown as Request & { apiKey?: IApiKey };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as unknown as jest.Mocked<Response>;
+      const next = jest.fn();
+      
+      // Mock checkRateLimit to throw an error
+      jest.spyOn(require('../../../src/services/RateLimitService'), 'checkRateLimit')
+        .mockRejectedValue(new Error('Rate limit check failed'));
+      
+      mw(req, res, next);
+      
+      // Wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Should call next() on error
+      expect(next).toHaveBeenCalled();
+    });
+  });
+
+  describe('IP Middleware Error Handling', () => {
+    it('handles IP middleware errors gracefully', async () => {
+      const mw = createIPMiddleware({ windowMs: 60000, maxRequests: 1 });
+      const req = { headers: {}, ip: '1.2.3.4' } as unknown as Request;
+      const res: jest.Mocked<Response> = {
+        setHeader: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as unknown as jest.Mocked<Response>;
+      const next: NextFunction = jest.fn();
+
+      // Mock checkRateLimit to throw an error
+      const spy = jest.spyOn(require('../../../src/services/RateLimitService'), 'checkRateLimit').mockRejectedValueOnce('Test error' as unknown as never);
+
+      await mw(req, res, next);
+
+      // Should still call next() even on error
+      expect(next).toHaveBeenCalled();
+
+      // Restore original function
+      spy.mockRestore();
+    });
+  });
+
+  describe('Email Middleware Error Handling', () => {
+    it('handles email middleware errors gracefully', async () => {
+      const mw = createEmailMiddleware({ windowMs: 60000, maxRequests: 1 });
+      const req = { body: { guestEmail: 'test@example.com' } } as unknown as Request;
+      const res: jest.Mocked<Response> = {
+        setHeader: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as unknown as jest.Mocked<Response>;
+      const next: NextFunction = jest.fn();
+
+      // Mock checkRateLimit to throw an error
+      const spy = jest.spyOn(require('../../../src/services/RateLimitService'), 'checkRateLimit').mockRejectedValueOnce('Test error' as unknown as never);
+
+      await mw(req, res, next);
+
+      // Should still call next() even on error
+      expect(next).toHaveBeenCalled();
+
+      // Restore original function
+      spy.mockRestore();
+    });
+
+    it('handles various email formats correctly', async () => {
+      const mw = createEmailMiddleware({ windowMs: 60000, maxRequests: 1 });
+      const res: jest.Mocked<Response> = {
+        setHeader: jest.fn(),
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as unknown as jest.Mocked<Response>;
+      const next: NextFunction = jest.fn();
+
+      // Test with uppercase email
+      const req1 = { body: { guestEmail: 'TEST@EXAMPLE.COM' } } as unknown as Request;
+      await mw(req1, res, next);
+      expect(next).toHaveBeenCalled();
+
+      // Test with empty email
+      const req2 = { body: { guestEmail: '' } } as unknown as Request;
+      const next2: NextFunction = jest.fn();
+      await mw(req2, res, next2);
+      expect(next2).toHaveBeenCalled();
+
+      // Test with null email
+      const req3 = { body: { guestEmail: null } } as unknown as Request;
+      const next3: NextFunction = jest.fn();
+      await mw(req3, res, next3);
+      expect(next3).toHaveBeenCalled();
+
+      // Test with undefined email
+      const req4 = { body: {} } as unknown as Request;
+      const next4: NextFunction = jest.fn();
+      await mw(req4, res, next4);
+      expect(next4).toHaveBeenCalled();
+    });
+  });
+
+  describe('getUsage Error Handling', () => {
+    it('handles store errors in getUsage gracefully', async () => {
+      class ErrorStore implements RateLimitStore {
+        pipeline(): RateLimitPipeline { throw new Error('Pipeline failure'); }
+        async zadd(): Promise<number> { throw new Error('fail'); }
+        async zcard(): Promise<number> { throw new Error('fail'); }
+        async zremrangebyscore(): Promise<number> { throw new Error('fail'); }
+        async zrem(): Promise<number> { throw new Error('fail'); }
+        async zrange(): Promise<string[]> { throw new Error('fail'); }
+        async incr(): Promise<number> { throw new Error('fail'); }
+        async expire(): Promise<number> { throw new Error('fail'); }
+        async del(): Promise<number> { throw new Error('fail'); }
+      }
+      
+      // Initialize with the error store
+      initialize(new ErrorStore() as unknown as Redis);
+      
+      const config = { windowMs: 60000, maxRequests: 10 };
+      const result = await getUsage('test:usage', config);
+      
+      expect(result.used).toBe(0);
+      expect(result.limit).toBe(1000);
+      expect(result.remaining).toBe(1000);
+      expect(result.resetAt).toBeInstanceOf(Date);
+    });
+    
+    it('closes the service properly', async () => {
+      // Reset global state first
+      __resetForTest();
+      
+      const mockRedis = {
+        quit: jest.fn().mockResolvedValue('OK'),
+        on: jest.fn()
+      } as unknown as Redis;
+      
+      // Initialize with the mock Redis - this should set the global redis variable
+      initialize(mockRedis);
+      
+      // Call close and wait for it to complete
+      await close();
+      
+      expect(mockRedis.quit).toHaveBeenCalled();
+    });
+  });
+
+  describe('initialize function', () => {
+    it('initializes with custom Redis instance', () => {
+      const customRedis = new InMemoryRateLimitStore() as unknown as Redis;
+      initialize(customRedis);
+      
+      // The service should be initialized with the custom instance
+      expect(() => checkRateLimit('test', { windowMs: 1000, maxRequests: 1 })).not.toThrow();
+    });
+
+    it('initializes with default Redis when no instance provided', () => {
+      // This test verifies the initialize function works without parameters
+      expect(() => initialize()).not.toThrow();
+    });
+  });
+
+  describe('Edge Cases and Error Scenarios', () => {
+    it('handles pipeline execution failure in checkRateLimit', async () => {
+      class NullPipelineStore implements RateLimitStore {
+        pipeline(): RateLimitPipeline {
+          return {
+            zremrangebyscore: jest.fn().mockReturnThis(),
+            zcard: jest.fn().mockReturnThis(),
+            zadd: jest.fn().mockReturnThis(),
+            expire: jest.fn().mockReturnThis(),
+            zrange: jest.fn().mockReturnThis(),
+            exec: jest.fn().mockResolvedValue(null)
+          } as unknown as RateLimitPipeline;
+        }
+        async zadd(): Promise<number> { return 1; }
+        async zcard(): Promise<number> { return 0; }
+        async zremrangebyscore(): Promise<number> { return 0; }
+        async zrem(): Promise<number> { return 0; }
+        async zrange(): Promise<string[]> { return []; }
+        async incr(): Promise<number> { return 1; }
+        async expire(): Promise<number> { return 1; }
+        async del(): Promise<number> { return 1; }
+      }
+      
+      // Initialize with the failing store
+      initialize(new NullPipelineStore() as unknown as Redis);
+      
+      const config = { windowMs: 60000, maxRequests: 10 };
+      const result = await checkRateLimit('test:pipeline', config);
+      expect(result).toBeDefined();
+      expect(result.allowed).toBe(true);
+      expect(result.remaining).toBe(9); // The function returns 9 when pipeline fails
+    });
+    
+    it('handles trackAbuse function errors', async () => {
+      class AbuseErrorStore implements RateLimitStore {
+        pipeline(): RateLimitPipeline {
+          return {
+            zremrangebyscore: jest.fn().mockReturnThis(),
+            zcard: jest.fn().mockReturnThis(),
+            zadd: jest.fn().mockReturnThis(),
+            expire: jest.fn().mockReturnThis(),
+            zrange: jest.fn().mockReturnThis(),
+            exec: jest.fn().mockResolvedValue([
+              [null, 0], // zremrangebyscore result
+              [null, 4], // zcard result - exceeds the limit (3)
+              [null, 1], // zadd result
+              [null, 1], // expire result
+              [null, ['request-key', '1234567890']] // zrange result
+            ])
+          } as unknown as RateLimitPipeline;
+        }
+        async zadd(): Promise<number> { return 1; }
+        async zcard(): Promise<number> { return 0; }
+        async zremrangebyscore(): Promise<number> { return 0; }
+        async zrem(): Promise<number> { return 0; }
+        async zrange(): Promise<string[]> { return []; }
+        async incr(): Promise<number> { throw new Error('Incr failed'); }
+        async expire(): Promise<number> { return 1; }
+        async del(): Promise<number> { return 1; }
+      }
+      
+      // Initialize with the failing store
+      initialize(new AbuseErrorStore() as unknown as Redis);
+      
+      const mw = createIPMiddleware({ windowMs: 60000, maxRequests: 3 });
+      const req = { headers: {}, ip: '1.2.3.4' } as unknown as Request;
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as unknown as jest.Mocked<Response>;
+      const next = jest.fn();
+      
+      // Call the middleware
+      mw(req, res, next);
+      
+      // Wait for async operations to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Should still work despite trackAbuse error
+      expect(res.status).toHaveBeenCalledWith(429);
+    });
+  });
+
+  describe('validateApiKeyPresence', () => {
+    it('returns false if apiKey property is missing', () => {
+      expect(validateApiKeyPresence({})).toBe(false);
+    });
+    it('returns false if apiKey is undefined', () => {
+      expect(validateApiKeyPresence({ apiKey: undefined })).toBe(false);
+    });
+    it('returns true if apiKey is null', () => {
+      expect(validateApiKeyPresence({ apiKey: null })).toBe(true);
+    });
+    it('returns true if apiKey is a valid object', () => {
+      expect(validateApiKeyPresence({ apiKey: { keyPrefix: 'abc', rateLimits: {} } as any })).toBe(true);
     });
   });
 }); 

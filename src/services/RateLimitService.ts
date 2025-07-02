@@ -249,6 +249,10 @@ const trackAbuse = async (ip: string, apiKeyPrefix?: string): Promise<void> => {
   }
 };
 
+export function validateApiKeyPresence(req: { apiKey?: IApiKey }): boolean {
+  return typeof req.apiKey !== 'undefined';
+}
+
 /**
  * Express middleware for API key-based rate limiting
  */
@@ -260,8 +264,7 @@ export const createApiKeyMiddleware = (): (
   return (req: Request & { apiKey?: IApiKey }, res: Response, next: NextFunction): void => {
     Promise.resolve().then(async () => {
       try {
-        const apiKey = req.apiKey;
-        if (typeof apiKey === 'undefined') {
+        if (!validateApiKeyPresence(req)) {
           res.status(401).json({
             error: 'API key required',
             errorCode: WIDGET_ERROR_CODES.INVALID_API_KEY
@@ -283,16 +286,16 @@ export const createApiKeyMiddleware = (): (
         const endpoint = req.path;
         let endpointConfig: RateLimitConfig | undefined = undefined;
         
-        if (apiKey.rateLimits?.endpoints instanceof Map) {
-          const endpointValue: unknown = apiKey.rateLimits.endpoints.get(endpoint);
+        if (req.apiKey?.rateLimits?.endpoints instanceof Map) {
+          const endpointValue: unknown = req.apiKey.rateLimits.endpoints.get(endpoint);
           endpointConfig = endpointValue as RateLimitConfig | undefined;
         }
         
-        const config = endpointConfig ?? apiKey.rateLimits?.global ?? RATE_LIMIT_DEFAULTS.GLOBAL;
+        const config = endpointConfig ?? req.apiKey?.rateLimits?.global ?? RATE_LIMIT_DEFAULTS.GLOBAL;
 
         // Check rate limit
         const result = await checkRateLimit(
-          `api_key:${apiKey.keyPrefix}`,
+          `api_key:${req.apiKey?.keyPrefix}`,
           config,
           endpoint
         );
@@ -308,10 +311,10 @@ export const createApiKeyMiddleware = (): (
           }
           
           // Track abuse - block IP if too many violations
-          await trackAbuse(clientIP, apiKey.keyPrefix);
+          await trackAbuse(clientIP, req.apiKey?.keyPrefix);
           
           res.status(429).json({
-            error: config.message ?? 'Too many requests',
+            error: (config as RateLimitConfig)?.message ?? 'Too many requests',
             errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED,
             retryAfter: result.retryAfter
           });
@@ -372,7 +375,7 @@ export const createIPMiddleware = (
           await trackAbuse(clientIP);
           
           res.status(429).json({
-            error: config.message ?? 'Too many requests',
+            error: (config)?.message ?? 'Too many requests',
             errorCode: WIDGET_ERROR_CODES.RATE_LIMIT_EXCEEDED,
             retryAfter: result.retryAfter
           });
@@ -522,4 +525,13 @@ export const rateLimitService = {
   getUsage,
   close,
   initialize
+};
+
+// Test-only reset function to clear global state
+export const __resetForTest = (): void => {
+  // @ts-expect-error - Test-only function to reset global state
+  store = null;
+  // @ts-expect-error - Test-only function to reset global state
+  redis = null;
+  cleanupInterval = null;
 }; 
