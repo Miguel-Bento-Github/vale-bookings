@@ -1,17 +1,30 @@
 import { logInfo, logWarning, logError } from '../utils/logger';
+import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
+import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 // Email configuration
 interface EmailConfig {
-  provider: 'sendgrid' | 'ses' | 'smtp';
+  provider: 'ses' | 'smtp' | 'resend';
   apiKey?: string;
   region?: string;
   fromEmail: string;
   fromName: string;
   replyTo?: string;
+  // SMTP specific config
+  smtp?: {
+    host: string;
+    port: number;
+    secure: boolean;
+    auth: {
+      user: string;
+      pass: string;
+    };
+  };
 }
 
 // Email message interface
-interface EmailMessage {
+export interface EmailMessage {
   to: string;
   subject: string;
   html: string;
@@ -35,13 +48,25 @@ interface EmailResult {
 
 // Get email configuration from environment
 const getEmailConfig = (): EmailConfig => {
+  const emailDomain = process.env.EMAIL_DOMAIN ?? 'valebooking.com';
+  const defaultFromEmail = `noreply@${emailDomain}`;
+  
   return {
-    provider: (process.env.EMAIL_PROVIDER as 'sendgrid' | 'ses' | 'smtp') ?? 'sendgrid',
-    apiKey: process.env.EMAIL_API_KEY,
+    provider: (process.env.EMAIL_PROVIDER as 'ses' | 'smtp' | 'resend') ?? 'resend',
+    apiKey: process.env.RESEND_KEY || process.env.EMAIL_API_KEY,
     region: process.env.EMAIL_REGION ?? 'us-east-1',
-    fromEmail: process.env.EMAIL_FROM ?? 'noreply@vale.com',
+    fromEmail: process.env.EMAIL_FROM ?? defaultFromEmail,
     fromName: process.env.EMAIL_FROM_NAME ?? 'Vale Booking System',
-    replyTo: process.env.EMAIL_REPLY_TO
+    replyTo: process.env.EMAIL_REPLY_TO,
+    smtp: {
+      host: process.env.SMTP_HOST ?? 'localhost',
+      port: parseInt(process.env.SMTP_PORT ?? '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER ?? '',
+        pass: process.env.SMTP_PASS ?? ''
+      }
+    }
   };
 };
 
@@ -51,54 +76,60 @@ const validateEmail = (email: string): boolean => {
   return emailRegex.test(email);
 };
 
-// Mock SendGrid integration
-const sendWithSendGrid = async (message: EmailMessage, _config: EmailConfig): Promise<EmailResult> => {
-  try {
-    logInfo('Sending email via SendGrid', { to: message.to, subject: message.subject });
-    
-    // Mock successful SendGrid response
-    // In real implementation, you would use @sendgrid/mail
-    const messageId = `sg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    logInfo('Email sent successfully via SendGrid', { messageId, to: message.to });
-    
-    return {
-      success: true,
-      messageId,
-      provider: 'sendgrid'
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown SendGrid error';
-    logError('SendGrid email failed', { error: errorMessage, to: message.to });
-    
-    return {
-      success: false,
-      error: errorMessage,
-      provider: 'sendgrid'
-    };
-  }
-};
 
-// Mock AWS SES integration
-const sendWithSES = async (message: EmailMessage, _config: EmailConfig): Promise<EmailResult> => {
+
+// Real AWS SES integration
+const sendWithSES = async (message: EmailMessage, config: EmailConfig): Promise<EmailResult> => {
   try {
+    if (!config.apiKey) {
+      throw new Error('AWS credentials are required for SES');
+    }
+
+    const sesClient = new SESClient({
+      region: config.region,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? '',
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? ''
+      }
+    });
+
     logInfo('Sending email via AWS SES', { to: message.to, subject: message.subject });
+
+    const params: SendEmailCommandInput = {
+      Source: message.from ?? `${config.fromName} <${config.fromEmail}>`,
+      Destination: {
+        ToAddresses: [message.to]
+      },
+      Message: {
+        Subject: {
+          Data: message.subject,
+          Charset: 'UTF-8'
+        },
+        Body: {
+          Text: {
+            Data: message.text,
+            Charset: 'UTF-8'
+          },
+          Html: {
+            Data: message.html,
+            Charset: 'UTF-8'
+          }
+        }
+      },
+      ReplyToAddresses: message.replyTo ? [message.replyTo] : undefined
+    };
+
+    const command = new SendEmailCommand(params);
+    const response = await sesClient.send(command);
     
-    // Mock successful SES response
-    // In real implementation, you would use aws-sdk v3 SESv2Client
-    const messageId = `ses_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 120));
-    
-    logInfo('Email sent successfully via SES', { messageId, to: message.to });
-    
+    logInfo('Email sent successfully via SES', { 
+      messageId: response.MessageId, 
+      to: message.to 
+    });
+
     return {
       success: true,
-      messageId,
+      messageId: response.MessageId,
       provider: 'ses'
     };
   } catch (error) {
@@ -113,23 +144,59 @@ const sendWithSES = async (message: EmailMessage, _config: EmailConfig): Promise
   }
 };
 
-// Mock SMTP integration
-const sendWithSMTP = async (message: EmailMessage, _config: EmailConfig): Promise<EmailResult> => {
+// Real SMTP integration using Nodemailer
+const sendWithSMTP = async (message: EmailMessage, config: EmailConfig): Promise<EmailResult> => {
   try {
+    if (!config.smtp) {
+      throw new Error('SMTP configuration is required');
+    }
+
     logInfo('Sending email via SMTP', { to: message.to, subject: message.subject });
+
+    // Create transporter
+    const transporter = nodemailer.createTransport({
+      host: config.smtp.host,
+      port: config.smtp.port,
+      secure: config.smtp.secure,
+      auth: config.smtp.auth,
+      // Additional options for better reliability
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+      rateLimit: 14, // Max 14 emails per second
+      rateDelta: 1000 // Per second
+    });
+
+    // Verify connection
+    await transporter.verify();
+
+    const mailOptions = {
+      from: message.from ?? `${config.fromName} <${config.fromEmail}>`,
+      to: message.to,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+      replyTo: message.replyTo,
+      attachments: message.attachments?.map(att => ({
+        filename: att.filename,
+        content: typeof att.content === 'string' ? Buffer.from(att.content, 'base64') : att.content,
+        contentType: att.contentType
+      }))
+    };
+
+    const info = await transporter.sendMail(mailOptions);
     
-    // Mock successful SMTP response
-    // In real implementation, you would use nodemailer
-    const messageId = `smtp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    
-    // Simulate SMTP delay
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    logInfo('Email sent successfully via SMTP', { messageId, to: message.to });
-    
+    logInfo('Email sent successfully via SMTP', { 
+      messageId: info.messageId, 
+      to: message.to 
+    });
+
+    // Close the connection pool
+    transporter.close();
+
     return {
       success: true,
-      messageId,
+      messageId: info.messageId,
       provider: 'smtp'
     };
   } catch (error) {
@@ -140,6 +207,101 @@ const sendWithSMTP = async (message: EmailMessage, _config: EmailConfig): Promis
       success: false,
       error: errorMessage,
       provider: 'smtp'
+    };
+  }
+};
+
+// Real Resend integration with rate limiting
+const sendWithResend = async (message: EmailMessage, config: EmailConfig): Promise<EmailResult> => {
+  try {
+    if (!config.apiKey) {
+      throw new Error('Resend API key is required');
+    }
+
+    const resend = new Resend(config.apiKey);
+
+    logInfo('Sending email via Resend', { to: message.to, subject: message.subject });
+
+    const emailData = {
+      from: message.from ?? `${config.fromName} <${config.fromEmail}>`,
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      replyTo: message.replyTo,
+      attachments: message.attachments?.map(att => ({
+        filename: att.filename,
+        content: typeof att.content === 'string' ? att.content : att.content.toString('base64'),
+        type: att.contentType
+      }))
+    };
+
+    // Add retry logic for rate limiting
+    let lastError: Error | null = null;
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await resend.emails.send(emailData);
+        
+        logInfo('Email sent successfully via Resend', { 
+          messageId: response.data?.id, 
+          to: message.to 
+        });
+
+        return {
+          success: true,
+          messageId: response.data?.id,
+          provider: 'resend'
+        };
+      } catch (error) {
+        lastError = error as Error;
+        
+        // Check if it's a rate limit error
+        if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 429) {
+          const retryAfter = (error as any).headers?.['retry-after'] || baseDelay;
+          const delay = Math.min(retryAfter * 1000, baseDelay * Math.pow(2, attempt - 1));
+          
+          logWarning('Resend rate limit hit, retrying', { 
+            attempt, 
+            maxRetries, 
+            delay: `${delay}ms`,
+            to: message.to 
+          });
+          
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+        
+        // For non-rate-limit errors or after max retries, break
+        break;
+      }
+    }
+
+    // If we get here, all retries failed
+    const errorMessage = lastError?.message || 'Unknown Resend error';
+    logError('Resend email failed after retries', { 
+      error: errorMessage, 
+      to: message.to,
+      attempts: maxRetries 
+    });
+    
+    return {
+      success: false,
+      error: errorMessage,
+      provider: 'resend'
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown Resend error';
+    logError('Resend email failed', { error: errorMessage, to: message.to });
+    
+    return {
+      success: false,
+      error: errorMessage,
+      provider: 'resend'
     };
   }
 };
@@ -175,12 +337,12 @@ export const sendEmail = async (message: EmailMessage): Promise<EmailResult> => 
     
     // Route to appropriate provider
     switch (config.provider) {
-    case 'sendgrid':
-      return await sendWithSendGrid(emailToSend, config);
     case 'ses':
       return await sendWithSES(emailToSend, config);
     case 'smtp':
       return await sendWithSMTP(emailToSend, config);
+    case 'resend':
+      return await sendWithResend(emailToSend, config);
     default:
       logError('Unsupported email provider', { provider: config.provider });
       return {
