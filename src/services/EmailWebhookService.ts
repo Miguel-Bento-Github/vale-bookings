@@ -29,7 +29,7 @@ export interface WebhookHandlerResult {
 }
 
 export class EmailWebhookService {
-    /**
+  /**
    * Handle incoming webhook events from Resend
    */
   static handleWebhookEvent(event: EmailWebhookEvent): WebhookHandlerResult {

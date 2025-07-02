@@ -1,4 +1,3 @@
-import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 
@@ -6,9 +5,8 @@ import { logInfo, logWarning, logError } from '../utils/logger';
 
 // Email configuration
 interface EmailConfig {
-  provider: 'ses' | 'smtp' | 'resend';
+  provider: 'smtp' | 'resend';
   apiKey?: string;
-  region?: string;
   fromEmail: string;
   fromName: string;
   replyTo?: string;
@@ -53,9 +51,8 @@ const getEmailConfig = (): EmailConfig => {
   const defaultFromEmail = `noreply@${emailDomain}`;
   
   return {
-    provider: (process.env.EMAIL_PROVIDER as 'ses' | 'smtp' | 'resend') ?? 'resend',
+    provider: (process.env.EMAIL_PROVIDER as 'smtp' | 'resend') ?? 'resend',
     apiKey: process.env.RESEND_KEY ?? process.env.EMAIL_API_KEY,
-    region: process.env.EMAIL_REGION ?? 'us-east-1',
     fromEmail: process.env.EMAIL_FROM ?? defaultFromEmail,
     fromName: process.env.EMAIL_FROM_NAME ?? 'Vale Booking System',
     replyTo: process.env.EMAIL_REPLY_TO,
@@ -79,71 +76,7 @@ const validateEmail = (email: string): boolean => {
 
 
 
-// Real AWS SES integration
-const sendWithSES = async (message: EmailMessage, config: EmailConfig): Promise<EmailResult> => {
-  try {
-    if (config.apiKey == null || config.apiKey === '') {
-      throw new Error('AWS credentials are required for SES');
-    }
 
-    const sesClient = new SESClient({
-      region: config.region,
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? ''
-      }
-    });
-
-    logInfo('Sending email via AWS SES', { to: message.to, subject: message.subject });
-
-    const params: SendEmailCommandInput = {
-      Source: message.from ?? `${config.fromName} <${config.fromEmail}>`,
-      Destination: {
-        ToAddresses: [message.to]
-      },
-      Message: {
-        Subject: {
-          Data: message.subject,
-          Charset: 'UTF-8'
-        },
-        Body: {
-          Text: {
-            Data: message.text,
-            Charset: 'UTF-8'
-          },
-          Html: {
-            Data: message.html,
-            Charset: 'UTF-8'
-          }
-        }
-      },
-      ReplyToAddresses: message.replyTo != null ? [message.replyTo] : undefined
-    };
-
-    const command = new SendEmailCommand(params);
-    const response = await sesClient.send(command);
-    
-    logInfo('Email sent successfully via SES', { 
-      messageId: response.MessageId, 
-      to: message.to 
-    });
-
-    return {
-      success: true,
-      messageId: response.MessageId,
-      provider: 'ses'
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown SES error';
-    logError('SES email failed', { error: errorMessage, to: message.to });
-    
-    return {
-      success: false,
-      error: errorMessage,
-      provider: 'ses'
-    };
-  }
-};
 
 // Real SMTP integration using Nodemailer
 const sendWithSMTP = async (message: EmailMessage, config: EmailConfig): Promise<EmailResult> => {
@@ -340,8 +273,6 @@ export const sendEmail = async (message: EmailMessage): Promise<EmailResult> => 
     
     // Route to appropriate provider
     switch (config.provider) {
-    case 'ses':
-      return await sendWithSES(emailToSend, config);
     case 'smtp':
       return await sendWithSMTP(emailToSend, config);
     case 'resend':
