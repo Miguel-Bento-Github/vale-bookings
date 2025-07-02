@@ -1,9 +1,14 @@
+import type { Job } from 'agenda';
+import { Agenda } from 'agenda';
+import Bull from 'bull';
+import mongoose from 'mongoose';
+
 import { logInfo, logWarning, logError } from '../utils/logger';
 
 // Queue configuration
 interface QueueConfig {
   provider: 'bull' | 'agenda';
-  redict?: {
+  redis?: {
     host: string;
     port: number;
     password?: string;
@@ -16,7 +21,7 @@ interface QueueConfig {
 }
 
 // Job data interface
-interface JobData {
+export interface JobData {
   [key: string]: unknown;
   booking?: Record<string, unknown>;
   channels?: string[];
@@ -31,126 +36,248 @@ interface JobResult {
   error?: string;
 }
 
-// Mock job storage for demonstration
-const mockJobs = new Map<string, {
-  id: string;
-  type: string;
-  data: JobData;
-  scheduledFor: Date;
-  status: 'scheduled' | 'running' | 'completed' | 'failed' | 'cancelled';
-  createdAt: Date;
-  updatedAt: Date;
-}>();
+// Global queue instances
+let bullQueue: Bull.Queue | null = null;
+let agendaInstance: Agenda | null = null;
 
 // Get queue configuration from environment
 const getQueueConfig = (): QueueConfig => {
+  // In test environment, use the in-memory MongoDB instance
+  const isTestEnv = process.env.NODE_ENV === 'test';
+  const mongoUrl = isTestEnv 
+    ? (process.env.MONGODB_URI ?? 'mongodb://localhost:27017/test_valet_db')
+    : (process.env.MONGODB_URL ?? 'mongodb://localhost:27017/vale');
+
   return {
     provider: (process.env.QUEUE_PROVIDER as 'bull' | 'agenda') ?? 'bull',
-    redict: {
-      host: process.env.REDICT_HOST ?? 'localhost',
-      port: parseInt(process.env.REDICT_PORT ?? '6379'),
-      password: process.env.REDICT_PASSWORD,
-      db: parseInt(process.env.REDICT_DB ?? '0')
+    redis: {
+      host: process.env.REDIS_HOST ?? 'localhost',
+      port: parseInt(process.env.REDIS_PORT ?? '6379'),
+      password: process.env.REDIS_PASSWORD,
+      db: parseInt(process.env.REDIS_DB ?? '0')
     },
     mongodb: {
-      url: process.env.MONGODB_URL ?? 'mongodb://localhost:27017/vale',
+      url: mongoUrl,
       collection: process.env.QUEUE_COLLECTION ?? 'agenda_jobs'
     }
   };
 };
 
-// Generate unique job ID (currently unused but kept for future use)
-// const generateJobId = (): string => {
-//   return `job_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-// };
+// Initialize Bull queue
+const initializeBullQueue = (): Bull.Queue => {
+  if (bullQueue) {
+    return bullQueue;
+  }
 
-// Mock Bull Queue implementation
-const scheduleWithBull = (
+  const config = getQueueConfig();
+  
+  if (!config.redis) {
+    throw new Error('Redis configuration is required for Bull queue');
+  }
+
+  const redisConfig = {
+    host: config.redis.host,
+    port: config.redis.port,
+    password: config.redis.password,
+    db: config.redis.db
+  };
+
+  bullQueue = new Bull('vale-queue', {
+    redis: redisConfig,
+    defaultJobOptions: {
+      removeOnComplete: 100,
+      removeOnFail: 50,
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 2000
+      }
+    }
+  });
+
+  // Handle queue events
+  bullQueue.on('error', (error) => {
+    logError('Bull queue error', { error: error.message });
+  });
+
+  bullQueue.on('waiting', (jobId) => {
+    logInfo('Job waiting', { jobId: jobId.toString() });
+  });
+
+  bullQueue.on('active', (job) => {
+    logInfo('Job started', { jobId: job.id?.toString(), jobType: job.name });
+  });
+
+  bullQueue.on('completed', (job) => {
+    logInfo('Job completed', { jobId: job.id?.toString(), jobType: job.name });
+  });
+
+  bullQueue.on('failed', (job, error) => {
+    logError('Job failed', { jobId: job.id?.toString(), jobType: job.name, error: error.message });
+  });
+
+  return bullQueue;
+};
+
+// Initialize Agenda instance
+const initializeAgenda = (): Agenda => {
+  if (agendaInstance) {
+    return agendaInstance;
+  }
+
+  const config = getQueueConfig();
+  
+  if (!config.mongodb) {
+    throw new Error('MongoDB configuration is required for Agenda');
+  }
+
+  // In test environment, ensure Agenda connects properly
+  if (process.env.NODE_ENV === 'test' && mongoose.connection.readyState !== mongoose.ConnectionStates.connected) {
+    // Wait for mongoose to connect
+    throw new Error('MongoDB connection not ready for Agenda. Ensure test setup connects before using Agenda.');
+  }
+
+  agendaInstance = new Agenda({
+    db: {
+      address: config.mongodb.url,
+      collection: config.mongodb.collection
+    },
+    processEvery: process.env.NODE_ENV === 'test' ? '1 minute' : '30 seconds',
+    maxConcurrency: process.env.NODE_ENV === 'test' ? 1 : 20
+  });
+
+  // In test environment, configure Agenda to avoid persistent connections
+  if (process.env.NODE_ENV === 'test') {
+    // Disable automatic processing in test mode
+    agendaInstance._processEvery = 0;
+    // Set a shorter lock lifetime to avoid long-running connections
+    agendaInstance._defaultLockLifetime = 1000; // 1 second
+  }
+
+  // Handle agenda events
+  agendaInstance.on('start', (job: Job) => {
+    logInfo('Agenda job started', { jobId: String(job.attrs._id), jobType: job.attrs.name });
+  });
+
+  agendaInstance.on('complete', (job: Job) => {
+    logInfo('Agenda job completed', { jobId: String(job.attrs._id), jobType: job.attrs.name });
+  });
+
+  agendaInstance.on('fail', (error: Error, job: Job) => {
+    logError('Agenda job failed', {
+      jobId: String(job.attrs._id),
+      jobType: job.attrs.name,
+      error: error.message
+    });
+  });
+
+  return agendaInstance;
+};
+
+// Real Bull Queue implementation
+const scheduleWithBull = async (
   jobId: string,
   scheduledFor: Date,
   jobType: string,
   data: JobData
 ): Promise<JobResult> => {
   try {
+    const queue = initializeBullQueue();
+    
     logInfo('Scheduling job with Bull', { jobId, jobType, scheduledFor });
     
-    // In real implementation, you would use Bull Queue:
-    // const queue = new Bull('notifications', { redis: config.redis });
-    // const job = await queue.add(jobType, data, { delay: scheduledFor.getTime() - Date.now() });
+    const delay = scheduledFor.getTime() - Date.now();
     
-    // Mock implementation
-    const job = {
-      id: jobId,
-      type: jobType,
-      data,
-      scheduledFor,
-      status: 'scheduled' as const,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    mockJobs.set(jobId, job);
-    
-    logInfo('Job scheduled successfully with Bull', { jobId, scheduledFor });
-    
-    return Promise.resolve({
-      success: true,
+    if (delay <= 0) {
+      return {
+        success: false,
+        error: 'Scheduled time must be in the future'
+      };
+    }
+
+    const job = await queue.add(jobType, data, {
+      delay,
       jobId,
-      scheduledFor
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 2000
+      }
     });
+    
+    logInfo('Job scheduled successfully with Bull', { jobId: job.id, scheduledFor });
+    
+    return {
+      success: true,
+      jobId: job.id.toString(),
+      scheduledFor
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown Bull error';
     logError('Bull job scheduling failed', { error: errorMessage, jobId });
     
-    return Promise.resolve({
+    return {
       success: false,
       error: errorMessage
-    });
+    };
   }
 };
 
-// Mock Agenda implementation
-const scheduleWithAgenda = (
+// Real Agenda implementation
+const scheduleWithAgenda = async (
   jobId: string,
   scheduledFor: Date,
   jobType: string,
   data: JobData
 ): Promise<JobResult> => {
   try {
+    const agenda = initializeAgenda();
+
+    // Ensure Agenda is started before scheduling jobs (but not in test mode to avoid persistent connections)
+    if ((typeof agenda._processInterval === 'undefined' || agenda._processInterval === null)
+      && process.env.NODE_ENV !== 'test') {
+      await agenda.start();
+    }
+    
     logInfo('Scheduling job with Agenda', { jobId, jobType, scheduledFor });
     
-    // In real implementation, you would use Agenda:
-    // const agenda = new Agenda({ db: { address: config.mongodb.url } });
-    // await agenda.schedule(scheduledFor, jobType, data);
+    // Define job processor if not already defined
+    if (!Object.prototype.hasOwnProperty.call(agenda._definitions, jobType)) {
+      agenda.define(jobType, async (job: Job) => {
+        logInfo('Processing Agenda job', {
+          jobId: String(job.attrs._id),
+          jobType: job.attrs.name,
+          data: job.attrs.data
+        });
+        
+        // In production, you would call your actual job handlers here
+        // For example: await notificationService.sendReminder(job.attrs.data);
+        
+        await new Promise(resolve => setTimeout(resolve, 100)); // Simulate work
+      });
+    }
     
-    // Mock implementation
-    const job = {
-      id: jobId,
-      type: jobType,
-      data,
-      scheduledFor,
-      status: 'scheduled' as const,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    const job = await agenda.schedule(scheduledFor, jobType, data);
+    // Use the job's natural ID instead of trying to set a custom one
+    // Agenda will generate its own ID which we can use
     
-    mockJobs.set(jobId, job);
+    await job.save();
     
-    logInfo('Job scheduled successfully with Agenda', { jobId, scheduledFor });
+    logInfo('Job scheduled successfully with Agenda', { jobId: String(job.attrs._id), scheduledFor });
     
-    return Promise.resolve({
+    return {
       success: true,
-      jobId,
+      jobId: job.attrs._id.toString(),
       scheduledFor
-    });
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown Agenda error';
     logError('Agenda job scheduling failed', { error: errorMessage, jobId });
     
-    return Promise.resolve({
+    return {
       success: false,
       error: errorMessage
-    });
+    };
   }
 };
 
@@ -173,7 +300,7 @@ export const scheduleJob = async (
     }
     
     // Validate job data
-    if (!jobType || typeof jobType !== 'string' || jobType.length === 0) {
+    if (typeof jobType !== 'string' || jobType.length === 0) {
       return {
         success: false,
         error: 'Job type is required'
@@ -189,10 +316,10 @@ export const scheduleJob = async (
     case 'agenda':
       return await scheduleWithAgenda(jobId, scheduledFor, jobType, data);
     default:
-      logError('Unsupported queue provider', { provider: String(config.provider) });
+      logError('Unsupported queue provider', { provider: String(config.provider ?? 'unknown') });
       return {
         success: false,
-        error: `Unsupported queue provider: ${String(config.provider)}`
+        error: `Unsupported queue provider: ${String(config.provider ?? 'unknown')}`
       };
     }
   } catch (error) {
@@ -207,42 +334,54 @@ export const scheduleJob = async (
 };
 
 // Cancel a scheduled job
-export const cancelJob = (jobId: string): Promise<boolean> => {
+export const cancelJob = async (jobId: string): Promise<boolean> => {
   try {
-    logInfo('Cancelling job', { jobId });
+    const config = getQueueConfig();
     
-    // Check if job exists in mock storage
-    const job = mockJobs.get(jobId);
-    if (job == null) {
-      logWarning('Job not found for cancellation', { jobId });
-      return Promise.resolve(false);
+    logInfo('Cancelling job', { jobId, provider: config.provider });
+    
+    switch (config.provider) {
+    case 'bull': {
+      const queue = initializeBullQueue();
+      const job = await queue.getJob(jobId);
+      
+      if (!job) {
+        logWarning('Job not found for cancellation', { jobId });
+        return false;
+      }
+      
+      await job.remove();
+      logInfo('Job cancelled successfully with Bull', { jobId });
+      return true;
     }
     
-    // Check if job can be cancelled
-    if (job.status === 'completed' || job.status === 'failed') {
-      logWarning('Cannot cancel completed or failed job', { jobId, status: job.status });
-      return Promise.resolve(false);
+    case 'agenda': {
+      const agenda = initializeAgenda();
+      if (typeof jobId !== 'string' || jobId.length === 0) {
+        return false;
+      }
+      const result = await agenda.cancel({ _id: jobId });
+      if (typeof result !== 'number' || result === 0) {
+        logWarning('Job not found for cancellation', { jobId: String(jobId) });
+        return false;
+      }
+      logInfo('Job cancelled successfully with Agenda', { jobId: String(jobId) });
+      return true;
     }
     
-    // In real implementation, you would:
-    // For Bull: const job = await queue.getJob(jobId); await job.remove();
-    // For Agenda: await agenda.cancel({ _id: jobId });
-    
-    // Mock cancellation
-    job.status = 'cancelled';
-    job.updatedAt = new Date();
-    
-    logInfo('Job cancelled successfully', { jobId });
-    return Promise.resolve(true);
+    default:
+      logError('Unsupported queue provider for cancellation', { provider: String(config.provider ?? 'unknown') });
+      return false;
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Job cancellation failed', { error: errorMessage, jobId });
-    return Promise.resolve(false);
+    return false;
   }
 };
 
 // Get job status
-export const getJobStatus = (jobId: string): Promise<{
+export const getJobStatus = async (jobId: string): Promise<{
   exists: boolean;
   status?: string;
   scheduledFor?: Date;
@@ -250,32 +389,76 @@ export const getJobStatus = (jobId: string): Promise<{
   error?: string;
 }> => {
   try {
-    logInfo('Getting job status', { jobId });
+    const config = getQueueConfig();
     
-    const job = mockJobs.get(jobId);
-    if (job == null) {
-      return Promise.resolve({ exists: false });
+    logInfo('Getting job status', { jobId, provider: config.provider });
+    
+    switch (config.provider) {
+    case 'bull': {
+      const queue = initializeBullQueue();
+      const job = await queue.getJob(jobId);
+      
+      if (!job) {
+        return { exists: false };
+      }
+      
+      const state = await job.getState();
+      const delay = job.opts.delay ?? 0;
+      const scheduledFor = delay > 0 ? new Date(Date.now() + delay) : undefined;
+      
+      return {
+        exists: true,
+        status: state,
+        scheduledFor,
+        data: job.data as JobData
+      };
     }
     
-    return Promise.resolve({
-      exists: true,
-      status: job.status,
-      scheduledFor: job.scheduledFor,
-      data: job.data
-    });
+    case 'agenda': {
+      const agenda = initializeAgenda();
+      const jobs = await agenda.jobs({ _id: jobId });
+      if (!Array.isArray(jobs) || jobs.length === 0) {
+        return { exists: false };
+      }
+      const agendaJob = jobs[0];
+      if (!agendaJob) {
+        return { exists: false };
+      }
+      let status = 'scheduled';
+      if (typeof agendaJob.attrs.failReason === 'string' && agendaJob.attrs.failReason.length > 0) {
+        status = 'failed';
+      } else if (agendaJob.attrs.failedAt) {
+        status = 'failed';
+      } else if (agendaJob.attrs.lastRunAt) {
+        status = 'completed';
+      }
+      return {
+        exists: true,
+        status,
+        scheduledFor: agendaJob.attrs.nextRunAt ?? undefined,
+        data: agendaJob.attrs.data as JobData
+      };
+    }
+    
+    default:
+      return {
+        exists: false,
+        error: `Unsupported queue provider: ${String(config.provider ?? 'unknown')}`
+      };
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Getting job status failed', { error: errorMessage, jobId });
     
-    return Promise.resolve({
+    return {
       exists: false,
       error: errorMessage
-    });
+    };
   }
 };
 
 // List jobs (for debugging/monitoring)
-export const listJobs = (options: {
+export const listJobs = async (options: {
   status?: string;
   type?: string;
   limit?: number;
@@ -291,87 +474,153 @@ export const listJobs = (options: {
   total: number;
 }> => {
   try {
+    const config = getQueueConfig();
     const { status, type, limit = 50, offset = 0 } = options;
     
-    logInfo('Listing jobs', options);
+    logInfo('Listing jobs', { ...options, provider: config.provider });
     
-    let jobs = Array.from(mockJobs.values());
-    
-    // Apply filters
-    if (status != null && status !== '') {
-      jobs = jobs.filter(job => job.status === status);
+    switch (config.provider) {
+    case 'bull': {
+      const queue = initializeBullQueue();
+      const jobs = await queue.getJobs(['waiting', 'delayed', 'active', 'completed', 'failed']);
+      
+      let filteredJobs = jobs;
+      
+      if (typeof type === 'string' && type.length > 0) {
+        filteredJobs = filteredJobs.filter(job => job.name === type);
+      }
+      
+      const total = filteredJobs.length;
+      const sortedJobs = filteredJobs.sort((a, b) => b.timestamp - a.timestamp);
+      const slicedJobs = sortedJobs.slice(offset, offset + limit);
+      
+      const paginatedJobs = await Promise.all(slicedJobs.map(async job => ({
+        id: String(job.id),
+        type: job.name,
+        status: await job.getState(),
+        scheduledFor: (job.opts.delay ?? 0) > 0 
+          ? new Date(Date.now() + (job.opts.delay ?? 0)) 
+          : new Date(job.timestamp),
+        createdAt: new Date(job.timestamp)
+      })));
+      
+      return { jobs: paginatedJobs, total };
     }
     
-    if (type != null && type !== '') {
-      jobs = jobs.filter(job => job.type === type);
+    case 'agenda': {
+      const agenda = initializeAgenda();
+      const query: Record<string, unknown> = {};
+      
+      if (typeof type === 'string' && type.length > 0) {
+        query.name = type;
+      }
+      
+      const jobs = await agenda.jobs(query);
+      
+      let filteredJobs = jobs;
+      
+      if (typeof status === 'string' && status.length > 0) {
+        filteredJobs = jobs.filter(job => {
+          const jobStatus = typeof job.attrs.failReason === 'string' && job.attrs.failReason.length > 0
+            ? 'failed'
+            : job.attrs.failedAt !== null && job.attrs.failedAt !== undefined
+              ? 'failed'
+              : job.attrs.lastRunAt !== null && job.attrs.lastRunAt !== undefined
+                ? 'completed'
+                : 'scheduled';
+          return jobStatus === status;
+        });
+      }
+      
+      const total = filteredJobs.length;
+      const paginatedJobs = filteredJobs
+        .sort((a, b) => (b.attrs.lastRunAt?.getTime() ?? 0) - (a.attrs.lastRunAt?.getTime() ?? 0))
+        .slice(offset, offset + limit)
+        .map(job => ({
+          id: job.attrs._id !== null && job.attrs._id !== undefined ? String(job.attrs._id) : '',
+          type: job.attrs.name,
+          status: typeof job.attrs.failReason === 'string' && job.attrs.failReason.length > 0
+            ? 'failed'
+            : job.attrs.failedAt !== null && job.attrs.failedAt !== undefined
+              ? 'failed'
+              : job.attrs.lastRunAt !== null && job.attrs.lastRunAt !== undefined
+                ? 'completed'
+                : 'scheduled',
+          scheduledFor: job.attrs.nextRunAt ?? new Date(),
+          createdAt: job.attrs.lastRunAt ?? new Date()
+        }));
+      
+      return { jobs: paginatedJobs, total };
     }
     
-    // Apply pagination
-    const total = jobs.length;
-    const paginatedJobs = jobs
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(offset, offset + limit)
-      .map(job => ({
-        id: job.id,
-        type: job.type,
-        status: job.status,
-        scheduledFor: job.scheduledFor,
-        createdAt: job.createdAt
-      }));
-    
-    return Promise.resolve({
-      jobs: paginatedJobs,
-      total
-    });
+    default:
+      return { jobs: [], total: 0 };
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Listing jobs failed', { error: errorMessage });
     
-    return Promise.resolve({
-      jobs: [],
-      total: 0
-    });
+    return { jobs: [], total: 0 };
   }
 };
 
 // Process jobs manually (for testing)
 export const processJob = async (jobId: string): Promise<boolean> => {
   try {
-    logInfo('Processing job manually', { jobId });
+    const config = getQueueConfig();
     
-    const job = mockJobs.get(jobId);
-    if (!job) {
-      logWarning('Job not found for processing', { jobId });
-      return false;
-    }
+    logInfo('Processing job manually', { jobId, provider: config.provider });
     
-    if (job.status !== 'scheduled') {
-      logWarning('Job is not in scheduled status', { jobId, status: job.status });
-      return false;
-    }
-    
-    // Update job status
-    job.status = 'running';
-    job.updatedAt = new Date();
-    
-    // Simulate job processing
-    try {
-      // In real implementation, this would execute the actual job logic
-      // For booking reminders, it would call the notification service
+    switch (config.provider) {
+    case 'bull': {
+      const queue = initializeBullQueue();
+      const job = await queue.getJob(jobId);
       
-      await new Promise(resolve => setTimeout(resolve, 100)); // Simulate work
+      if (!job) {
+        logWarning('Job not found for processing', { jobId });
+        return false;
+      }
       
-      job.status = 'completed';
-      job.updatedAt = new Date();
+      const state = await job.getState();
+      if (state !== 'delayed' && state !== 'waiting') {
+        logWarning('Job is not in processable state', { jobId, state });
+        return false;
+      }
       
-      logInfo('Job processed successfully', { jobId });
+      // For Bull, we can't manually process jobs, but we can move them to active state
+      // by removing and re-adding with immediate execution
+      await job.remove();
+      const newJob = await queue.add(job.name, job.data, { 
+        attempts: job.opts.attempts,
+        backoff: job.opts.backoff
+      });
+      
+      logInfo('Job processed successfully with Bull', { jobId: newJob.id.toString() });
       return true;
-    } catch (processingError) {
-      job.status = 'failed';
-      job.updatedAt = new Date();
+    }
+    
+    case 'agenda': {
+      const agenda = initializeAgenda();
+      const jobs = await agenda.jobs({ _id: jobId });
       
-      const errorMessage = processingError instanceof Error ? processingError.message : 'Processing failed';
-      logError('Job processing failed', { error: errorMessage, jobId });
+      if (!Array.isArray(jobs) || jobs.length === 0) {
+        logWarning('Job not found for processing', { jobId });
+        return false;
+      }
+      
+      const job = jobs[0];
+      if (!job) {
+        logWarning('Job not found for processing', { jobId });
+        return false;
+      }
+      
+      await job.run();
+      
+      logInfo('Job processed successfully with Agenda', { jobId });
+      return true;
+    }
+    
+    default:
       return false;
     }
   } catch (error) {
@@ -382,36 +631,54 @@ export const processJob = async (jobId: string): Promise<boolean> => {
 };
 
 // Clean up completed/failed jobs
-export const cleanupJobs = (olderThanDays: number = 7): Promise<number> => {
+export const cleanupJobs = async (olderThanDays: number = 7): Promise<number> => {
   try {
-    logInfo('Cleaning up old jobs', { olderThanDays });
+    const config = getQueueConfig();
     
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+    logInfo('Cleaning up old jobs', { olderThanDays, provider: config.provider });
     
-    let cleanedCount = 0;
-    
-    for (const [jobId, job] of mockJobs.entries()) {
-      if (
-        (job.status === 'completed' || job.status === 'failed') &&
-        job.updatedAt < cutoffDate
-      ) {
-        mockJobs.delete(jobId);
-        cleanedCount++;
-      }
+    switch (config.provider) {
+    case 'bull': {
+      // Bull automatically removes completed/failed jobs based on defaultJobOptions
+      // This is handled by the removeOnComplete and removeOnFail settings
+      logInfo('Bull cleanup handled automatically by defaultJobOptions');
+      return 0;
     }
     
-    logInfo('Job cleanup completed', { cleanedCount, olderThanDays });
-    return Promise.resolve(cleanedCount);
+    case 'agenda': {
+      const agenda = initializeAgenda();
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+      
+      const result = await agenda.jobs({
+        $or: [
+          { lastRunAt: { $lt: cutoffDate } },
+          { failedAt: { $lt: cutoffDate } }
+        ]
+      });
+      
+      let cleanedCount = 0;
+      for (const job of result) {
+        await job.remove();
+        cleanedCount++;
+      }
+      
+      logInfo('Agenda cleanup completed', { cleanedCount, olderThanDays });
+      return cleanedCount;
+    }
+    
+    default:
+      return 0;
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Job cleanup failed', { error: errorMessage });
-    return Promise.resolve(0);
+    return 0;
   }
 };
 
 // Get queue health status
-export const getQueueHealth = (): Promise<{
+export const getQueueHealth = async (): Promise<{
   healthy: boolean;
   provider: string;
   jobCounts: {
@@ -426,41 +693,126 @@ export const getQueueHealth = (): Promise<{
   try {
     const config = getQueueConfig();
     
-    // Count jobs by status
-    const jobCounts = {
-      scheduled: 0,
-      running: 0,
-      completed: 0,
-      failed: 0,
-      cancelled: 0
-    };
-    
-    for (const job of mockJobs.values()) {
-      jobCounts[job.status]++;
+    switch (config.provider) {
+    case 'bull': {
+      const queue = initializeBullQueue();
+      
+      const [, active, completed, failed, delayed] = await Promise.all([
+        queue.getWaiting(),
+        queue.getActive(),
+        queue.getCompleted(),
+        queue.getFailed(),
+        queue.getDelayed()
+      ]);
+      
+      const jobCounts = {
+        scheduled: delayed.length,
+        running: active.length,
+        completed: completed.length,
+        failed: failed.length,
+        cancelled: 0 // Bull doesn't have a cancelled state
+      };
+      
+      logInfo('Bull queue health check', { provider: config.provider, jobCounts });
+      
+      return {
+        healthy: true,
+        provider: config.provider,
+        jobCounts
+      };
     }
     
-    logInfo('Queue health check', { provider: config.provider, jobCounts });
-    
-    return Promise.resolve({
-      healthy: true,
-      provider: config.provider,
-      jobCounts
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logError('Queue health check failed', { error: errorMessage });
-    
-    return Promise.resolve({
-      healthy: false,
-      provider: 'unknown',
-      jobCounts: {
+    case 'agenda': {
+      const agenda = initializeAgenda();
+      
+      const jobs = await agenda.jobs({});
+      const jobCounts = {
         scheduled: 0,
         running: 0,
         completed: 0,
         failed: 0,
         cancelled: 0
-      },
+      };
+      
+      for (const job of jobs) {
+        if ((typeof job.attrs.failReason === 'string' && job.attrs.failReason.length > 0) || job.attrs.failedAt) {
+          jobCounts.failed++;
+        } else if (job.attrs.lastRunAt) {
+          jobCounts.completed++;
+        } else {
+          jobCounts.scheduled++;
+        }
+      }
+      
+      logInfo('Agenda queue health check', { provider: config.provider, jobCounts });
+      
+      return {
+        healthy: true,
+        provider: config.provider,
+        jobCounts
+      };
+    }
+    
+    default:
+      return {
+        healthy: false,
+        provider: 'unknown',
+        jobCounts: { scheduled: 0, running: 0, completed: 0, failed: 0, cancelled: 0 },
+        error: `Unsupported queue provider: ${String(config.provider ?? 'unknown')}`
+      };
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logError('Queue health check failed', { error: errorMessage });
+    
+    return {
+      healthy: false,
+      provider: 'unknown',
+      jobCounts: { scheduled: 0, running: 0, completed: 0, failed: 0, cancelled: 0 },
       error: errorMessage
-    });
+    };
+  }
+};
+
+// Graceful shutdown
+export const shutdown = async (): Promise<void> => {
+  try {
+    const config = getQueueConfig();
+    
+    logInfo('Shutting down queue service', { provider: config.provider });
+    
+    switch (config.provider) {
+    case 'bull':
+      if (bullQueue) {
+        await bullQueue.close();
+        bullQueue = null;
+      }
+      break;
+    
+    case 'agenda':
+      if (agendaInstance) {
+        try {
+          // Remove all event listeners to prevent memory leaks
+          agendaInstance.removeAllListeners();
+          // Stop the agenda instance
+          await agendaInstance.stop();
+          // Close the database connection
+          await agendaInstance.close();
+          
+
+        } catch (agendaError) {
+          // Log but don't throw - Agenda cleanup errors shouldn't prevent shutdown
+          logError('Agenda cleanup error', { error: agendaError instanceof Error ? agendaError.message : 'Unknown' });
+        } finally {
+          agendaInstance = null;
+        }
+      }
+      break;
+    }
+    
+    logInfo('Queue service shutdown completed');
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logError('Queue service shutdown failed', { error: errorMessage });
   }
 }; 
