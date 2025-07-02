@@ -18,6 +18,9 @@ beforeAll(async () => {
 
   const mongoUri = mongoServer.getUri();
 
+  // Set environment variable for QueueService to use
+  process.env.MONGODB_URI = mongoUri;
+
   await mongoose.connect(mongoUri, {
     // Highly optimized connection settings for speed
     maxPoolSize: 100, // Increased pool size for parallel operations
@@ -42,6 +45,14 @@ afterAll(async () => {
 
   if (mongoServer) {
     await mongoServer.stop({ doCleanup: true, force: true });
+  }
+
+  // Clean up QueueService connections
+  try {
+    const { shutdown } = await import('../src/services/QueueService');
+    await shutdown();
+  } catch (error) {
+    // Ignore shutdown errors in global teardown
   }
 
   // Clean up any remaining handles (RateLimitService is mocked, so no cleanup needed)
