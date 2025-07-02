@@ -1,7 +1,8 @@
-import { logInfo, logWarning, logError } from '../utils/logger';
 import { SESClient, SendEmailCommand, SendEmailCommandInput } from '@aws-sdk/client-ses';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
+
+import { logInfo, logWarning, logError } from '../utils/logger';
 
 // Email configuration
 interface EmailConfig {
@@ -53,7 +54,7 @@ const getEmailConfig = (): EmailConfig => {
   
   return {
     provider: (process.env.EMAIL_PROVIDER as 'ses' | 'smtp' | 'resend') ?? 'resend',
-    apiKey: process.env.RESEND_KEY || process.env.EMAIL_API_KEY,
+    apiKey: process.env.RESEND_KEY ?? process.env.EMAIL_API_KEY,
     region: process.env.EMAIL_REGION ?? 'us-east-1',
     fromEmail: process.env.EMAIL_FROM ?? defaultFromEmail,
     fromName: process.env.EMAIL_FROM_NAME ?? 'Vale Booking System',
@@ -81,7 +82,7 @@ const validateEmail = (email: string): boolean => {
 // Real AWS SES integration
 const sendWithSES = async (message: EmailMessage, config: EmailConfig): Promise<EmailResult> => {
   try {
-    if (!config.apiKey) {
+    if (config.apiKey == null || config.apiKey === '') {
       throw new Error('AWS credentials are required for SES');
     }
 
@@ -116,7 +117,7 @@ const sendWithSES = async (message: EmailMessage, config: EmailConfig): Promise<
           }
         }
       },
-      ReplyToAddresses: message.replyTo ? [message.replyTo] : undefined
+      ReplyToAddresses: message.replyTo != null ? [message.replyTo] : undefined
     };
 
     const command = new SendEmailCommand(params);
@@ -147,7 +148,7 @@ const sendWithSES = async (message: EmailMessage, config: EmailConfig): Promise<
 // Real SMTP integration using Nodemailer
 const sendWithSMTP = async (message: EmailMessage, config: EmailConfig): Promise<EmailResult> => {
   try {
-    if (!config.smtp) {
+    if (config.smtp == null) {
       throw new Error('SMTP configuration is required');
     }
 
@@ -214,7 +215,7 @@ const sendWithSMTP = async (message: EmailMessage, config: EmailConfig): Promise
 // Real Resend integration with rate limiting
 const sendWithResend = async (message: EmailMessage, config: EmailConfig): Promise<EmailResult> => {
   try {
-    if (!config.apiKey) {
+    if (config.apiKey == null || config.apiKey === '') {
       throw new Error('Resend API key is required');
     }
 
@@ -259,8 +260,10 @@ const sendWithResend = async (message: EmailMessage, config: EmailConfig): Promi
         lastError = error as Error;
         
         // Check if it's a rate limit error
-        if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 429) {
-          const retryAfter = (error as any).headers?.['retry-after'] || baseDelay;
+        if (error != null && typeof error === 'object' && 'statusCode' in error && error.statusCode === 429) {
+          const errorObj = error as { headers?: { 'retry-after'?: string } };
+          const retryAfterStr = errorObj.headers?.['retry-after'] ?? baseDelay.toString();
+          const retryAfter = parseInt(retryAfterStr, 10) || baseDelay;
           const delay = Math.min(retryAfter * 1000, baseDelay * Math.pow(2, attempt - 1));
           
           logWarning('Resend rate limit hit, retrying', { 
@@ -282,7 +285,7 @@ const sendWithResend = async (message: EmailMessage, config: EmailConfig): Promi
     }
 
     // If we get here, all retries failed
-    const errorMessage = lastError?.message || 'Unknown Resend error';
+    const errorMessage = lastError?.message ?? 'Unknown Resend error';
     logError('Resend email failed after retries', { 
       error: errorMessage, 
       to: message.to,
@@ -321,7 +324,7 @@ export const sendEmail = async (message: EmailMessage): Promise<EmailResult> => 
     }
     
     // Validate required fields
-    if (!message.subject || message.subject.length === 0 || !message.text || message.text.length === 0) {
+    if (message.subject == null || message.subject.length === 0 || message.text == null || message.text.length === 0) {
       return {
         success: false,
         error: 'Subject and text content are required'
