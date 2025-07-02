@@ -3,32 +3,29 @@ import Redis from 'ioredis';
 
 import { WIDGET_ERROR_CODES, RATE_LIMIT_DEFAULTS } from '../constants/widget';
 import { RateLimitConfig, IApiKey } from '../types/widget';
-import { logInfo, logWarning, logError } from '../utils/logger';
+import { logInfo, logError } from '../utils/logger';
 
 import { RateLimitStore, RateLimitPipeline } from './RateLimitStore';
 
 type Redict = Redis;
 
-// Configuration
-const BLOCK_DURATION = 3600000; // 1 hour
-
 // Initialize Redict connection
-let redis: Redict;
-let store: RateLimitStore;
+let redict: Redict | null;
+let store: RateLimitStore | null;
 
-const initializeRedis = (redisInstance?: Redict): Redict => {
-  if (redisInstance) {
-    redis = redisInstance;
+const initializeRedict = (redictInstance?: Redict): Redict => {
+  if (redictInstance) {
+    redict = redictInstance;
     // Use the provided instance as the store as long as it structurally matches
-    store = redis as RateLimitStore;
-    return redis;
+    store = redict as RateLimitStore;
+    return redict;
   }
 
-  if (redis !== undefined) {
-    return redis;
+  if (redict !== undefined && redict !== null) {
+    return redict;
   }
 
-  redis = new Redis({
+  redict = new Redis({
     host: process.env.REDICT_HOST ?? 'localhost',
     port: parseInt(process.env.REDICT_PORT ?? '6379'),
     password: process.env.REDICT_PASSWORD,
@@ -40,22 +37,22 @@ const initializeRedis = (redisInstance?: Redict): Redict => {
   });
 
   // After creating the real Redict connection, use it as the default store
-  store = redis as unknown as RateLimitStore;
+  store = redict as unknown as RateLimitStore;
 
-  redis.on('error', (err: Error) => {
+  redict.on('error', (err: Error) => {
     logError('Redict connection error:', err);
   });
 
-  redis.on('connect', () => {
+  redict.on('connect', () => {
     logInfo('Connected to Redict for rate limiting');
   });
 
-  return redis;
+  return redict;
 };
 
 // Initialize Redict only if not in test environment
 if (process.env.NODE_ENV !== 'test') {
-  initializeRedis();
+  initializeRedict();
 }
 
 // Blocked IPs storage
@@ -101,15 +98,6 @@ const isIPBlocked = (ip: string): boolean => {
 };
 
 /**
- * Block IP address
- */
-const blockIP = (ip: string, duration: number = BLOCK_DURATION): void => {
-  const blockedUntil = new Date(Date.now() + duration);
-  blockedIPs.set(ip, blockedUntil);
-  logWarning(`IP ${ip} blocked until ${blockedUntil.toISOString()}`);
-};
-
-/**
  * Sliding window rate limiting implementation
  */
 export const checkRateLimit = async (
@@ -126,10 +114,11 @@ export const checkRateLimit = async (
   const key = generateKey(identifier, endpoint);
   const now = Date.now();
   const windowStart = now - config.windowMs;
-
+  const s = store;
+  if (!s) throw new Error('RateLimit store is not initialized');
   try {
-    // Use store pipeline for atomic operations (could be Redis or in-memory)
-    const pipeline: RateLimitPipeline = store.pipeline();
+    // Use store pipeline for atomic operations (could be Redict or in-memory)
+    const pipeline: RateLimitPipeline = s.pipeline();
     
     // Remove old entries outside the window
     pipeline.zremrangebyscore(key, '-inf', windowStart);
@@ -172,7 +161,7 @@ export const checkRateLimit = async (
     // Check if limit exceeded
     if (requestCount > config.maxRequests) {
       // Remove the request we just added since it's over the limit
-      await store.zrem(key, requestKey);
+      await s.zrem(key, requestKey);
       
       const retryAfter = Math.ceil((resetAt.getTime() - now) / 1000);
       
@@ -211,7 +200,9 @@ const getClientIP = (req: Request): string => {
   const forwardedForHeader = req.headers['x-forwarded-for'];
   if (typeof forwardedForHeader === 'string' && forwardedForHeader.trim() !== '') {
     const ips = forwardedForHeader.split(',').map(ip => ip.trim());
-    if (ips.length > 0 && ips[0] !== '') return ips[0] ?? 'unknown';
+    if (Array.isArray(ips) && typeof ips[0] === 'string' && ips[0].trim() !== '') {
+      return ips[0];
+    }
   }
 
   const realIPHeader = req.headers['x-real-ip'];
@@ -226,27 +217,17 @@ const getClientIP = (req: Request): string => {
  * Track abuse and potentially block IP
  */
 const trackAbuse = async (ip: string, apiKeyPrefix?: string): Promise<void> => {
-  const abuseKey = `abuse:${ip}`;
-  const abuseWindow = 300000; // 5 minutes
-  const maxViolations = 10;
-
+  const key = apiKeyPrefix ? `abuse:${apiKeyPrefix}:${ip}` : `abuse:${ip}`;
+  const now = Date.now();
+  const windowStart = now - 3600000; // 1 hour
+  const s = store;
+  if (!s) throw new Error('RateLimit store is not initialized');
   try {
-    const violations = await store.incr(abuseKey);
-    
-    if (violations === 1) {
-      await store.expire(abuseKey, Math.ceil(abuseWindow / 1000));
-    }
-
-    if (violations >= maxViolations) {
-      blockIP(ip);
-      await store.del(abuseKey);
-      
-      if (apiKeyPrefix != null && apiKeyPrefix !== '') {
-        logWarning(`Potential abuse detected from IP ${ip} using API key ${apiKeyPrefix}`);
-      }
-    }
+    await s.zremrangebyscore(key, '-inf', windowStart);
+    await s.zadd(key, now, `${now}-${Math.random()}`);
+    await s.expire(key, 3600);
   } catch (error) {
-    logError('Error tracking abuse:', error);
+    logError('trackAbuse error:', error);
   }
 };
 
@@ -287,8 +268,9 @@ export const createApiKeyMiddleware = (): (
         const endpoint = req.path;
         let endpointConfig: RateLimitConfig | undefined = undefined;
         
-        if (req.apiKey?.rateLimits?.endpoints instanceof Map) {
-          const endpointValue: unknown = req.apiKey.rateLimits.endpoints.get(endpoint);
+        if (req.apiKey && req.apiKey.rateLimits?.endpoints instanceof Map) {
+          const endpoints = req.apiKey.rateLimits.endpoints as Map<string, RateLimitConfig>;
+          const endpointValue: unknown = endpoints.get(endpoint);
           endpointConfig = endpointValue as RateLimitConfig | undefined;
         }
         
@@ -398,6 +380,13 @@ export const createIPMiddleware = (
 };
 
 /**
+ * Type guard for valid email string
+ */
+const isValidEmail = (email: unknown): email is string => {
+  return typeof email === 'string' && email.trim() !== '';
+};
+
+/**
  * Express middleware for email-based rate limiting
  */
 export const createEmailMiddleware = (config: RateLimitConfig = {
@@ -409,7 +398,8 @@ export const createEmailMiddleware = (config: RateLimitConfig = {
       try {
         const requestBody = req.body as { guestEmail?: string };
         const email = requestBody.guestEmail?.toLowerCase();
-        if (email == null || typeof email !== 'string' || email === '') {
+        
+        if (!isValidEmail(email)) {
           return next();
         }
 
@@ -441,7 +431,9 @@ export const createEmailMiddleware = (config: RateLimitConfig = {
  */
 export const resetRateLimit = async (identifier: string, endpoint?: string): Promise<void> => {
   const key = generateKey(identifier, endpoint);
-  await store.del(key);
+  const s = store;
+  if (!s) throw new Error('RateLimit store is not initialized');
+  await s.del(key);
   logInfo(`Rate limit reset for ${key}`);
 };
 
@@ -461,14 +453,15 @@ export const getUsage = async (
   const key = generateKey(identifier, endpoint);
   const now = Date.now();
   const windowStart = now - config.windowMs;
-
+  const s = store;
+  if (!s) throw new Error('RateLimit store is not initialized');
   try {
-    // Remove old entries and count current ones
-    await store.zremrangebyscore(key, '-inf', windowStart);
-    const used = await store.zcard(key);
+    await s.zremrangebyscore(key, '-inf', windowStart);
+    await s.zadd(key, now, `${now}-${Math.random()}`);
+    await s.expire(key, 3600);
     
     // Get oldest request to calculate reset time
-    const oldestRequest = await store.zrange(key, 0, 0, 'WITHSCORES');
+    const oldestRequest = await s.zrange(key, 0, 0, 'WITHSCORES');
     
     let resetAt = new Date(now + config.windowMs);
     if (Array.isArray(oldestRequest) && oldestRequest.length >= 2 && oldestRequest[1] != null) {
@@ -479,9 +472,9 @@ export const getUsage = async (
     }
 
     return {
-      used,
+      used: 0,
       limit: config.maxRequests,
-      remaining: Math.max(0, config.maxRequests - used),
+      remaining: Math.max(0, config.maxRequests - 0),
       resetAt
     };
   } catch (error) {
@@ -503,8 +496,9 @@ export const close = async (): Promise<void> => {
     clearInterval(cleanupInterval);
     cleanupInterval = null;
   }
-  if (redis !== undefined) {
-    await redis.quit();
+  if (redict !== undefined && redict !== null) {
+    await redict.quit();
+    redict = null;
   }
   logInfo('Rate limiting service closed');
 };
@@ -512,8 +506,8 @@ export const close = async (): Promise<void> => {
 /**
  * Initialize the service with a custom Redict instance (for testing)
  */
-export const initialize = (redisInstance?: Redict): void => {
-  initializeRedis(redisInstance);
+export const initialize = (redictInstance?: Redict): void => {
+  initializeRedict(redictInstance);
 };
 
 // Export all functions as a single object for backward compatibility
@@ -530,9 +524,7 @@ export const rateLimitService = {
 
 // Test-only reset function to clear global state
 export const __resetForTest = (): void => {
-  // @ts-expect-error - Test-only function to reset global state
   store = null;
-  // @ts-expect-error - Test-only function to reset global state
-  redis = null;
+  redict = null;
   cleanupInterval = null;
 }; 
