@@ -719,7 +719,7 @@ describe('RateLimitService', () => {
       __resetForTest();
       
       const mockRedict = {
-        quit: jest.fn().mockResolvedValue(undefined),
+        quit: jest.fn<() => Promise<unknown>>().mockResolvedValue(undefined),
         on: jest.fn()
       } as unknown as Redict;
       
@@ -758,7 +758,7 @@ describe('RateLimitService', () => {
             zadd: jest.fn().mockReturnThis(),
             expire: jest.fn().mockReturnThis(),
             zrange: jest.fn().mockReturnThis(),
-            exec: jest.fn().mockResolvedValue([])
+            exec: jest.fn<() => Promise<[null, unknown][]>>().mockResolvedValue([])
           } as unknown as RateLimitPipeline;
         }
         async zadd(): Promise<number> { return 1; }
@@ -790,7 +790,7 @@ describe('RateLimitService', () => {
             zadd: jest.fn().mockReturnThis(),
             expire: jest.fn().mockReturnThis(),
             zrange: jest.fn().mockReturnThis(),
-            exec: jest.fn().mockResolvedValue([
+            exec: jest.fn<() => Promise<[null, unknown][]>>().mockResolvedValue([
               [null, 0], // zremrangebyscore result
               [null, 4], // zcard result - exceeds the limit (3)
               [null, 1], // zadd result
