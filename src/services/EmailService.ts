@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import { createTransport } from 'nodemailer';
 import { Resend } from 'resend';
 
 import { logInfo, logWarning, logError } from '../utils/logger';
@@ -88,7 +88,7 @@ const sendWithSMTP = async (message: EmailMessage, config: EmailConfig): Promise
     logInfo('Sending email via SMTP', { to: message.to, subject: message.subject });
 
     // Create transporter
-    const transporter = nodemailer.createTransport({
+    const transporter = createTransport({
       host: config.smtp.host,
       port: config.smtp.port,
       secure: config.smtp.secure,

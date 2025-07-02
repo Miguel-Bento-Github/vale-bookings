@@ -10,17 +10,17 @@ const router = Router();
  * Handles email delivery events, bounces, complaints, etc.
  */
 router.post('/email', (req: Request, res: Response): void => {
-  void (async () => {
+  void (() : void => {
     try {
       logInfo('Email webhook received', {
         headers: req.headers,
-        body: req.body,
+        body: JSON.stringify(req.body),
         ip: req.ip
       });
 
       // Validate webhook payload
       if (req.body == null || typeof req.body !== 'object') {
-        logError('Invalid webhook payload', { body: req.body });
+        logError('Invalid webhook payload', { body: String(req.body) });
         res.status(400).json({
           success: false,
           error: 'Invalid webhook payload'
@@ -41,7 +41,7 @@ router.post('/email', (req: Request, res: Response): void => {
       }
 
       // Process the webhook event
-      const result = await EmailWebhookService.handleWebhookEvent(event as unknown as EmailWebhookEvent);
+      const result = EmailWebhookService.handleWebhookEvent(event as unknown as EmailWebhookEvent);
 
       if (result.success) {
         logInfo('Webhook processed successfully', {

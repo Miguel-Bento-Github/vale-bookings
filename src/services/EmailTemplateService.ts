@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { sendEmail, type EmailMessage } from './EmailService';
 
 // Email template types
@@ -584,11 +585,6 @@ The Vale Team
     
     const instructionsHtml = data.activationLink != null ? `<p>To get started, please activate your account:</p>
     <p><a href="${data.activationLink}" class="button">Activate Account</a></p>` : '';
-
-    const instructionsText = data.activationLink != null ? `To get started, please activate your account:
-    ${data.activationLink}
-
-    ` : '';
 
     const html = `
       <!DOCTYPE html>
