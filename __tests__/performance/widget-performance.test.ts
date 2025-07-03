@@ -163,7 +163,7 @@ describe('Widget Performance Tests', () => {
 
       // Memory increase should be less than 50MB
       expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024);
-    }, 60000);
+    }, 15000);
   });
 
   describe('Response Time Performance', () => {
@@ -272,7 +272,7 @@ describe('Widget Performance Tests', () => {
       // Average response time should be reasonable
       const avgResponseTime = totalTime / concurrentRequests;
       expect(avgResponseTime).toBeLessThan(100);
-    }, 60000);
+    }, 15000);
 
     it('should handle 2 concurrent booking creation requests', async () => {
       const concurrentRequests = 2;

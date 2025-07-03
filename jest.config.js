@@ -23,7 +23,7 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   setupFiles: ['<rootDir>/__tests__/rateLimitMockSetup.ts'],
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
-  testTimeout: 30000,
+  testTimeout: 15000,
   // Optimization settings
   maxWorkers: process.env.CI ? 2 : '50%',
   cache: true,
