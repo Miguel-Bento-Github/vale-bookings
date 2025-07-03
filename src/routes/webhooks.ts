@@ -29,7 +29,7 @@ router.post('/email', (req: Request, res: Response): void => {
       }
 
       // Extract webhook event
-      const event = req.body as Record<string, unknown>;
+      const event = req.body as EmailWebhookEvent;
       
       if (event.type == null || event.data == null) {
         logError('Missing webhook event data', { event });
@@ -41,7 +41,7 @@ router.post('/email', (req: Request, res: Response): void => {
       }
 
       // Process the webhook event
-      const result = EmailWebhookService.handleWebhookEvent(event as unknown as EmailWebhookEvent);
+      const result = EmailWebhookService.handleWebhookEvent(event);
 
       if (result.success) {
         logInfo('Webhook processed successfully', {

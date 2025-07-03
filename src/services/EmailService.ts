@@ -78,7 +78,7 @@ const validateEmail = (email: string): boolean => {
 
 
 
-// Real SMTP integration using Nodemailer
+// SMTP integration using Nodemailer
 const sendWithSMTP = async (message: EmailMessage, config: EmailConfig): Promise<EmailResult> => {
   try {
     if (config.smtp == null) {
@@ -145,7 +145,7 @@ const sendWithSMTP = async (message: EmailMessage, config: EmailConfig): Promise
   }
 };
 
-// Real Resend integration with rate limiting
+// Resend integration with rate limiting
 const sendWithResend = async (message: EmailMessage, config: EmailConfig): Promise<EmailResult> => {
   try {
     if (config.apiKey == null || config.apiKey === '') {
