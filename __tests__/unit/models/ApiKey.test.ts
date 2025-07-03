@@ -1,4 +1,4 @@
-import { API_KEY_CONFIG, RATE_LIMIT_DEFAULTS, DATA_RETENTION_PERIODS } from '../../../src/constants/widget';
+import { API_KEY_CONFIG, DATA_RETENTION_PERIODS } from '../../../src/constants/widget';
 import { ApiKey } from '../../../src/models/ApiKey';
 import { IApiKey } from '../../../src/types/widget';
 import { encryptionService } from '../../../src/utils/encryption';
@@ -178,7 +178,10 @@ describe('ApiKey Model Unit Tests', () => {
       expectedExpiration.setDate(expectedExpiration.getDate() + API_KEY_CONFIG.ROTATION_DAYS);
       
       // Allow for small time differences
-      expect(Math.abs(apiKey.expiresAt!.getTime() - expectedExpiration.getTime())).toBeLessThan(1000);
+      expect(apiKey.expiresAt).toBeDefined();
+      if (apiKey.expiresAt) {
+        expect(Math.abs(apiKey.expiresAt.getTime() - expectedExpiration.getTime())).toBeLessThan(1000);
+      }
     });
 
     it('should not set expiration if rotation days is 0', async () => {
@@ -412,8 +415,11 @@ describe('ApiKey Model Unit Tests', () => {
         await (apiKey as any).incrementUsage();
         const afterTime = new Date();
         expect(apiKey.lastUsedAt).toBeInstanceOf(Date);
-        expect(apiKey.lastUsedAt!.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime());
-        expect(apiKey.lastUsedAt!.getTime()).toBeLessThanOrEqual(afterTime.getTime());
+        expect(apiKey.lastUsedAt).toBeDefined();
+        if (apiKey.lastUsedAt) {
+          expect(apiKey.lastUsedAt.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime());
+          expect(apiKey.lastUsedAt.getTime()).toBeLessThanOrEqual(afterTime.getTime());
+        }
       });
 
       it('should handle multiple endpoint increments', async () => {
@@ -457,13 +463,16 @@ describe('ApiKey Model Unit Tests', () => {
         expect(apiKey.isActive).toBe(false);
         const newKey = await ApiKey.findOne({ name: 'Test API Key (Rotated)' });
         expect(newKey).toBeDefined();
-        expect(newKey!.isActive).toBe(true);
-        expect(newKey!.domainWhitelist).toEqual(['example.com', '*.subdomain.com']);
-        expect(newKey!.allowWildcardSubdomains).toBe(false);
-        expect(newKey!.createdBy).toBe('new-user');
-        expect(newKey!.rotatedFrom).toBe(apiKey._id?.toString());
-        expect(newKey!.rotatedAt).toBeInstanceOf(Date);
-        expect(newKey!.tags).toContain('rotated');
+        expect(newKey).toBeDefined();
+        if (newKey) {
+          expect(newKey.isActive).toBe(true);
+          expect(newKey.domainWhitelist).toEqual(['example.com', '*.subdomain.com']);
+          expect(newKey.allowWildcardSubdomains).toBe(false);
+          expect(newKey.createdBy).toBe('new-user');
+          expect(newKey.rotatedFrom).toBe(apiKey._id?.toString());
+          expect(newKey.rotatedAt).toBeInstanceOf(Date);
+          expect(newKey.tags).toContain('rotated');
+        }
       });
 
 
@@ -473,7 +482,10 @@ describe('ApiKey Model Unit Tests', () => {
         await apiKey.save();
         await (apiKey as any).rotate('new-user');
         const newKey = await ApiKey.findOne({ name: 'Test API Key (Rotated)' });
-        expect(newKey!.tags).toEqual(['rotated']);
+        expect(newKey).toBeDefined();
+        if (newKey) {
+          expect(newKey.tags).toEqual(['rotated']);
+        }
       });
 
       it('should handle existing tags during rotation', async () => {
@@ -481,7 +493,10 @@ describe('ApiKey Model Unit Tests', () => {
         await apiKey.save();
         await (apiKey as any).rotate('new-user');
         const newKey = await ApiKey.findOne({ name: 'Test API Key (Rotated)' });
-        expect(newKey!.tags).toEqual(['existing-tag', 'rotated']);
+        expect(newKey).toBeDefined();
+        if (newKey) {
+          expect(newKey.tags).toEqual(['existing-tag', 'rotated']);
+        }
       });
     });
   });
@@ -557,7 +572,7 @@ describe('ApiKey Model Unit Tests', () => {
 
     describe('findActive', () => {
       it('should find all active non-expired keys', async () => {
-        const keys = await (ApiKey as any).findActive();
+        const keys = await (ApiKey as any).findActive() as IApiKey[];
         
         expect(keys).toHaveLength(2);
         expect(keys.map((k: IApiKey) => k.name)).toContain('Active Key 1');
@@ -566,13 +581,13 @@ describe('ApiKey Model Unit Tests', () => {
       });
 
       it('should not include inactive keys', async () => {
-        const keys = await (ApiKey as any).findActive();
+        const keys = await (ApiKey as any).findActive() as IApiKey[];
         
         expect(keys.map((k: IApiKey) => k.name)).not.toContain('Inactive Key');
       });
 
       it('should not include expired keys', async () => {
-        const keys = await (ApiKey as any).findActive();
+        const keys = await (ApiKey as any).findActive() as IApiKey[];
         
         expect(keys.map((k: IApiKey) => k.name)).not.toContain('Expired Key');
       });
@@ -622,7 +637,10 @@ describe('ApiKey Model Unit Tests', () => {
   describe('Indexes', () => {
     it('should have correct indexes defined', async () => {
       const indexes = await ApiKey.collection.indexes();
-      const indexNames = indexes.map(index => Object.keys(index.key)[0]);
+      const indexNames = indexes.map((index) => {
+        const key = (index as { key: Record<string, unknown> }).key;
+        return Object.keys(key)[0];
+      });
       
       expect(indexNames).toContain('key');
       expect(indexNames).toContain('keyPrefix');
