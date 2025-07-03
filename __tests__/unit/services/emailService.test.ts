@@ -1,26 +1,24 @@
-// @ts-nocheck - Jest mocks cause strict TypeScript issues
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import type { CreateEmailResponse } from 'resend';
 
 import { emailQueueService } from '../../../src/services/EmailQueueService';
 import { sendEmail, sendBulkEmails, testEmailConfig, getEmailServiceStatus } from '../../../src/services/EmailService';
 import { emailTemplateService } from '../../../src/services/EmailTemplateService';
 
-// Import actual types from the libraries
-import type { CreateEmailResponse } from 'resend';
-
 // Mock external dependencies
 jest.mock('resend', () => ({
   Resend: jest.fn().mockImplementation(() => ({
     emails: {
-      send: jest.fn().mockResolvedValue({ data: { id: 'sg_test-email-id' } })
+      send: jest.fn<() => Promise<CreateEmailResponse>>()
+        .mockResolvedValue({ data: { id: 'sg_test-email-id' }, error: null })
     }
   }))
 }));
 
 jest.mock('nodemailer', () => ({
   createTransport: jest.fn().mockReturnValue({
-    verify: jest.fn().mockResolvedValue(undefined),
-    sendMail: jest.fn().mockResolvedValue({ messageId: 'smtp_test-message-id' }),
+    verify: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    sendMail: jest.fn<() => Promise<{ messageId: string }>>().mockResolvedValue({ messageId: 'smtp_test-message-id' }),
     close: jest.fn()
   })
 }));
@@ -335,7 +333,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       const mockResend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue(new Error('SendGrid API error')) as unknown as jest.Mock
+          send: jest.fn<() => Promise<never>>().mockRejectedValue(new Error('SendGrid API error'))
         }
       }));
       require('resend').Resend = mockResend;
@@ -361,7 +359,7 @@ describe('EmailService', () => {
       // Mock nodemailer to throw an error
       const originalCreateTransport = require('nodemailer').createTransport;
       const mockTransporter = {
-        verify: jest.fn().mockRejectedValue(new Error('SMTP error')) as unknown as jest.Mock,
+        verify: jest.fn<() => Promise<void>>().mockRejectedValue(new Error('SMTP error')),
         sendMail: jest.fn(),
         close: jest.fn()
       };
@@ -387,7 +385,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue('String error') as unknown as jest.Mock
+          send: jest.fn<() => Promise<never>>().mockRejectedValue('String error')
         }
       }));
 
@@ -410,7 +408,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue(new Error('Bulk email error')) as unknown as jest.Mock
+          send: jest.fn<() => Promise<never>>().mockRejectedValue(new Error('Bulk email error'))
         }
       }));
 
@@ -435,7 +433,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue(new Error('Status check failed'))
+          send: jest.fn<() => Promise<never>>().mockRejectedValue(new Error('Status check failed'))
         }
       }));
 
@@ -455,7 +453,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue('String error in status check')
+          send: jest.fn<() => Promise<never>>().mockRejectedValue('String error in status check')
         }
       }));
 
@@ -475,7 +473,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue(new Error('Specific status check error'))
+          send: jest.fn<() => Promise<never>>().mockRejectedValue(new Error('Specific status check error'))
         }
       }));
 
@@ -495,7 +493,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue(new Error('Test email failed'))
+          send: jest.fn<() => Promise<never>>().mockRejectedValue(new Error('Test email failed'))
         }
       }));
 
@@ -513,7 +511,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue(new Error('Service unavailable'))
+          send: jest.fn<() => Promise<never>>().mockRejectedValue(new Error('Service unavailable'))
         }
       }));
 
@@ -533,7 +531,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue('String error')
+          send: jest.fn<() => Promise<never>>().mockRejectedValue('String error')
         }
       }));
 
@@ -590,7 +588,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue(new Error('Test email failed'))
+          send: jest.fn<() => Promise<never>>().mockRejectedValue(new Error('Test email failed'))
         }
       }));
 
@@ -619,7 +617,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue(new Error('Service unavailable'))
+          send: jest.fn<() => Promise<never>>().mockRejectedValue(new Error('Service unavailable'))
         }
       }));
 
@@ -639,7 +637,7 @@ describe('EmailService', () => {
       const originalResend = require('resend').Resend;
       require('resend').Resend = jest.fn().mockImplementation(() => ({
         emails: {
-          send: jest.fn().mockRejectedValue('String error')
+          send: jest.fn<() => Promise<never>>().mockRejectedValue('String error')
         }
       }));
 
@@ -714,11 +712,8 @@ describe('EmailTemplateService', () => {
     process.env.EMAIL_FROM_NAME = 'Vale Test';
     // Mock sendEmail for EmailTemplateService tests only
     originalSendEmail = require('../../../src/services/EmailService').sendEmail;
-    require('../../../src/services/EmailService').sendEmail = jest.fn().mockResolvedValue({
-      success: true,
-      messageId: 'sg_test-id',
-      provider: 'resend'
-    }) as unknown as (input: any) => Promise<any>;
+    require('../../../src/services/EmailService').sendEmail = jest.fn<() => Promise<CreateEmailResponse>>()
+      .mockResolvedValue({ data: { id: 'sg_test-id' }, error: null });
   });
 
   afterEach(() => {
@@ -818,7 +813,7 @@ describe('EmailQueueService', () => {
     
     // Mock sendEmail to throw error for queue tests, so emails stay in queue
     originalSendEmail = require('../../../src/services/EmailService').sendEmail;
-    require('../../../src/services/EmailService').sendEmail = jest.fn().mockRejectedValue(new Error('Test error')) as unknown as (input: any) => Promise<any>;
+    require('../../../src/services/EmailService').sendEmail = jest.fn<() => Promise<never>>().mockRejectedValue(new Error('Test error')) as unknown as (input: any) => Promise<any>;
   });
 
   afterEach(() => {
