@@ -33,6 +33,9 @@ describe('Bookings Integration Tests', () => {
     userId = context.userId;
     locationId = context.locationId;
     bookingId = context.bookingId;
+
+    // Small delay to ensure all database operations are complete
+    await new Promise(resolve => setTimeout(resolve, 50));
   });
 
 
@@ -93,6 +96,17 @@ describe('Bookings Integration Tests', () => {
 
   describe('GET /api/bookings/:id', () => {
     it('should get a specific booking by ID for owner', async () => {
+      // Verify test context is properly set up
+      expect(bookingId).toBeTruthy();
+      expect(userToken).toBeTruthy();
+      expect(userId).toBeTruthy();
+      expect(locationId).toBeTruthy();
+
+      // Verify the booking exists in the database before making the request
+      const existingBooking = await Booking.findById(bookingId);
+      expect(existingBooking).toBeTruthy();
+      expect(existingBooking?.userId.toString()).toBe(userId);
+
       const response = await request(app)
         .get(`/api/bookings/${bookingId}`)
         .set('Authorization', `Bearer ${userToken}`)
