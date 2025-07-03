@@ -1,6 +1,7 @@
 import type { Job } from 'agenda';
 import { Agenda } from 'agenda';
 import Bull from 'bull';
+import mongoose from 'mongoose';
 
 import { logInfo, logWarning, logError } from '../utils/logger';
 
@@ -130,44 +131,7 @@ const initializeAgenda = (): Agenda => {
     throw new Error('MongoDB configuration is required for Agenda');
   }
 
-  // In test environment, return a mock agenda instance to prevent MongoDB connections
-  if (process.env.NODE_ENV === 'test') {
-    // Create a minimal mock that implements the necessary methods
-    const mockAgenda = {
-      _processEvery: 0,
-      _defaultLockLifetime: 1000,
-      _definitions: {},
-      on: (): void => {},
-      removeAllListeners: (): void => {},
-      define: (): void => {},
-      schedule: (
-        scheduledFor: Date,
-        jobType: string,
-        data: JobData
-      ): Promise<{
-        attrs: { _id: string; name: string; data: JobData; nextRunAt: Date };
-        save: () => void;
-      }> => Promise.resolve({
-        attrs: {
-          _id: `test-job-${Date.now()}`,
-          name: jobType,
-          data,
-          nextRunAt: scheduledFor
-        },
-        save: (): void => {}
-      }),
-      jobs: (): Promise<never[]> => Promise.resolve([]),
-      cancel: (): Promise<number> => Promise.resolve(0),
-      start: (): Promise<void> => Promise.resolve(),
-      stop: (): Promise<void> => Promise.resolve(),
-      close: (): Promise<void> => Promise.resolve()
-    };
-    
-    agendaInstance = mockAgenda as unknown as Agenda;
-    return agendaInstance;
-  }
-
-  // Production code remains the same
+  // Production code - use real Agenda with in-memory MongoDB for tests
   agendaInstance = new Agenda({
     db: {
       address: config.mongodb.url,
@@ -175,6 +139,15 @@ const initializeAgenda = (): Agenda => {
     },
     processEvery: '30 seconds',
     maxConcurrency: 20
+  });
+
+  // Set up connection timeout to prevent hanging connections
+  agendaInstance.on('ready', () => {
+    logInfo('Agenda is ready');
+  });
+
+  agendaInstance.on('error', (error: Error) => {
+    logError('Agenda error', { error: error.message });
   });
 
   // Handle agenda events
@@ -256,18 +229,15 @@ const scheduleWithAgenda = async (
   try {
     const agenda = initializeAgenda();
 
-    // In test environment, we're using a mock so skip connection checks
-    if (process.env.NODE_ENV !== 'test') {
-      // Ensure Agenda is started before scheduling jobs in production
-      if (typeof agenda._processInterval === 'undefined' || agenda._processInterval === null) {
-        await agenda.start();
-      }
+    // Ensure Agenda is started before scheduling jobs
+    if (typeof agenda._processInterval === 'undefined' || agenda._processInterval === null) {
+      await agenda.start();
     }
     
     logInfo('Scheduling job with Agenda', { jobId, jobType, scheduledFor });
     
-    // Define job processor if not already defined (skip in test mode)
-    if (process.env.NODE_ENV !== 'test' && !Object.prototype.hasOwnProperty.call(agenda._definitions, jobType)) {
+    // Define job processor if not already defined
+    if (!Object.prototype.hasOwnProperty.call(agenda._definitions, jobType)) {
       agenda.define(jobType, async (job: Job) => {
         logInfo('Processing Agenda job', {
           jobId: String(job.attrs._id),
@@ -283,9 +253,6 @@ const scheduleWithAgenda = async (
     }
     
     const job = await agenda.schedule(scheduledFor, jobType, data);
-    // Use the job's natural ID instead of trying to set a custom one
-    // Agenda will generate its own ID which we can use
-    
     await job.save();
     
     logInfo('Job scheduled successfully with Agenda', { jobId: String(job.attrs._id), scheduledFor });
@@ -385,7 +352,28 @@ export const cancelJob = async (jobId: string): Promise<boolean> => {
       if (typeof jobId !== 'string' || jobId.length === 0) {
         return false;
       }
-      const result = await agenda.cancel({ _id: jobId });
+      
+      // First check the job status to see if it can be cancelled
+      const jobs = await agenda.jobs({ _id: new mongoose.Types.ObjectId(jobId) });
+      if (!Array.isArray(jobs) || jobs.length === 0) {
+        logWarning('Job not found for cancellation', { jobId: String(jobId) });
+        return false;
+      }
+      
+      const agendaJob = jobs[0];
+      if (!agendaJob) {
+        logWarning('Job not found for cancellation', { jobId: String(jobId) });
+        return false;
+      }
+      
+      // Check if the job is already completed or failed
+      if (agendaJob.attrs.lastRunAt || agendaJob.attrs.failedAt || 
+          (typeof agendaJob.attrs.failReason === 'string' && agendaJob.attrs.failReason.length > 0)) {
+        logWarning('Cannot cancel completed or failed job', { jobId: String(jobId) });
+        return false;
+      }
+      
+      const result = await agenda.cancel({ _id: new mongoose.Types.ObjectId(jobId) });
       if (typeof result !== 'number' || result === 0) {
         logWarning('Job not found for cancellation', { jobId: String(jobId) });
         return false;
@@ -441,7 +429,7 @@ export const getJobStatus = async (jobId: string): Promise<{
     
     case 'agenda': {
       const agenda = initializeAgenda();
-      const jobs = await agenda.jobs({ _id: jobId });
+      const jobs = await agenda.jobs({ _id: new mongoose.Types.ObjectId(jobId) });
       if (!Array.isArray(jobs) || jobs.length === 0) {
         return { exists: false };
       }
@@ -626,7 +614,7 @@ export const processJob = async (jobId: string): Promise<boolean> => {
     
     case 'agenda': {
       const agenda = initializeAgenda();
-      const jobs = await agenda.jobs({ _id: jobId });
+      const jobs = await agenda.jobs({ _id: new mongoose.Types.ObjectId(jobId) });
       
       if (!Array.isArray(jobs) || jobs.length === 0) {
         logWarning('Job not found for processing', { jobId });
@@ -636,6 +624,13 @@ export const processJob = async (jobId: string): Promise<boolean> => {
       const job = jobs[0];
       if (!job) {
         logWarning('Job not found for processing', { jobId });
+        return false;
+      }
+      
+      // Check if job is already completed or failed
+      if (job.attrs.lastRunAt || job.attrs.failedAt || 
+          (typeof job.attrs.failReason === 'string' && job.attrs.failReason.length > 0)) {
+        logWarning('Job is not in processable state', { jobId });
         return false;
       }
       
@@ -717,23 +712,6 @@ export const getQueueHealth = async (): Promise<{
 }> => {
   try {
     const config = getQueueConfig();
-    
-    // In test environment with Agenda, return mock health status immediately
-    if (process.env.NODE_ENV === 'test' && config.provider === 'agenda') {
-      logInfo('Agenda queue health check (test mode)', { provider: config.provider });
-      
-      return {
-        healthy: true,
-        provider: config.provider,
-        jobCounts: {
-          scheduled: 0,
-          running: 0,
-          completed: 0,
-          failed: 0,
-          cancelled: 0
-        }
-      };
-    }
     
     switch (config.provider) {
     case 'bull': {
@@ -826,20 +804,19 @@ export const shutdown = async (): Promise<void> => {
     switch (config.provider) {
     case 'bull':
       if (bullQueue) {
-        await bullQueue.close();
-        bullQueue = null;
+        try {
+          await bullQueue.close();
+        } catch (bullError) {
+          logError('Bull cleanup error', { error: bullError instanceof Error ? bullError.message : 'Unknown' });
+        } finally {
+          bullQueue = null;
+        }
       }
       break;
-    
+      
     case 'agenda':
       if (agendaInstance) {
         try {
-          // In test mode, we're using a mock so just clear the reference
-          if (process.env.NODE_ENV === 'test') {
-            agendaInstance = null;
-            return;
-          }
-          
           // Remove all event listeners to prevent memory leaks
           agendaInstance.removeAllListeners();
           
@@ -849,6 +826,8 @@ export const shutdown = async (): Promise<void> => {
           // Close the database connection
           await agendaInstance.close();
           
+
+          
         } catch (agendaError) {
           // Log but don't throw - Agenda cleanup errors shouldn't prevent shutdown
           logError('Agenda cleanup error', { error: agendaError instanceof Error ? agendaError.message : 'Unknown' });
@@ -857,9 +836,10 @@ export const shutdown = async (): Promise<void> => {
         }
       }
       break;
+      
+    default:
+      logWarning('Unknown queue provider during shutdown', { provider: String(config.provider ?? 'unknown') });
     }
-    
-    logInfo('Queue service shutdown completed');
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logError('Queue service shutdown failed', { error: errorMessage });

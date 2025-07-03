@@ -149,7 +149,6 @@ describe('Widget Performance Tests', () => {
           )
         );
         // Release references
-        // eslint-disable-next-line no-unused-vars
         batch.length = 0;
         if (global.gc) {
           global.gc();

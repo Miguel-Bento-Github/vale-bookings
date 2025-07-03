@@ -34,7 +34,6 @@ interface ZMember {
 class MockRedis {
   private sets: Map<string, ZMember[]> = new Map();
   private counters = new Map<string, number>();
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   on(): void {}
 
   /** Increment a key used for abuse tracking (not utilised in these tests). */
@@ -217,7 +216,6 @@ describe('RateLimitService', () => {
 
       // Issue additional requests until one is blocked
       for (let i = 0; i < 3 && lastResult.allowed; i++) {
-        // eslint-disable-next-line no-await-in-loop
         lastResult = await checkRateLimit(id, cfg);
       }
 
@@ -312,7 +310,6 @@ describe('RateLimitService', () => {
     it('falls back gracefully when the underlying store fails', async () => {
       // Store that always throws to exercise error path.
       class FailingStore implements RateLimitStore {
-        // eslint-disable-next-line class-methods-use-this
         pipeline(): RateLimitPipeline {
           throw new Error('Pipeline failure');
         }
@@ -392,7 +389,6 @@ describe('RateLimitService', () => {
       // Trigger violations – 11 is > maxViolations (10)
       for (let i = 0; i < 11; i++) {
         // Await each async middleware execution
-        // eslint-disable-next-line no-await-in-loop
         await new Promise<void>((resolve) => {
           ipLimitMw(makeReq(), resFactory(), () => resolve());
           setImmediate(resolve);
