@@ -40,7 +40,7 @@ describe('QueueService', () => {
     }
     
     // Wait a bit for any pending operations to complete
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 50));
   });
 
   afterEach(async () => {
@@ -59,7 +59,7 @@ describe('QueueService', () => {
     }
     
     // Wait a bit for any pending operations to complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 50));
   });
 
   describe('scheduleJob', () => {
