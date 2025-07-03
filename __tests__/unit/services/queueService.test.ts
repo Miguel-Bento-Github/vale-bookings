@@ -34,15 +34,13 @@ describe('QueueService', () => {
     }
     
     // Additional cleanup for test environment
-    if (process.env.NODE_ENV === 'test') {
-      // Force garbage collection to help clean up any remaining handles
-      if (global.gc) {
-        global.gc();
-      }
-      
-      // Wait a bit for any pending operations to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
+    // Force garbage collection to help clean up any remaining handles
+    if (global.gc) {
+      global.gc();
     }
+    
+    // Wait a bit for any pending operations to complete
+    await new Promise(resolve => setTimeout(resolve, 200));
   });
 
   afterEach(async () => {
@@ -54,16 +52,14 @@ describe('QueueService', () => {
       // Ignore shutdown errors in tests
     }
     
-    // Additional cleanup for Agenda in test environment
-    if (process.env.QUEUE_PROVIDER === 'agenda') {
-      // Force garbage collection to help clean up any remaining handles
-      if (global.gc) {
-        global.gc();
-      }
-      
-      // Wait a bit for any pending operations to complete
-      await new Promise(resolve => setTimeout(resolve, 50));
+    // Additional cleanup for both Bull and Agenda in test environment
+    // Force garbage collection to help clean up any remaining handles
+    if (global.gc) {
+      global.gc();
     }
+    
+    // Wait a bit for any pending operations to complete
+    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   describe('scheduleJob', () => {
@@ -243,16 +239,10 @@ describe('QueueService', () => {
       const originalError = console.error;
       console.error = jest.fn();
       
-      // Mock mockJobs.get to throw an error
-      const mockMap = new Map();
-      mockMap.get = jest.fn(() => {
-        throw new Error('Mock error');
-      });
-      
-      // We can't easily mock the internal mockJobs Map, so we'll test the error path differently
-      // by testing the catch block in a different way
-      const status = await getJobStatus('test-job');
+      // Test with a non-existent job ID to trigger the error path
+      const status = await getJobStatus('non-existent-job-id');
       expect(status.exists).toBe(false);
+      
       console.error = originalError;
     });
   });

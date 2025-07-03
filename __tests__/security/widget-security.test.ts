@@ -63,19 +63,16 @@ describe('Widget Security Tests', () => {
       const maliciousData = {
         locationId: testLocation._id.toString(),
         serviceId: 'haircut',
-        date: new Date().toISOString().split('T')[0],
-        time: '10:00',
+        bookingDate: new Date().toISOString().split('T')[0],
+        bookingTime: '10:00',
         duration: 60,
-        guestInfo: {
-          firstName: '<script>alert("XSS")</script>',
-          lastName: '<img src="x" onerror="alert(\'XSS\')">',
-          email: 'test@example.com',
-          phone: '+1234567890'
-        },
+        guestEmail: 'test@example.com<script>alert("XSS")</script>',
+        guestName: '<img src="x" onerror="alert(\'XSS\')">',
+        guestPhone: '+1234567890',
         gdprConsent: {
-          consentGiven: true,
-          consentVersion: '1.0',
-          consentTimestamp: new Date().toISOString()
+          version: '1.0',
+          acceptedAt: new Date().toISOString(),
+          ipAddress: '127.0.0.1'
         }
       };
 
@@ -87,8 +84,8 @@ describe('Widget Security Tests', () => {
 
       // Should sanitize the input or reject it
       if (response.status === 201) {
-        expect(response.body.data.guestInfo.firstName).not.toContain('<script>');
-        expect(response.body.data.guestInfo.lastName).not.toContain('<img');
+        expect(response.body.data.guestEmail).not.toContain('<script>');
+        expect(response.body.data.guestName).not.toContain('<img');
       } else {
         expect(response.status).toBe(400);
         expect(response.body.errorCode).toBe('VALIDATION_ERROR');
@@ -151,19 +148,16 @@ describe('Widget Security Tests', () => {
         const bookingData = {
           locationId: testLocation._id.toString(),
           serviceId: 'haircut',
-          date: new Date().toISOString().split('T')[0],
-          time: '10:00',
+          bookingDate: new Date().toISOString().split('T')[0],
+          bookingTime: '10:00',
           duration: 60,
-          guestInfo: {
-            firstName: 'Test',
-            lastName: 'User',
-            email: email,
-            phone: '+1234567890'
-          },
+          guestEmail: email,
+          guestName: 'Test User',
+          guestPhone: '+1234567890',
           gdprConsent: {
-            consentGiven: true,
-            consentVersion: '1.0',
-            consentTimestamp: new Date().toISOString()
+            version: '1.0',
+            acceptedAt: new Date().toISOString(),
+            ipAddress: '127.0.0.1'
           }
         };
 
