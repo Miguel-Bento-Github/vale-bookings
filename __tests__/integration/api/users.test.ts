@@ -39,6 +39,10 @@ describe('Users Integration Tests', () => {
         email: uniqueUser.email,
         password: validUser.password
       });
+    
+    if (!userLoginResponse.body.success || !userLoginResponse.body.data?.token) {
+      throw new Error(`User login failed: ${JSON.stringify(userLoginResponse.body)}`);
+    }
     userToken = userLoginResponse.body.data.token;
 
     const adminLoginResponse = await request(app)
@@ -47,6 +51,10 @@ describe('Users Integration Tests', () => {
         email: uniqueAdmin.email,
         password: adminUser.password
       });
+    
+    if (!adminLoginResponse.body.success || !adminLoginResponse.body.data?.token) {
+      throw new Error(`Admin login failed: ${JSON.stringify(adminLoginResponse.body)}`);
+    }
     adminToken = adminLoginResponse.body.data.token;
   });
 
