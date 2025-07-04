@@ -494,7 +494,7 @@ npm test __tests__/unit/services.test.ts
 NODE_ENV=development
 PORT=3000
 MONGODB_URI=mongodb://localhost:27017/vale_db
-MONGODB_TEST_URI=mongodb://localhost:27017/valet_test_db
+MONGODB_TEST_URI=mongodb://localhost:27017/vale_test_db
 JWT_SECRET=your-super-secret-jwt-key
 JWT_REFRESH_SECRET=your-refresh-secret
 JWT_EXPIRES_IN=15m
