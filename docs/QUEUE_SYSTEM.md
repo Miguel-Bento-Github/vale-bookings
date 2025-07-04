@@ -48,7 +48,7 @@ REDIS_PASSWORD=your_redis_password
 REDIS_DB=0
 
 # MongoDB configuration (for Agenda)
-MONGODB_URL=mongodb://localhost:27017/vale
+MONGODB_URL=mongodb://localhost:27017/vale_db
 QUEUE_COLLECTION=agenda_jobs
 ```
 
@@ -57,7 +57,7 @@ QUEUE_COLLECTION=agenda_jobs
 - **Provider**: Bull (if not specified)
 - **Redis Host**: localhost
 - **Redis Port**: 6379
-- **MongoDB URL**: mongodb://localhost:27017/vale
+- **MongoDB URL**: mongodb://localhost:27017/vale_db
 - **Queue Collection**: agenda_jobs
 
 ## Usage
