@@ -45,8 +45,8 @@ const getQueueConfig = (): QueueConfig => {
   // In test environment, use the in-memory MongoDB instance
   const isTestEnv = process.env.NODE_ENV === 'test';
   const mongoUrl = isTestEnv 
-    ? (process.env.MONGODB_URI ?? 'mongodb://localhost:27017/test_valet_db')
-    : (process.env.MONGODB_URL ?? 'mongodb://localhost:27017/vale');
+    ? (process.env.MONGODB_URI ?? 'mongodb://localhost:27017/test_vale_db')
+    : (process.env.MONGODB_URL ?? 'mongodb://localhost:27017/vale_db');
 
   return {
     provider: (process.env.QUEUE_PROVIDER as 'bull' | 'agenda') ?? 'bull',
