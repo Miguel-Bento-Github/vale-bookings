@@ -35,7 +35,7 @@ describe('Bookings Integration Tests', () => {
     bookingId = context.bookingId;
 
     // Small delay to ensure all database operations are complete
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 5));
   });
 
 

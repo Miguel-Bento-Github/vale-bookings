@@ -90,8 +90,10 @@ const sendWithTwilio = async (message: SMSMessage, _config: SMSConfig): Promise<
     const messageId = `tw_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const segments = calculateSMSSegments(message.message);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 150));
+    // Simulate API call delay (skip in test environment)
+    if (process.env.NODE_ENV !== 'test') {
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
     
     logInfo('SMS sent successfully via Twilio', { messageId, to: message.to, segments });
     
@@ -124,8 +126,10 @@ const sendWithSNS = async (message: SMSMessage, _config: SMSConfig): Promise<SMS
     const messageId = `sns_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const segments = calculateSMSSegments(message.message);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 180));
+    // Simulate API call delay (skip in test environment)
+    if (process.env.NODE_ENV !== 'test') {
+      await new Promise(resolve => setTimeout(resolve, 180));
+    }
     
     logInfo('SMS sent successfully via SNS', { messageId, to: message.to, segments });
     
@@ -231,9 +235,10 @@ export const sendBulkSMS = async (
     
     results.push(...batchResults);
     
-    // Add delay between batches to respect rate limits
+    // Add delay between batches to respect rate limits (reduce in test environment)
     if (i + batchSize < messages.length) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      const actualDelay = process.env.NODE_ENV === 'test' ? Math.min(delayMs, 10) : delayMs;
+      await new Promise(resolve => setTimeout(resolve, actualDelay));
     }
   }
   

@@ -248,7 +248,10 @@ const scheduleWithAgenda = async (
         // In production, you would call your actual job handlers here
         // For example: await notificationService.sendReminder(job.attrs.data);
         
-        await new Promise(resolve => setTimeout(resolve, 100)); // Simulate work
+        // Simulate work (skip in test environment)
+        if (process.env.NODE_ENV !== 'test') {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       });
     }
     

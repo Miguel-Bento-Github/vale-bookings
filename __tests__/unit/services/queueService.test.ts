@@ -34,7 +34,7 @@ describe('QueueService', () => {
     // Additional cleanup for Agenda in test environment
     if (process.env.QUEUE_PROVIDER === 'agenda') {
       // Wait a bit for any pending operations to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       // Force garbage collection to help clean up any remaining handles
       if (global.gc) {
@@ -60,7 +60,7 @@ describe('QueueService', () => {
       }
       
       // Wait a bit for any pending operations to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
   });
 
@@ -170,7 +170,7 @@ describe('QueueService', () => {
       expect(result.success).toBe(true);
       
       // Wait a bit for the job to be ready for processing
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       // Process the job first
       const processed = await processJob(result.jobId ?? '');

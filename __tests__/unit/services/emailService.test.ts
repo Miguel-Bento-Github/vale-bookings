@@ -835,7 +835,7 @@ describe('EmailQueueService', () => {
       expect(id).toMatch(/^email_\d+_[a-z0-9]+$/);
       
       // Wait a bit for processing to complete and email to be re-queued due to error
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       // Check queue length after processing
       const status = emailQueueService.getStatus();

@@ -153,7 +153,7 @@ describe('Widget Performance Tests', () => {
         if (global.gc) {
           global.gc();
           // Give GC a chance to run
-          await new Promise(r => setTimeout(r, 5));
+          await new Promise(r => setTimeout(r, 1));
         }
       }
 

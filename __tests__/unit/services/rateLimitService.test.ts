@@ -596,7 +596,7 @@ describe('RateLimitService', () => {
       mw(req, res, next);
       
       // Wait for async operations to complete
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       // Should call next() on error
       expect(next).toHaveBeenCalled();

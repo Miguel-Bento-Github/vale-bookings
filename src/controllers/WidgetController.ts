@@ -457,8 +457,10 @@ const createBooking = async (req: Request, res: Response, next: NextFunction): P
             mongoError.code === 11000 && 
             mongoError.keyPattern?.referenceNumber !== undefined) {
           attempts++;
-          // Add a small random delay before retrying
-          await new Promise(r => setTimeout(r, Math.floor(Math.random() * 10) + 1));
+          // Add a small random delay before retrying (skip in test environment)
+          if (process.env.NODE_ENV !== 'test') {
+            await new Promise(r => setTimeout(r, Math.floor(Math.random() * 10) + 1));
+          }
           continue;
         }
         throw err;
