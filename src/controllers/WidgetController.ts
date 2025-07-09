@@ -4,6 +4,7 @@ import mongoose, { Model } from 'mongoose';
 import { WIDGET_ERROR_CODES } from '../constants/widget';
 import { GuestBooking } from '../models/GuestBooking';
 import Location from '../models/Location';
+import { EmailTemplateService } from '../services/EmailTemplateService';
 import { IGuestBooking } from '../types/widget';
 import { encryptionService } from '../utils/encryption';
 import { logInfo, logError } from '../utils/logger';
@@ -480,6 +481,87 @@ const createBooking = async (req: Request, res: Response, next: NextFunction): P
       locationId: bookingData.locationId,
       bookingDate: bookingData.bookingDate
     });
+
+    // Send confirmation email
+    try {
+      const emailTemplateService = new EmailTemplateService();
+      
+      // Combine booking date and time into a single Date object
+      const bookingDateStr = savedBooking.bookingDate?.toISOString();
+      if (!bookingDateStr) {
+        throw new Error('Invalid booking date');
+      }
+      
+      const dateStr = bookingDateStr.split('T')[0];
+      if (dateStr === undefined || dateStr === '') {
+        throw new Error('Invalid date format');
+      }
+      
+      const dateParts = dateStr.split('-');
+      const timeParts = savedBooking.bookingTime.split(':');
+      
+      // Ensure we have valid date and time parts
+      if (dateParts.length !== 3 || timeParts.length !== 2) {
+        throw new Error('Invalid date or time format');
+      }
+      
+      // After validation, we know these values exist
+      const year = dateParts[0];
+      const month = dateParts[1];
+      const day = dateParts[2];
+      const hours = timeParts[0];
+      const minutes = timeParts[1];
+      
+      if (year === undefined || year === '' || 
+          month === undefined || month === '' || 
+          day === undefined || day === '' || 
+          hours === undefined || hours === '' || 
+          minutes === undefined || minutes === '') {
+        throw new Error('Invalid date or time components');
+      }
+      
+      // Create startTime
+      const startTime = new Date(
+        parseInt(year, 10),
+        parseInt(month, 10) - 1,
+        parseInt(day, 10),
+        parseInt(hours, 10),
+        parseInt(minutes, 10)
+      );
+
+      // Calculate end time based on duration
+      const endTime = new Date(startTime.getTime() + savedBooking.duration * 60 * 1000);
+
+      const emailData = {
+        bookingId: String(savedBooking._id),
+        customerEmail: savedBooking.guestEmail,
+        customerName: savedBooking.guestName,
+        reference: savedBooking.referenceNumber,
+        locationName: location.name,
+        locationAddress: location.address,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        duration: savedBooking.duration / 60, // Convert minutes to hours
+        totalAmount: savedBooking.price,
+        currency: savedBooking.currency,
+        status: savedBooking.status,
+        instructions: 'Please arrive 5 minutes before your scheduled time.', // Default instructions
+        cancellationPolicy: 'You can cancel up to 2 hours before your booking time.' // Default policy
+      };
+
+      await emailTemplateService.sendBookingConfirmation(emailData);
+      
+      logInfo('Booking confirmation email sent', {
+        referenceNumber: savedBooking.referenceNumber,
+        email: savedBooking.guestEmail
+      });
+    } catch (emailError) {
+      // Log email error but don't fail the booking
+      logError('Failed to send booking confirmation email', {
+        error: emailError instanceof Error ? emailError.message : 'Unknown error',
+        referenceNumber: savedBooking.referenceNumber
+      });
+    }
 
     res.status(201).json({
       success: true,
