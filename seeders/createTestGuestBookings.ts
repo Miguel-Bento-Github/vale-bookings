@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import mongoose from 'mongoose';
 import { GuestBooking } from '../src/models/GuestBooking';
 import Location from '../src/models/Location';
@@ -6,8 +7,45 @@ import { DATABASE_CONFIG } from '../src/constants/database';
 import { 
   GUEST_BOOKING_STATUSES, 
   GDPR_CONSENT_VERSIONS,
-  AUDIT_ACTIONS 
+  AUDIT_ACTIONS,
+  REFERENCE_NUMBER_CONFIG
 } from '../src/constants/widget';
+
+// Function to generate reference number
+function generateReferenceNumber(): string {
+  const timestamp = Date.now().toString(36);
+  const randomChars = Array.from(
+    { length: REFERENCE_NUMBER_CONFIG.LENGTH - REFERENCE_NUMBER_CONFIG.PREFIX.length - timestamp.length },
+    () => REFERENCE_NUMBER_CONFIG.CHARSET[Math.floor(Math.random() * REFERENCE_NUMBER_CONFIG.CHARSET.length)]
+  ).join('');
+  
+  return REFERENCE_NUMBER_CONFIG.PREFIX + timestamp + randomChars;
+}
+
+// Function to generate unique reference number
+async function generateUniqueReferenceNumber(): Promise<string> {
+  let referenceNumber: string;
+  let attempts = 0;
+  const maxAttempts = 10;
+  
+  do {
+    referenceNumber = generateReferenceNumber();
+    attempts++;
+    
+    // Check if reference number already exists
+    const existing = await GuestBooking.findOne({ referenceNumber });
+    if (!existing) {
+      return referenceNumber;
+    }
+    
+    // Small delay to ensure different timestamp
+    if (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 1));
+    }
+  } while (attempts < maxAttempts);
+  
+  throw new Error('Failed to generate unique reference number after maximum attempts');
+}
 
 async function createTestGuestBookings() {
   try {
@@ -46,6 +84,7 @@ async function createTestGuestBookings() {
 
     // Create test guest bookings
     const guestBookings: Array<{
+      referenceNumber: string;
       guestEmail: string;
       guestName: string;
       guestPhone: string;
@@ -81,9 +120,13 @@ async function createTestGuestBookings() {
     ];
 
     // Create guest bookings for the next 30 days
+    const createdGuestBookings: any[] = [];
     for (let i = 0; i < 20; i++) {
       const guest = guestData[i % guestData.length];
       const location = locations[i % locations.length];
+      
+      // Generate unique reference number
+      const referenceNumber = await generateUniqueReferenceNumber();
       
       // Create booking for a future date
       const bookingDate = new Date(now);
@@ -127,7 +170,9 @@ async function createTestGuestBookings() {
         }
       ];
 
-      guestBookings.push({
+      // Create and save the guest booking immediately
+      const guestBooking = new GuestBooking({
+        referenceNumber,
         guestEmail: guest.email,
         guestName: guest.name,
         guestPhone: guest.phone,
@@ -147,10 +192,9 @@ async function createTestGuestBookings() {
         status,
         auditTrail
       });
+      const savedBooking = await guestBooking.save();
+      createdGuestBookings.push(savedBooking);
     }
-
-    // Insert all guest bookings
-    const createdGuestBookings = await GuestBooking.insertMany(guestBookings);
     console.log(`Created ${createdGuestBookings.length} test guest bookings`);
 
     // Display summary by status

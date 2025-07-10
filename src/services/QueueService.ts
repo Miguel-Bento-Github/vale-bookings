@@ -46,7 +46,7 @@ const getQueueConfig = (): QueueConfig => {
   // In test environment, use the in-memory MongoDB instance
   const isTestEnv = process.env.NODE_ENV === 'test';
   const mongoUrl = isTestEnv 
-    ? DATABASE_CONFIG.MONGODB_TEST_VALE_DB
+    ? DATABASE_CONFIG.MONGODB_TEST_URI
     : DATABASE_CONFIG.MONGODB_URL;
 
   return {
