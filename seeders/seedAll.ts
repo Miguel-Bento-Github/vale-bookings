@@ -11,11 +11,11 @@ async function seedAll() {
 
     console.log('📋 Available seeders to run:');
     console.log('  1. npx tsx src/scripts/createAdmin.ts');
-    console.log('  2. npx tsx scripts/createTestApiKey.ts');
-    console.log('  3. npx tsx scripts/createTestLocations.ts');
-    console.log('  4. npx tsx scripts/createTestSchedules.ts');
-    console.log('  5. npx tsx scripts/createTestBookings.ts');
-    console.log('  6. npx tsx scripts/createTestGuestBookings.ts');
+    console.log('  2. npx tsx seeders/createTestApiKey.ts');
+    console.log('  3. npx tsx seeders/createTestLocations.ts');
+    console.log('  4. npx tsx seeders/createTestSchedules.ts');
+    console.log('  5. npx tsx seeders/createTestBookings.ts');
+    console.log('  6. npx tsx seeders/createTestGuestBookings.ts');
     console.log('\n💡 Run these scripts in order for complete database seeding.');
     console.log('   Or run individual scripts as needed.\n');
 
