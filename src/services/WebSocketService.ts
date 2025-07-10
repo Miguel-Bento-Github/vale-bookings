@@ -77,7 +77,7 @@ function setupMiddleware(): void {
     }
 
     try {
-      const jwtSecret = process.env.JWT_SECRET ?? 'fallback-secret-key';
+      const jwtSecret = process.env.JWT_SECRET ?? 'your-super-secret-jwt-key-change-this-in-production';
       if (jwtSecret.trim() === '') {
         logError('❌ WebSocket auth: JWT_SECRET not configured');
         return next(new Error('JWT secret not configured'));

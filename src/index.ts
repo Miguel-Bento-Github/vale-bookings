@@ -6,6 +6,7 @@ import { DATABASE_CONFIG } from './constants/database';
 import { logInfo, logSuccess, logError } from './utils/logger';
 
 config();
+
 const PORT = process.env.PORT ?? '3000';
 
 // Database connection and server start
