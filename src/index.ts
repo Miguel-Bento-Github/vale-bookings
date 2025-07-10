@@ -2,8 +2,8 @@ import { config } from 'dotenv';
 import mongoose from 'mongoose';
 
 import app, { httpServer } from './app';
-import { logInfo, logSuccess, logError } from './utils/logger';
 import { DATABASE_CONFIG } from './constants/database';
+import { logInfo, logSuccess, logError } from './utils/logger';
 
 config();
 const PORT = process.env.PORT ?? '3000';

@@ -3,8 +3,8 @@ import { Agenda } from 'agenda';
 import Bull from 'bull';
 import mongoose from 'mongoose';
 
-import { logInfo, logWarning, logError } from '../utils/logger';
 import { DATABASE_CONFIG } from '../constants/database';
+import { logInfo, logWarning, logError } from '../utils/logger';
 
 // Queue configuration
 interface QueueConfig {

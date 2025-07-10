@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach, jest, beforeAll, afterAll } from '@jest/globals';
 import mongoose from 'mongoose';
 
+import { DATABASE_CONFIG } from '../../../src/constants/database';
 import { 
   GUEST_BOOKING_STATUSES, 
   DATA_RETENTION_PERIODS,
@@ -10,7 +11,6 @@ import {
 import { GuestBooking } from '../../../src/models/GuestBooking';
 import type { GDPRConsent } from '../../../src/types/widget';
 import { encryptionService } from '../../../src/utils/encryption';
-import { DATABASE_CONFIG } from '../../../src/constants/database';
 
 // Mock encryption service
 jest.mock('../../../src/utils/encryption', () => ({
