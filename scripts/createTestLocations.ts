@@ -1,63 +1,63 @@
 import mongoose from 'mongoose';
 import Location from '../src/models/Location';
 
-// Test locations data
+// Test locations data (all in Leiden, Netherlands - less mainstream locations)
 const testLocations = [
   {
-    name: 'Downtown Parking',
-    address: '123 Main St, San Francisco, CA 94102',
+    name: 'Pieterskerk Square Cafe',
+    address: 'Pieterskerkhof 9, 2311 SL Leiden, Netherlands',
     coordinates: {
-      latitude: 37.7749,
-      longitude: -122.4194
+      latitude: 52.1583,
+      longitude: 4.4924
     },
     services: ['standard-valet', 'premium-valet'],
     isActive: true,
     operatingHours: {
-      monday: { open: '06:00', close: '22:00' },
-      tuesday: { open: '06:00', close: '22:00' },
-      wednesday: { open: '06:00', close: '22:00' },
-      thursday: { open: '06:00', close: '22:00' },
-      friday: { open: '06:00', close: '22:00' },
-      saturday: { open: '07:00', close: '21:00' },
-      sunday: { open: '07:00', close: '21:00' }
+      monday: { open: '08:00', close: '18:00' },
+      tuesday: { open: '08:00', close: '18:00' },
+      wednesday: { open: '08:00', close: '18:00' },
+      thursday: { open: '08:00', close: '18:00' },
+      friday: { open: '08:00', close: '20:00' },
+      saturday: { open: '09:00', close: '20:00' },
+      sunday: { open: '10:00', close: '17:00' }
     }
   },
   {
-    name: 'Airport Valet',
-    address: '456 Airport Blvd, San Francisco, CA 94128',
+    name: 'Botanical Gardens Workshop',
+    address: 'Rapenburg 73, 2311 GJ Leiden, Netherlands',
     coordinates: {
-      latitude: 37.6213,
-      longitude: -122.3790
-    },
-    services: ['standard-valet', 'premium-valet'],
-    isActive: true,
-    operatingHours: {
-      monday: { open: '04:00', close: '24:00' },
-      tuesday: { open: '04:00', close: '24:00' },
-      wednesday: { open: '04:00', close: '24:00' },
-      thursday: { open: '04:00', close: '24:00' },
-      friday: { open: '04:00', close: '24:00' },
-      saturday: { open: '04:00', close: '24:00' },
-      sunday: { open: '04:00', close: '24:00' }
-    }
-  },
-  {
-    name: 'Shopping Center',
-    address: '789 Market St, San Francisco, CA 94103',
-    coordinates: {
-      latitude: 37.7849,
-      longitude: -122.4094
+      latitude: 52.1579,
+      longitude: 4.4857
     },
     services: ['standard-valet'],
     isActive: true,
     operatingHours: {
-      monday: { open: '09:00', close: '21:00' },
-      tuesday: { open: '09:00', close: '21:00' },
-      wednesday: { open: '09:00', close: '21:00' },
-      thursday: { open: '09:00', close: '21:00' },
-      friday: { open: '09:00', close: '22:00' },
-      saturday: { open: '09:00', close: '22:00' },
-      sunday: { open: '10:00', close: '20:00' }
+      monday: { open: '10:00', close: '17:00' },
+      tuesday: { open: '10:00', close: '17:00' },
+      wednesday: { open: '10:00', close: '17:00' },
+      thursday: { open: '10:00', close: '17:00' },
+      friday: { open: '10:00', close: '17:00' },
+      saturday: { open: '10:00', close: '17:00' },
+      sunday: { open: '10:00', close: '17:00' }
+    }
+  },
+  {
+    name: 'Breestraat Book Corner',
+    address: 'Breestraat 45, 2311 CS Leiden, Netherlands',
+    coordinates: {
+      latitude: 52.1604,
+      longitude: 4.4931
+    },
+    services: ['standard-valet', 'premium-valet'],
+    isActive: true,
+    operatingHours: {
+      monday: { open: '09:00', close: '18:00' },
+      tuesday: { open: '09:00', close: '18:00' },
+      wednesday: { open: '09:00', close: '18:00' },
+      thursday: { open: '09:00', close: '18:00' },
+      friday: { open: '09:00', close: '19:00' },
+      saturday: { open: '10:00', close: '19:00' },
+      sunday: { open: '12:00', close: '17:00' }
     }
   }
 ];
@@ -68,9 +68,9 @@ async function createTestLocations() {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/vale-test');
     console.log('Connected to MongoDB');
 
-    // Clear existing test locations
+    // Clear existing test locations with the same names
     await Location.deleteMany({ name: { $in: testLocations.map(loc => loc.name) } });
-    console.log('Cleared existing test locations');
+    console.log('Cleared existing test locations with matching names');
 
     // Create new test locations
     const createdLocations = await Location.insertMany(testLocations);
