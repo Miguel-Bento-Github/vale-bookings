@@ -65,7 +65,7 @@ const testLocations = [
 async function createTestLocations() {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/vale-test');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/vale_db');
     console.log('Connected to MongoDB');
 
     // Clear existing test locations with the same names

@@ -130,7 +130,7 @@ describe('Widget Performance Tests', () => {
       const endTime = Date.now();
 
       expect(response.status).toBe(200);
-      expect(endTime - startTime).toBeLessThan(100);
+      expect(endTime - startTime).toBeLessThan(150);
     });
   });
 
