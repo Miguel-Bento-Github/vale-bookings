@@ -1,12 +1,15 @@
 import { hash } from 'bcryptjs';
 import mongoose from 'mongoose';
 
+import { DATABASE_CONFIG } from '../constants/database';
 import User from '../models/User';
 
 async function createAdminUser(): Promise<void> {
   try {
-    // Connect to MongoDB
-    const mongoUri = process.env.MONGODB_URI ?? 'mongodb://localhost:27017/vale_db';
+    // Connect to MongoDB - use test URI in test environment
+    const mongoUri = process.env.NODE_ENV === 'test' 
+      ? DATABASE_CONFIG.MONGODB_TEST_URI 
+      : DATABASE_CONFIG.MONGODB_URI;
     await mongoose.connect(mongoUri);
     process.stdout.write('Connected to MongoDB\n');
 

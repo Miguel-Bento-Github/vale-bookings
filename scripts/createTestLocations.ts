@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Location from '../src/models/Location';
+import { DATABASE_CONFIG } from '../src/constants/database';
 
 // Test locations data (all in Leiden, Netherlands - less mainstream locations)
 const testLocations = [
@@ -65,7 +66,7 @@ const testLocations = [
 async function createTestLocations() {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/vale_db');
+    await mongoose.connect(DATABASE_CONFIG.MONGODB_URI);
     console.log('Connected to MongoDB');
 
     // Clear existing test locations with the same names

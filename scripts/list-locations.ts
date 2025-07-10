@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
-const { DATABASE_CONFIG } = require('../src/constants/database');
+import mongoose from 'mongoose';
+import { DATABASE_CONFIG } from '../src/constants/database';
 
 // Import the Location model
 const Location = require('../dist/src/models/Location').default;
 
-async function listLocations() {
+async function listLocations(): Promise<void> {
   try {
     // Connect to MongoDB
     await mongoose.connect(DATABASE_CONFIG.MONGODB_URI);
@@ -20,7 +20,7 @@ async function listLocations() {
       console.log('No locations found in database.');
       console.log('Run: npx tsx scripts/createTestLocations.ts');
     } else {
-      locations.forEach((location, index) => {
+      locations.forEach((location: any, index: number) => {
         console.log(`${index + 1}. ${location.name}`);
         console.log(`   ID: ${location._id}`);
         console.log(`   Active: ${location.isActive ? '✅' : '❌'}`);
@@ -30,11 +30,12 @@ async function listLocations() {
     }
 
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Error:', (error as Error).message);
   } finally {
     await mongoose.disconnect();
     console.log('Disconnected from MongoDB');
   }
 }
 
+// Run the script
 listLocations(); 

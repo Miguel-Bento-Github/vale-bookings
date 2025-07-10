@@ -10,6 +10,7 @@ import {
 import { GuestBooking } from '../../../src/models/GuestBooking';
 import type { GDPRConsent } from '../../../src/types/widget';
 import { encryptionService } from '../../../src/utils/encryption';
+import { DATABASE_CONFIG } from '../../../src/constants/database';
 
 // Mock encryption service
 jest.mock('../../../src/utils/encryption', () => ({
@@ -22,7 +23,7 @@ jest.mock('../../../src/utils/encryption', () => ({
 describe('GuestBooking Model', () => {
   beforeAll(async () => {
     if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(process.env.MONGODB_URI ?? 'mongodb://localhost:27017/test');
+      await mongoose.connect(DATABASE_CONFIG.MONGODB_TEST_URI);
     }
   });
 

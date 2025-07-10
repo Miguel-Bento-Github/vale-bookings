@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
-const { DATABASE_CONFIG } = require('../src/constants/database');
+import mongoose from 'mongoose';
+import { DATABASE_CONFIG } from '../src/constants/database';
 
-async function main() {
+async function main(): Promise<void> {
   try {
     await mongoose.connect(DATABASE_CONFIG.MONGODB_URI);
     console.log('Connected to MongoDB');
@@ -40,6 +40,7 @@ async function main() {
   }
 }
 
+// Run if called directly
 if (require.main === module) {
-  main();
+  void main();
 } 

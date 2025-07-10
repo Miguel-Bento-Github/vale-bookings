@@ -1,6 +1,7 @@
 import { hash } from 'bcryptjs';
 import mongoose from 'mongoose';
 
+import { DATABASE_CONFIG } from '../../../src/constants/database';
 import User from '../../../src/models/User';
 import createAdminUser from '../../../src/scripts/createAdmin';
 
@@ -28,12 +29,14 @@ const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {
 describe('createAdminUser script', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.NODE_ENV = 'test';
     process.env.MONGODB_URI = 'mongodb://test:27017/test_db';
   });
 
   afterEach(() => {
     jest.clearAllMocks();
     delete process.env.MONGODB_URI;
+    delete process.env.NODE_ENV;
   });
 
   it('should create admin user successfully when none exists', async () => {
@@ -50,7 +53,7 @@ describe('createAdminUser script', () => {
 
     await createAdminUser();
 
-    expect(mockMongoose.connect).toHaveBeenCalledWith('mongodb://test:27017/test_db');
+    expect(mockMongoose.connect).toHaveBeenCalledWith(DATABASE_CONFIG.MONGODB_TEST_URI);
     expect(mockUser.findOne).toHaveBeenCalledWith({ email: 'admin@vale.com' });
     expect(mockHash).toHaveBeenCalledWith('admin123', 10);
     expect(mockUser).toHaveBeenCalledWith({
@@ -85,7 +88,7 @@ describe('createAdminUser script', () => {
 
     await createAdminUser();
 
-    expect(mockMongoose.connect).toHaveBeenCalledWith('mongodb://localhost:27017/vale_db');
+    expect(mockMongoose.connect).toHaveBeenCalledWith(DATABASE_CONFIG.MONGODB_TEST_URI);
   });
 
   it('should skip creation when admin user already exists', async () => {
@@ -100,7 +103,7 @@ describe('createAdminUser script', () => {
 
     await createAdminUser();
 
-    expect(mockMongoose.connect).toHaveBeenCalledWith('mongodb://test:27017/test_db');
+    expect(mockMongoose.connect).toHaveBeenCalledWith(DATABASE_CONFIG.MONGODB_TEST_URI);
     expect(mockUser.findOne).toHaveBeenCalledWith({ email: 'admin@vale.com' });
     expect(mockHash).not.toHaveBeenCalled();
     expect(mockUser).not.toHaveBeenCalledWith(expect.objectContaining({

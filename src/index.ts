@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 
 import app, { httpServer } from './app';
 import { logInfo, logSuccess, logError } from './utils/logger';
+import { DATABASE_CONFIG } from './constants/database';
 
 config();
 const PORT = process.env.PORT ?? '3000';
@@ -10,8 +11,7 @@ const PORT = process.env.PORT ?? '3000';
 // Database connection and server start
 const startServer = async (): Promise<void> => {
   try {
-    const mongoUri = process.env.MONGODB_URI ?? 'mongodb://localhost:27017/vale_db';
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(DATABASE_CONFIG.MONGODB_URI);
     logSuccess('Connected to MongoDB');
     
     // Ensure all indexes are created
