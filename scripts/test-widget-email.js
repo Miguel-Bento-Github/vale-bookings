@@ -4,9 +4,9 @@ async function testWidgetBooking() {
   try {
     // First, create a test booking through the widget API
     const bookingData = {
-      locationId: '5f9d88b9c26d4e3f8c6d6b4a', // You'll need to use a valid location ID
+      locationId: '686f7803c20660671d6dfdaa', // Downtown Parking location ID
       serviceId: 'valet',
-      guestEmail: 'test@example.com',
+      guestEmail: 'delivered@resend.dev',
       guestName: 'Test User',
       guestPhone: '+1234567890',
       bookingDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
@@ -22,9 +22,9 @@ async function testWidgetBooking() {
     console.log('Creating test booking...');
     console.log('Booking data:', JSON.stringify(bookingData, null, 2));
 
-    const response = await axios.post('http://localhost:3000/api/widget/bookings', bookingData, {
+    const response = await axios.post('http://localhost:3000/api/widget/v1/bookings', bookingData, {
       headers: {
-        'x-api-key': 'your-test-api-key', // You'll need to use a valid API key
+        'x-api-key': '229c6e69beff246d1ec8ac4f5e383fd1f295c78e617a2308241ac436082c0cd0', // Test API key
         'Content-Type': 'application/json',
         'Origin': 'http://localhost:8080'
       }

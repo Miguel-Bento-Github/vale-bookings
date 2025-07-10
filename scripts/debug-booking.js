@@ -1,7 +1,7 @@
 const request = require('supertest');
-const app = require('./dist/src/app').default;
-const { ApiKey } = require('./dist/src/models/ApiKey');
-const { hash, generateSecureToken } = require('./dist/src/utils/encryption');
+const app = require('../dist/src/app').default;
+const { ApiKey } = require('../dist/src/models/ApiKey');
+const { hash, generateSecureToken } = require('../dist/src/utils/encryption');
 
 async function testBooking() {
   try {

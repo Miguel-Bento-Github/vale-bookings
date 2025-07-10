@@ -51,6 +51,7 @@
     "@types/nodemailer": "^6.4.17",
     "@types/uuid": "^10.0.0",
     "agenda": "^5.0.0",
+    "axios": "^1.10.0",
     "bcryptjs": "^2.4.3",
     "bull": "^4.16.5",
     "cors": "^2.8.5",
