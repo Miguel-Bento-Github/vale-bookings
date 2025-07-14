@@ -388,7 +388,35 @@ export const getAllBookings = async (filters: IBookingFilters): Promise<IBooking
     .populate('locationId', 'name address')
     .sort({ startTime: -1 });
 
-  return bookings;
+  // Transform bookings to include user and location as separate properties
+  // The frontend expects 'user' and 'location' properties, but MongoDB populates
+  // the userId and locationId fields with the actual objects
+  const transformedBookings = bookings.map(booking => {
+    const bookingJSON = booking.toJSON();
+    
+    // Handle potentially null populated fields (when referenced docs are deleted)
+    const populatedUser = bookingJSON.userId;
+    const populatedLocation = bookingJSON.locationId;
+    
+    // Type guards for populated objects
+    function hasId(obj: unknown): obj is { _id: unknown } {
+      return obj !== null && typeof obj === 'object' && '_id' in obj;
+    }
+    
+    return {
+      ...bookingJSON,
+      user: populatedUser,    // Copy populated user data to 'user' property
+      location: populatedLocation,  // Copy populated location data to 'location' property
+      userId: hasId(populatedUser) 
+        ? String(populatedUser._id) 
+        : String(populatedUser || booking.userId),
+      locationId: hasId(populatedLocation) 
+        ? String(populatedLocation._id) 
+        : String(populatedLocation || booking.locationId)
+    };
+  });
+
+  return transformedBookings as IBookingDocument[];
 };
 
 export const updateBookingStatus = async (bookingId: string, status: BookingStatus): Promise<IBookingDocument> => {
