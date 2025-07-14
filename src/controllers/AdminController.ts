@@ -597,18 +597,23 @@ export const createApiKey = withErrorHandling(
       expiresAt?: string;
     };
 
-    if (!name || domainWhitelist.length === 0) {
+    if (typeof name !== 'string' || !Array.isArray(domainWhitelist) || domainWhitelist.length === 0) {
       sendError(res, 'Name and domain whitelist are required', 400);
       return;
     }
+
+    const safeNotes = typeof notes === 'string' && notes.trim().length > 0 ? notes : undefined;
+    const safeExpiresAt = typeof expiresAt === 'string' && expiresAt.trim().length > 0
+      ? new Date(expiresAt)
+      : undefined;
 
     const { apiKey, rawKey } = await generateApiKey({
       name,
       domainWhitelist,
       allowWildcardSubdomains: allowWildcardSubdomains ?? false,
       createdBy: req.user.email,
-      notes,
-      expiresAt: expiresAt ? new Date(expiresAt) : undefined
+      notes: safeNotes,
+      expiresAt: safeExpiresAt
     });
 
     sendSuccess(res, { apiKey, rawKey });

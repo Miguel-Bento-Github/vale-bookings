@@ -11,21 +11,30 @@ async function seedAll() {
 
     console.log('📋 Available seeders to run:');
     console.log('  1. npx tsx src/scripts/createAdmin.ts');
-    console.log('  2. npx tsx seeders/createTestApiKey.ts');
-    console.log('  3. npx tsx seeders/createTestLocations.ts');
-    console.log('  4. npx tsx seeders/createTestSchedules.ts');
-    console.log('  5. npx tsx seeders/createTestBookings.ts');
-    console.log('  6. npx tsx seeders/createTestGuestBookings.ts');
+    console.log('  2. npx tsx seeders/createTestUsers.ts');
+    console.log('  3. npx tsx seeders/createTestApiKey.ts');
+    console.log('  4. npx tsx seeders/createTestLocations.ts');
+    console.log('  5. npx tsx seeders/createTestSchedules.ts');
+    console.log('  6. npx tsx seeders/createTestBookings.ts');
+    console.log('  7. npx tsx seeders/createHistoricalBookings.ts');
+    console.log('  8. npx tsx seeders/createTestGuestBookings.ts');
     console.log('\n💡 Run these scripts in order for complete database seeding.');
     console.log('   Or run individual scripts as needed.\n');
 
     console.log('📋 Summary of data that will be seeded:');
     console.log('  - Admin user (admin@vale.com)');
+    console.log('  - 10 test customer users with realistic profiles');
     console.log('  - Test API key for widget development');
     console.log('  - 3 test locations in Leiden, Netherlands');
     console.log('  - Weekly schedules for each location');
-    console.log('  - 15 test bookings with various statuses');
+    console.log('  - 45 future bookings with proper customer links');
+    console.log('  - 30 historical completed bookings for analytics');
     console.log('  - 20 test guest bookings with GDPR compliance');
+    console.log('\n🎯 New improved seeding:');
+    console.log('  ✅ Bookings properly linked to customer users (not admin)');
+    console.log('  ✅ Realistic booking distribution across time periods');
+    console.log('  ✅ Location-based pricing and customer preferences');
+    console.log('  ✅ Better analytics data for dashboard testing');
     
   } catch (error) {
     console.error('❌ Error during seeding:', error);
