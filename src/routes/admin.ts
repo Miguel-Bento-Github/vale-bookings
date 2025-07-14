@@ -20,7 +20,11 @@ import {
   updateBookingStatus,
   getAnalyticsOverview,
   getRevenueAnalytics,
-  getBookingAnalytics
+  getBookingAnalytics,
+  getAllApiKeys,
+  createApiKey,
+  rotateApiKeyById,
+  deleteApiKey
 } from '../controllers/AdminController';
 import { authenticate, authorize } from '../middleware/auth';
 
@@ -100,6 +104,20 @@ router.get('/analytics/revenue', (req, res, next) => {
 });
 router.get('/analytics/bookings', (req, res, next) => {
   getBookingAnalytics(req, res).catch(next);
+});
+
+// Admin API key management
+router.get('/api-keys', (req, res, next) => {
+  getAllApiKeys(req, res).catch(next);
+});
+router.post('/api-keys', (req, res, next) => {
+  createApiKey(req, res).catch(next);
+});
+router.post('/api-keys/:id/rotate', (req, res, next) => {
+  rotateApiKeyById(req, res).catch(next);
+});
+router.delete('/api-keys/:id', (req, res, next) => {
+  deleteApiKey(req, res).catch(next);
 });
 
 export default router; 

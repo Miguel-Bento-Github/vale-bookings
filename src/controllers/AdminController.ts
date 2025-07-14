@@ -23,6 +23,12 @@ import {
   getBookingAnalytics as getBookingAnalyticsService
 } from '../services/AdminService';
 import {
+  generateApiKey,
+  listActiveKeys,
+  rotateApiKey,
+  revokeApiKey
+} from '../services/WidgetAuthService';
+import {
   AuthenticatedRequest,
   UserRole,
   BookingStatus,
@@ -187,7 +193,7 @@ export const updateUserRole = withErrorHandling(async (req: AuthenticatedRequest
 
   const { id } = req.params;
 
-  if (id === undefined || id === null || id.trim().length === 0) {
+  if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
     sendError(res, 'User ID is required', 400);
     return;
   }
@@ -211,7 +217,7 @@ export const deleteUser = withErrorHandling(async (req: AuthenticatedRequest, re
   const { id } = req.params;
   const currentUserId = req.user?.userId;
 
-  if (id === undefined || id === null || id.trim().length === 0) {
+  if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
     sendError(res, 'User ID is required', 400);
     return;
   }
@@ -264,7 +270,7 @@ export const updateValet = withErrorHandling(async (req: AuthenticatedRequest, r
 
   const { id } = req.params;
 
-  if (id === undefined || id === null || id.trim().length === 0) {
+  if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
     sendError(res, 'Valet ID is required', 400);
     return;
   }
@@ -286,7 +292,7 @@ export const deleteValet = withErrorHandling(async (req: AuthenticatedRequest, r
 
   const { id } = req.params;
 
-  if (id === undefined || id === null || id.trim().length === 0) {
+  if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
     sendError(res, 'Valet ID is required', 400);
     return;
   }
@@ -319,7 +325,7 @@ export const updateLocation = withErrorHandling(async (req: AuthenticatedRequest
 
   const { id } = req.params;
 
-  if (id === undefined || id === null || id.trim().length === 0) {
+  if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
     sendError(res, 'Location ID is required', 400);
     return;
   }
@@ -341,7 +347,7 @@ export const deleteLocation = withErrorHandling(async (req: AuthenticatedRequest
 
   const { id } = req.params;
 
-  if (id === undefined || id === null || id.trim().length === 0) {
+  if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
     sendError(res, 'Location ID is required', 400);
     return;
   }
@@ -384,7 +390,7 @@ export const updateSchedule = withErrorHandling(async (req: AuthenticatedRequest
 
   const { id } = req.params;
 
-  if (id === undefined || id === null || id.trim().length === 0) {
+  if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
     sendError(res, 'Schedule ID is required', 400);
     return;
   }
@@ -406,7 +412,7 @@ export const deleteSchedule = withErrorHandling(async (req: AuthenticatedRequest
 
   const { id } = req.params;
 
-  if (id === undefined || id === null || id.trim().length === 0) {
+  if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
     sendError(res, 'Schedule ID is required', 400);
     return;
   }
@@ -496,7 +502,7 @@ export const updateBookingStatus = withErrorHandling(
 
     const { id } = req.params;
 
-    if (id === undefined || id === null || id.trim().length === 0) {
+    if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
       sendError(res, 'Booking ID is required', 400);
       return;
     }
@@ -506,7 +512,15 @@ export const updateBookingStatus = withErrorHandling(
       return;
     }
 
-    const { status } = req.body;
+    const { status } = req.body as { status?: BookingStatus };
+    if (
+      status === undefined ||
+      status === null ||
+      (typeof status === 'string' ? status.trim().length === 0 : false)
+    ) {
+      sendError(res, 'Status is required', 400);
+      return;
+    }
     const booking = await updateBookingStatusService(id, status);
     sendSuccess(res, booking);
   });
@@ -548,4 +562,90 @@ export const getBookingAnalytics = withErrorHandling(
 
     const analytics = await getBookingAnalyticsService();
     sendSuccess(res, analytics);
+  });
+
+// API Key Management
+export const getAllApiKeys = withErrorHandling(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.user?.role !== 'ADMIN') {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+
+    const filters = {
+      createdBy: req.query.createdBy as string,
+      domain: req.query.domain as string,
+      tag: req.query.tag as string
+    };
+
+    const apiKeys = await listActiveKeys(filters);
+    sendSuccess(res, apiKeys);
+  });
+
+export const createApiKey = withErrorHandling(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.user?.role !== 'ADMIN') {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+
+    const { name, domainWhitelist, allowWildcardSubdomains, notes, expiresAt } = req.body as {
+      name: string;
+      domainWhitelist: string[];
+      allowWildcardSubdomains?: boolean;
+      notes?: string;
+      expiresAt?: string;
+    };
+
+    if (!name || domainWhitelist.length === 0) {
+      sendError(res, 'Name and domain whitelist are required', 400);
+      return;
+    }
+
+    const { apiKey, rawKey } = await generateApiKey({
+      name,
+      domainWhitelist,
+      allowWildcardSubdomains: allowWildcardSubdomains ?? false,
+      createdBy: req.user.email,
+      notes,
+      expiresAt: expiresAt ? new Date(expiresAt) : undefined
+    });
+
+    sendSuccess(res, { apiKey, rawKey });
+  });
+
+export const rotateApiKeyById = withErrorHandling(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.user?.role !== 'ADMIN') {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+
+    const { id } = req.params;
+
+    if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
+      sendError(res, 'API key ID is required', 400);
+      return;
+    }
+
+    const { oldKey, newKey, rawKey } = await rotateApiKey(id, req.user.email);
+    sendSuccess(res, { oldKey, newKey, rawKey });
+  });
+
+export const deleteApiKey = withErrorHandling(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.user?.role !== 'ADMIN') {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+
+    const { id } = req.params;
+
+    if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
+      sendError(res, 'API key ID is required', 400);
+      return;
+    }
+
+    const apiKey = await revokeApiKey(id);
+    sendSuccess(res, apiKey);
   }); 
