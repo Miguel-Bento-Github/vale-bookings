@@ -18,8 +18,10 @@ beforeAll(async () => {
 
   const mongoUri = mongoServer.getUri();
 
-  // Set environment variable for QueueService to use
+  // Set environment variables for QueueService to use
   process.env.MONGODB_URI = mongoUri;
+  process.env.MONGODB_TEST_URI = mongoUri;
+  process.env.MONGODB_URL = mongoUri;
 
   await mongoose.connect(mongoUri, {
     // Highly optimized connection settings for speed
