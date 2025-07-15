@@ -350,6 +350,72 @@ export function isUserConnected(userId: string): boolean {
 }
 
 /**
+ * Force logout for specific user (token invalidated)
+ */
+export function forceUserLogout(userId: string, reason: string = 'Token invalidated'): void {
+  if (!io) return;
+
+  try {
+    logInfo(`🚪 Forcing logout for user ${userId}: ${reason}`);
+    
+    // Emit logout event to user's personal room
+    io.to(`user:${userId}`).emit('auth:force_logout', {
+      reason,
+      timestamp: new Date()
+    });
+
+    // Find and disconnect all sockets for this user
+    const socketsToDisconnect: string[] = [];
+    for (const [socketId, connectedUserId] of connectedUsers.entries()) {
+      if (connectedUserId === userId) {
+        socketsToDisconnect.push(socketId);
+      }
+    }
+
+    // Disconnect user's sockets
+    socketsToDisconnect.forEach(socketId => {
+      if (io) {
+        const socket = io.sockets.sockets.get(socketId);
+        if (socket) {
+          logInfo(`🔌 Disconnecting socket ${socketId} for user ${userId}`);
+          socket.disconnect(true);
+        }
+      }
+      connectedUsers.delete(socketId);
+    });
+
+    logInfo(`✅ User ${userId} logout completed - disconnected ${socketsToDisconnect.length} socket(s)`);
+  } catch (error) {
+    logError('Failed to force user logout:', error);
+  }
+}
+
+/**
+ * Force logout for all users (global token invalidation)
+ */
+export function forceAllUsersLogout(reason: string = 'System maintenance'): void {
+  if (!io) return;
+
+  try {
+    logInfo(`🚪 Forcing logout for all users: ${reason}`);
+    
+    // Emit to all connected users
+    io.emit('auth:force_logout', {
+      reason,
+      timestamp: new Date()
+    });
+
+    // Disconnect all sockets
+    io.disconnectSockets(true);
+    connectedUsers.clear();
+
+    logInfo(`✅ All users logged out - reason: ${reason}`);
+  } catch (error) {
+    logError('Failed to force all users logout:', error);
+  }
+}
+
+/**
  * Get server instance for testing
  */
 export function getWebSocketServer(): SocketIOServer | null {
