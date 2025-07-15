@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 
-import { verifyToken } from '../services/AuthService';
+import { verifyTokenSafely } from '../services/AuthService';
 import { AppError, AuthenticatedRequest, UserRole } from '../types';
 import { sendError } from '../utils/responseHelpers';
 
@@ -24,7 +24,14 @@ export const authenticate = (
       return;
     }
 
-    const payload = verifyToken(token);
+    // Use safe token verification that handles expiration gracefully
+    const payload = verifyTokenSafely(token);
+    
+    if (!payload) {
+      // Token is expired or invalid - send 401 to trigger frontend logout
+      sendError(res, 'Token expired or invalid', 401);
+      return;
+    }
     
     req.user = {
       userId: payload.userId,

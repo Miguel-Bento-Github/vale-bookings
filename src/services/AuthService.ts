@@ -9,8 +9,10 @@ import {
   UserRole,
   AppError
 } from '../types';
+import { logError } from '../utils/logger';
 
 import { createUser, findByEmail, findById } from './UserService';
+import { forceUserLogout } from './WebSocketService';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'your-super-secret-jwt-key-change-this-in-production';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? 'your-super-secret-refresh-key-change-this-in-production';
@@ -102,4 +104,36 @@ export async function refreshTokens(refreshToken: string): Promise<IAuthTokens> 
 
 export async function getCurrentUser(userId: string): Promise<IUserDocument | null> {
   return await findById(userId);
+}
+
+/**
+ * Invalidate user token and force logout via WebSocket
+ */
+export function invalidateUserToken(userId: string, reason: string = 'Token invalidated by system'): void {
+  try {
+    // Force logout via WebSocket
+    forceUserLogout(userId, reason);
+  } catch (error) {
+    console.error('Failed to invalidate user token:', error);
+  }
+}
+
+/**
+ * Verify token and handle expiration gracefully
+ */
+export function verifyTokenSafely(token: string): IJWTPayload | null {
+  try {
+    return verify(token, JWT_SECRET) as IJWTPayload;
+  } catch (error) {
+    if (error instanceof Error) {
+      // Check if it's a token expiration error
+      if (error.name === 'TokenExpiredError') {
+        // Token expired - handled gracefully
+        return null;
+      }
+      // Other JWT errors (invalid, malformed, etc.)
+      logError('JWT verification error:', error);
+    }
+    return null;
+  }
 } 
