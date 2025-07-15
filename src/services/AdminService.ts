@@ -27,6 +27,7 @@ import {
   safeDelete,
   checkDocumentExists
 } from '../utils/mongoHelpers';
+import { transformBookings } from '../utils/populateHelpers';
 
 import { emitBookingUpdate, sendUserNotification } from './WebSocketService';
 
@@ -42,6 +43,7 @@ interface IBookingFilters {
   status?: BookingStatus;
   startDate?: string;
   endDate?: string;
+  locationId?: string;
 }
 
 interface IRevenueFilters {
@@ -266,7 +268,28 @@ export const getAllSchedules = async (): Promise<IScheduleDocument[]> => {
     .populate('locationId', 'name address')
     .sort({ locationId: 1, dayOfWeek: 1 });
 
-  return schedules;
+  // Transform schedules to include location as separate property
+  const transformedSchedules = schedules.map(schedule => {
+    const scheduleJSON = typeof schedule.toJSON === 'function' 
+      ? schedule.toJSON() 
+      : schedule as Record<string, unknown>;
+    const populatedLocation = scheduleJSON.locationId;
+    
+    // Type guard for populated objects
+    function hasId(obj: unknown): obj is { _id: unknown } {
+      return obj !== null && typeof obj === 'object' && '_id' in obj;
+    }
+    
+    return {
+      ...scheduleJSON,
+      location: populatedLocation,
+      locationId: hasId(populatedLocation) 
+        ? populatedLocation
+        : scheduleJSON.locationId
+    };
+  });
+
+  return transformedSchedules as unknown as IScheduleDocument[];
 };
 
 export const createSchedule = async (scheduleData: ICreateScheduleRequest): Promise<IScheduleDocument> => {
@@ -340,6 +363,11 @@ export const getAllBookings = async (filters: IBookingFilters): Promise<IBooking
     query.status = filters.status;
   }
 
+  // Apply location filter
+  if (typeof filters.locationId === 'string' && filters.locationId.trim().length > 0) {
+    query.locationId = filters.locationId;
+  }
+
   // Apply date range filter
   if (typeof filters.startDate === 'string' || typeof filters.endDate === 'string') {
     const dateRange: IDateRangeQuery = {};
@@ -388,35 +416,7 @@ export const getAllBookings = async (filters: IBookingFilters): Promise<IBooking
     .populate('locationId', 'name address')
     .sort({ startTime: -1 });
 
-  // Transform bookings to include user and location as separate properties
-  // The frontend expects 'user' and 'location' properties, but MongoDB populates
-  // the userId and locationId fields with the actual objects
-  const transformedBookings = bookings.map(booking => {
-    const bookingJSON = booking.toJSON();
-    
-    // Handle potentially null populated fields (when referenced docs are deleted)
-    const populatedUser = bookingJSON.userId;
-    const populatedLocation = bookingJSON.locationId;
-    
-    // Type guards for populated objects
-    function hasId(obj: unknown): obj is { _id: unknown } {
-      return obj !== null && typeof obj === 'object' && '_id' in obj;
-    }
-    
-    return {
-      ...bookingJSON,
-      user: populatedUser,    // Copy populated user data to 'user' property
-      location: populatedLocation,  // Copy populated location data to 'location' property
-      userId: hasId(populatedUser) 
-        ? String(populatedUser._id) 
-        : String(populatedUser || booking.userId),
-      locationId: hasId(populatedLocation) 
-        ? String(populatedLocation._id) 
-        : String(populatedLocation || booking.locationId)
-    };
-  });
-
-  return transformedBookings as IBookingDocument[];
+  return transformBookings(bookings) as unknown as IBookingDocument[];
 };
 
 export const updateBookingStatus = async (bookingId: string, status: BookingStatus): Promise<IBookingDocument> => {

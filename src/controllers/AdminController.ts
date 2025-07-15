@@ -486,7 +486,8 @@ export const getAllBookings = withErrorHandling(async (req: AuthenticatedRequest
   const filters = {
     status: req.query.status as BookingStatus,
     startDate: req.query.startDate as string,
-    endDate: req.query.endDate as string
+    endDate: req.query.endDate as string,
+    locationId: req.query.locationId as string
   };
 
   const bookings = await getAllBookingsService(filters);
