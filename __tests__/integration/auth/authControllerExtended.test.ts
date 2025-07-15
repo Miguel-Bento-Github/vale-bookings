@@ -104,7 +104,7 @@ describe('AuthController Extended Integration Tests', () => {
         .expect(401);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('Invalid token');
+      expect(response.body.message).toContain('Token expired or invalid');
     });
   });
 

@@ -101,7 +101,7 @@ describe('Users Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: expect.stringContaining('Invalid token')
+        message: expect.stringContaining('Token expired or invalid')
       });
     });
 
@@ -292,7 +292,7 @@ describe('Users Integration Tests', () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: expect.stringContaining('Invalid token')
+        message: expect.stringContaining('Token expired or invalid')
       });
     });
 
