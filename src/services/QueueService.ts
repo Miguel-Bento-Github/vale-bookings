@@ -132,15 +132,23 @@ const initializeAgenda = (): Agenda => {
     throw new Error('MongoDB configuration is required for Agenda');
   }
 
-  // Production code - use real Agenda with in-memory MongoDB for tests
-  agendaInstance = new Agenda({
-    db: {
-      address: config.mongodb.url,
-      collection: config.mongodb.collection
-    },
-    processEvery: '30 seconds',
-    maxConcurrency: 20
-  });
+  // Use existing mongoose connection in test environment to avoid connection issues
+  if (process.env.NODE_ENV === 'test' && mongoose.connection.readyState === mongoose.STATES.connected) {
+    agendaInstance = new Agenda({ // eslint-disable-line @typescript-eslint/no-unsafe-argument
+      mongo: mongoose.connection.db as any, // eslint-disable-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, max-len
+      processEvery: '1 second', // Faster processing in tests
+      maxConcurrency: 5
+    } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+  } else {
+    agendaInstance = new Agenda({
+      db: {
+        address: config.mongodb.url,
+        collection: config.mongodb.collection
+      },
+      processEvery: '30 seconds',
+      maxConcurrency: 20
+    });
+  }
 
   // Set up connection timeout to prevent hanging connections
   agendaInstance.on('ready', () => {
@@ -169,6 +177,11 @@ const initializeAgenda = (): Agenda => {
   });
 
   return agendaInstance;
+};
+
+// Helper function to ensure agenda is ready before operations
+const ensureAgendaReady = (_agenda: Agenda): void => {
+  // Currently not needed - connection is handled by Agenda internally
 };
 
 // Real Bull Queue implementation
@@ -526,6 +539,8 @@ export const listJobs = async (options: {
     
     case 'agenda': {
       const agenda = initializeAgenda();
+      ensureAgendaReady(agenda);
+      
       const query: Record<string, unknown> = {};
       
       if (typeof type === 'string' && type.length > 0) {

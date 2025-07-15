@@ -13,6 +13,7 @@ import {
   safeDelete,
   deactivateDocument
 } from '../utils/mongoHelpers';
+import { transformSchedules } from '../utils/populateHelpers';
 
 export async function createSchedule(scheduleData: ISchedule): Promise<IScheduleDocument> {
   return await createWithDuplicateHandling(
@@ -42,9 +43,11 @@ export async function deleteSchedule(scheduleId: string): Promise<void> {
 }
 
 export async function getAllSchedules(): Promise<IScheduleDocument[]> {
-  return await Schedule.find({})
+  const schedules = await Schedule.find({})
     .populate('locationId', 'name address')
     .sort({ locationId: 1, dayOfWeek: 1 });
+
+  return transformSchedules(schedules) as unknown as IScheduleDocument[];
 }
 
 export async function createBulkSchedules(
