@@ -178,7 +178,13 @@ describe('ScheduleService', () => {
       expect(MockedSchedule.find).toHaveBeenCalledWith({});
       expect(mockPopulate).toHaveBeenCalledWith('locationId', 'name address');
       expect(mockSort).toHaveBeenCalledWith({ locationId: 1, dayOfWeek: 1 });
-      expect(result).toEqual(mockSchedules);
+      
+      // Expect the transformed schedules with location property
+      const expectedSchedules = mockSchedules.map(schedule => ({
+        ...schedule,
+        location: schedule.locationId
+      }));
+      expect(result).toEqual(expectedSchedules);
     });
   });
 
