@@ -43,11 +43,11 @@ describe('Auth Middleware', () => {
         authorization: 'Bearer validtoken123'
       };
 
-      mockedAuthService.verifyToken.mockReturnValue(mockPayload);
+      mockedAuthService.verifyTokenSafely.mockReturnValue(mockPayload);
 
       authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
-      expect(mockedAuthService.verifyToken).toHaveBeenCalledWith('validtoken123');
+      expect(mockedAuthService.verifyTokenSafely).toHaveBeenCalledWith('validtoken123');
       expect(mockRequest.user).toEqual(mockPayload);
       expect(mockNext).toHaveBeenCalled();
       expect(mockResponse.status).not.toHaveBeenCalled();
@@ -65,7 +65,7 @@ describe('Auth Middleware', () => {
         message: 'Authentication required'
       });
       expect(mockNext).not.toHaveBeenCalled();
-      expect(mockedAuthService.verifyToken).not.toHaveBeenCalled();
+      expect(mockedAuthService.verifyTokenSafely).not.toHaveBeenCalled();
     });
 
     it('should return 401 when authorization header does not start with Bearer', () => {
@@ -81,7 +81,7 @@ describe('Auth Middleware', () => {
         message: 'Authentication required'
       });
       expect(mockNext).not.toHaveBeenCalled();
-      expect(mockedAuthService.verifyToken).not.toHaveBeenCalled();
+      expect(mockedAuthService.verifyTokenSafely).not.toHaveBeenCalled();
     });
 
     it('should return 401 when authorization header is just "Bearer "', () => {
@@ -97,7 +97,7 @@ describe('Auth Middleware', () => {
         message: 'Authentication required'
       });
       expect(mockNext).not.toHaveBeenCalled();
-      expect(mockedAuthService.verifyToken).not.toHaveBeenCalled();
+      expect(mockedAuthService.verifyTokenSafely).not.toHaveBeenCalled();
     });
 
     it('should return 401 when token verification fails with generic error', () => {
@@ -105,17 +105,15 @@ describe('Auth Middleware', () => {
         authorization: 'Bearer invalidtoken'
       };
 
-      mockedAuthService.verifyToken.mockImplementation(() => {
-        throw new Error('Invalid token');
-      });
+      mockedAuthService.verifyTokenSafely.mockReturnValue(null);
 
       authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
-      expect(mockedAuthService.verifyToken).toHaveBeenCalledWith('invalidtoken');
+      expect(mockedAuthService.verifyTokenSafely).toHaveBeenCalledWith('invalidtoken');
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Invalid token'
+        message: 'Token expired or invalid'
       });
       expect(mockNext).not.toHaveBeenCalled();
       expect(mockRequest.user).toBeUndefined();
@@ -127,13 +125,13 @@ describe('Auth Middleware', () => {
       };
 
       const appError = new AppError('Token expired', 403);
-      mockedAuthService.verifyToken.mockImplementation(() => {
+      mockedAuthService.verifyTokenSafely.mockImplementation(() => {
         throw appError;
       });
 
       authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
-      expect(mockedAuthService.verifyToken).toHaveBeenCalledWith('expiredtoken');
+      expect(mockedAuthService.verifyTokenSafely).toHaveBeenCalledWith('expiredtoken');
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
@@ -148,13 +146,13 @@ describe('Auth Middleware', () => {
         authorization: 'Bearer malformedtoken'
       };
 
-      mockedAuthService.verifyToken.mockImplementation(() => {
+      mockedAuthService.verifyTokenSafely.mockImplementation(() => {
         throw new JsonWebTokenError('Invalid signature');
       });
 
       authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
-      expect(mockedAuthService.verifyToken).toHaveBeenCalledWith('malformedtoken');
+      expect(mockedAuthService.verifyTokenSafely).toHaveBeenCalledWith('malformedtoken');
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
@@ -174,11 +172,11 @@ describe('Auth Middleware', () => {
         authorization: 'Bearer abc123def456ghi789'
       };
 
-      mockedAuthService.verifyToken.mockReturnValue(mockPayload);
+      mockedAuthService.verifyTokenSafely.mockReturnValue(mockPayload);
 
       authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
 
-      expect(mockedAuthService.verifyToken).toHaveBeenCalledWith('abc123def456ghi789');
+      expect(mockedAuthService.verifyTokenSafely).toHaveBeenCalledWith('abc123def456ghi789');
       expect(mockRequest.user).toEqual(mockPayload);
       expect(mockNext).toHaveBeenCalled();
     });
@@ -327,7 +325,7 @@ describe('Auth Middleware', () => {
         authorization: 'Bearer validtoken123'
       };
 
-      mockedAuthService.verifyToken.mockReturnValue(mockPayload);
+      mockedAuthService.verifyTokenSafely.mockReturnValue(mockPayload);
 
       // First apply authentication
       authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
@@ -358,7 +356,7 @@ describe('Auth Middleware', () => {
         authorization: 'Bearer validtoken123'
       };
 
-      mockedAuthService.verifyToken.mockReturnValue(mockPayload);
+      mockedAuthService.verifyTokenSafely.mockReturnValue(mockPayload);
 
       // First apply authentication
       authenticate(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext);
