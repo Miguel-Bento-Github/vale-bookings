@@ -65,7 +65,13 @@ describe('BookingService', () => {
 
   describe('findById', () => {
     it('should find booking by id', async () => {
-      MockedBooking.findById = jest.fn().mockResolvedValue(mockBookingDocument);
+      const mockChain = {
+        populate: jest.fn().mockReturnThis(),
+      };
+      // The second populate call should resolve with the document
+      mockChain.populate.mockReturnValueOnce(mockChain).mockResolvedValueOnce(mockBookingDocument);
+      
+      MockedBooking.findById = jest.fn().mockReturnValue(mockChain);
 
       const result = await BookingService.findById('507f1f77bcf86cd799439015');
 
@@ -82,8 +88,13 @@ describe('BookingService', () => {
           limit: jest.fn().mockResolvedValue(mockBookings)
         })
       });
+      const mockPopulate = jest.fn().mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          sort: mockSort
+        })
+      });
       MockedBooking.find = jest.fn().mockReturnValue({
-        sort: mockSort
+        populate: mockPopulate
       });
 
       const result = await BookingService.getUserBookings('507f1f77bcf86cd799439011', 2, 5);

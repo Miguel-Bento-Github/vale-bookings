@@ -54,8 +54,12 @@ describe('Bookings Integration Tests', () => {
       const booking = response.body.data.find((b: { _id: string }) => b._id === bookingId);
       expect(booking).toMatchObject({
         _id: bookingId,
-        userId: userId,
-        locationId: locationId,
+        userId: {
+          _id: userId
+        },
+        locationId: {
+          _id: locationId
+        },
         status: 'PENDING'
       });
     });
@@ -115,8 +119,12 @@ describe('Bookings Integration Tests', () => {
       expectSuccess(response);
       expect(response.body.data).toMatchObject({
         _id: bookingId,
-        userId: userId,
-        locationId: locationId,
+        userId: {
+          _id: userId
+        },
+        locationId: {
+          _id: locationId
+        },
         status: 'PENDING'
       });
     });
@@ -130,8 +138,12 @@ describe('Bookings Integration Tests', () => {
       expectSuccess(response);
       expect(response.body.data).toMatchObject({
         _id: bookingId,
-        userId: userId,
-        locationId: locationId
+        userId: {
+          _id: userId
+        },
+        locationId: {
+          _id: locationId
+        }
       });
     });
 
