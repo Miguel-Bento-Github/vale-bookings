@@ -11,6 +11,7 @@ import {
   sendSuccess, 
   sendSuccessWithPagination
 } from '../utils/responseHelpers';
+import { transformBookings } from '../utils/populateHelpers';
 import { 
   validateRequiredId,
   validatePaginationParams,
@@ -164,7 +165,9 @@ export const getById = withErrorHandling(async (req: AuthenticatedRequest, res: 
     return;
   }
 
-  sendSuccess(res, booking);
+  // Transform the booking to include populated user and location data
+  const transformedBooking = transformBookings([booking as any])[0];
+  sendSuccess(res, transformedBooking);
 });
 
 // Update booking

@@ -1,6 +1,8 @@
 import { Response } from 'express';
 
 import {
+  createUser as createUserService,
+  getUserById as getUserByIdService,
   getAllUsers as getAllUsersService,
   updateUserRole as updateUserRoleService,
   deleteUser as deleteUserService,
@@ -20,7 +22,8 @@ import {
   updateBookingStatus as updateBookingStatusService,
   getAnalyticsOverview as getAnalyticsOverviewService,
   getRevenueAnalytics as getRevenueAnalyticsService,
-  getBookingAnalytics as getBookingAnalyticsService
+  getBookingAnalytics as getBookingAnalyticsService,
+  getBookingStats as getBookingStatsService
 } from '../services/AdminService';
 import {
   generateApiKey,
@@ -45,6 +48,16 @@ import {
 import { validateBookingStatus } from '../utils/validationHelpers';
 
 // Type definitions for request bodies
+interface CreateUserRequestBody {
+  email: string;
+  password: string;
+  role: UserRole;
+  profile: {
+    name: string;
+    phone?: string;
+  };
+}
+
 interface UpdateUserRoleRequestBody {
   role: UserRole;
 }
@@ -70,6 +83,21 @@ interface UpdateBookingStatusRequestBody {
 }
 
 // Type guards for request validation
+function isCreateUserRequestBody(body: unknown): body is CreateUserRequestBody {
+  const bodyObj = body as Record<string, unknown>;
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    typeof bodyObj.email === 'string' &&
+    typeof bodyObj.password === 'string' &&
+    typeof bodyObj.role === 'string' &&
+    ['ADMIN', 'MANAGER', 'SUPPORT', 'CUSTOMER', 'VALET'].includes(bodyObj.role as string) &&
+    typeof bodyObj.profile === 'object' &&
+    bodyObj.profile !== null &&
+    typeof (bodyObj.profile as Record<string, unknown>).name === 'string'
+  );
+}
+
 function isUpdateUserRoleRequestBody(body: unknown): body is UpdateUserRoleRequestBody {
   return (
     typeof body === 'object' &&
@@ -176,12 +204,65 @@ export const getAllUsers = withErrorHandling(async (req: AuthenticatedRequest, r
 
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
-  const result = await getAllUsersService({ page, limit });
+  const role = req.query.role as string;
+  const search = req.query.search as string;
+  const status = req.query.status as string;
+  const sortBy = req.query.sortBy as string || 'createdAt';
+  const sortOrder = req.query.sortOrder as string || 'desc';
+  
+  const result = await getAllUsersService({ 
+    page, 
+    limit, 
+    role, 
+    search, 
+    status, 
+    sortBy, 
+    sortOrder 
+  });
 
   res.status(200).json({
     success: true,
     data: result.users,
     pagination: result.pagination
+  });
+});
+
+export const createUser = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
+  if (!isCreateUserRequestBody(req.body)) {
+    sendError(res, 'Invalid request body', 400);
+    return;
+  }
+
+  const user = await createUserService(req.body);
+  
+  res.status(201).json({
+    success: true,
+    data: user
+  });
+});
+
+export const getUserById = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
+  const userId = req.params.id;
+  if (!userId) {
+    sendError(res, 'User ID is required', 400);
+    return;
+  }
+
+  const user = await getUserByIdService(userId);
+  
+  res.status(200).json({
+    success: true,
+    data: user
   });
 });
 
@@ -563,6 +644,16 @@ export const getBookingAnalytics = withErrorHandling(
 
     const analytics = await getBookingAnalyticsService();
     sendSuccess(res, analytics);
+  });
+
+export const getBookingStats = withErrorHandling(
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.user?.role !== 'ADMIN') {
+      sendError(res, 'Forbidden: access denied', 403);
+      return;
+    }
+    const stats = await getBookingStatsService();
+    sendSuccess(res, stats);
   });
 
 // API Key Management
