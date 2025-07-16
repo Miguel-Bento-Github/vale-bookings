@@ -91,7 +91,7 @@ function isCreateUserRequestBody(body: unknown): body is CreateUserRequestBody {
     typeof bodyObj.email === 'string' &&
     typeof bodyObj.password === 'string' &&
     typeof bodyObj.role === 'string' &&
-    ['ADMIN', 'MANAGER', 'SUPPORT', 'CUSTOMER', 'VALET'].includes(bodyObj.role as string) &&
+    ['ADMIN', 'MANAGER', 'SUPPORT', 'CUSTOMER', 'VALET'].includes(bodyObj.role) &&
     typeof bodyObj.profile === 'object' &&
     bodyObj.profile !== null &&
     typeof (bodyObj.profile as Record<string, unknown>).name === 'string'
@@ -253,7 +253,7 @@ export const getUserById = withErrorHandling(async (req: AuthenticatedRequest, r
   }
 
   const userId = req.params.id;
-  if (!userId) {
+  if (userId === undefined || userId === null || userId.trim() === '') {
     sendError(res, 'User ID is required', 400);
     return;
   }

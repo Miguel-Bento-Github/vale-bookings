@@ -11,7 +11,6 @@ import {
   sendSuccess, 
   sendSuccessWithPagination
 } from '../utils/responseHelpers';
-import { transformBookings } from '../utils/populateHelpers';
 import { 
   validateRequiredId,
   validatePaginationParams,
@@ -157,7 +156,11 @@ export const getById = withErrorHandling(async (req: AuthenticatedRequest, res: 
   }
 
   // Check ownership or admin access
-  const isOwner = booking.userId.toString() === userId;
+  // Handle both populated and non-populated userId
+  const bookingUserId = typeof booking.userId === 'object' && booking.userId !== null 
+    ? String((booking.userId as { _id: unknown })._id) 
+    : String(booking.userId);
+  const isOwner = bookingUserId === userId;
   const isAdmin = req.user?.role === 'ADMIN';
 
   if (!isOwner && !isAdmin) {
@@ -165,9 +168,7 @@ export const getById = withErrorHandling(async (req: AuthenticatedRequest, res: 
     return;
   }
 
-  // Transform the booking to include populated user and location data
-  const transformedBooking = transformBookings([booking as any])[0];
-  sendSuccess(res, transformedBooking);
+  sendSuccess(res, booking);
 });
 
 // Update booking
@@ -265,7 +266,11 @@ export const deleteBooking = withErrorHandling(async (req: AuthenticatedRequest,
   }
 
   // Check ownership or admin access
-  const isOwner = booking.userId.toString() === userId;
+  // Handle both populated and non-populated userId
+  const bookingUserId = typeof booking.userId === 'object' && booking.userId !== null 
+    ? String((booking.userId as { _id: unknown })._id) 
+    : String(booking.userId);
+  const isOwner = bookingUserId === userId;
   const isAdmin = req.user?.role === 'ADMIN';
 
   if (!isOwner && !isAdmin) {
