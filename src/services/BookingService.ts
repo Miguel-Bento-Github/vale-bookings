@@ -45,7 +45,9 @@ export async function createBooking(bookingData: IBooking): Promise<IBookingDocu
 }
 
 export async function findById(bookingId: string): Promise<IBookingDocument | null> {
-  return await Booking.findById(bookingId);
+  return await Booking.findById(bookingId)
+    .populate('userId', 'email role profile')
+    .populate('locationId', 'name address coordinates');
 }
 
 export async function getUserBookings(
@@ -55,6 +57,8 @@ export async function getUserBookings(
 ): Promise<IBookingDocument[]> {
   const skip = (page - 1) * limit;
   return await Booking.find({ userId })
+    .populate('userId', 'email role profile')
+    .populate('locationId', 'name address coordinates')
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);

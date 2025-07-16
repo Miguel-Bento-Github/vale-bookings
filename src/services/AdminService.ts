@@ -60,7 +60,39 @@ interface IBulkScheduleResult {
 }
 
 // User Management Functions
-export const getAllUsers = async (options: IPaginationOptions): Promise<{
+interface IUserFilters extends IPaginationOptions {
+  role?: string;
+  search?: string;
+  status?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+export const createUser = async (userData: {
+  email: string;
+  password: string;
+  role: UserRole;
+  profile: {
+    name: string;
+    phone?: string;
+  };
+}): Promise<IUserDocument> => {
+  return await createWithDuplicateHandling(
+    User,
+    userData,
+    ERROR_MESSAGES.USER_ALREADY_EXISTS
+  );
+};
+
+export const getUserById = async (userId: string): Promise<IUserDocument> => {
+  const user = await User.findById(userId).select('-password');
+  if (!user) {
+    throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, 404);
+  }
+  return user;
+};
+
+export const getAllUsers = async (options: IUserFilters): Promise<{
   users: IUserDocument[];
   pagination: {
     currentPage: number;
@@ -73,13 +105,42 @@ export const getAllUsers = async (options: IPaginationOptions): Promise<{
   const limit = (typeof options.limit === 'number' && options.limit > 0) ? options.limit : 10;
   const skip = (page - 1) * limit;
 
+  // Build query object
+  const query: Record<string, unknown> = {};
+  
+  // Role filtering
+  if (options.role !== undefined && options.role !== null && options.role.trim() !== '') {
+    query.role = options.role;
+  }
+  
+  // Search filtering (name and email)
+  if (options.search !== undefined && options.search !== null && options.search.trim() !== '') {
+    const escapedSearch = options.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // eslint-disable-next-line security/detect-non-literal-regexp
+    const searchRegex = new RegExp(escapedSearch, 'i');
+    query.$or = [
+      { email: searchRegex },
+      { 'profile.name': searchRegex }
+    ];
+  }
+  
+  // Status filtering - for now, all users are considered active
+  // This can be expanded later if user status is implemented
+  
+  // Build sort object
+  const sortBy = options.sortBy ?? 'createdAt';
+  const sortOrder = options.sortOrder === 'asc' ? 1 : -1;
+  const sort: Record<string, 1 | -1> = {
+    [sortBy]: sortOrder
+  };
+
   const [users, totalItems] = await Promise.all([
-    User.find({})
+    User.find(query)
       .select('-password')
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 }),
-    User.countDocuments({})
+      .sort(sort),
+    User.countDocuments(query)
   ]);
 
   const totalPages = Math.ceil(totalItems / limit);
@@ -752,6 +813,95 @@ export const getBookingAnalytics = async (): Promise<{
   };
 };
 
+export const getBookingStats = async (): Promise<{
+  totalBookings: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  inProgressBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  totalRevenue: number;
+  averageBookingValue: number;
+  todayBookings: number;
+  upcomingBookings: number;
+}> => {
+  // Get total bookings
+  const totalBookings = await Booking.countDocuments({});
+
+  // Get bookings by status
+  const bookingsByStatusResult = await Booking.aggregate([
+    {
+      $group: {
+        _id: '$status',
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const statusCounts: Record<string, number> = {};
+  for (const item of bookingsByStatusResult) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const status = String(item['_id']);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const count = Number(item['count']);
+    if (status && !Number.isNaN(count)) {
+      // eslint-disable-next-line security/detect-object-injection
+      statusCounts[status] = count;
+    }
+  }
+
+  // Get total revenue
+  const revenueResult = await Booking.aggregate([
+    {
+      $match: {
+        status: { $in: ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'] }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: '$price' }
+      }
+    }
+  ]);
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  const totalRevenue = revenueResult.length > 0 ? Number(revenueResult[0]?.['totalRevenue'] ?? 0) : 0;
+
+  // Get today's bookings
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+
+  const todayBookings = await Booking.countDocuments({
+    startTime: {
+      $gte: startOfToday,
+      $lte: endOfToday
+    }
+  });
+
+  // Get upcoming bookings (future bookings)
+  const now = new Date();
+  const upcomingBookings = await Booking.countDocuments({
+    startTime: { $gt: now },
+    status: { $in: ['PENDING', 'CONFIRMED'] }
+  });
+
+  return {
+    totalBookings,
+    pendingBookings: statusCounts['PENDING'] ?? 0,
+    confirmedBookings: statusCounts['CONFIRMED'] ?? 0,
+    inProgressBookings: statusCounts['IN_PROGRESS'] ?? 0,
+    completedBookings: statusCounts['COMPLETED'] ?? 0,
+    cancelledBookings: statusCounts['CANCELLED'] ?? 0,
+    totalRevenue,
+    averageBookingValue: totalBookings > 0 ? totalRevenue / totalBookings : 0,
+    todayBookings,
+    upcomingBookings
+  };
+};
+
 // Export object with all functions to maintain compatibility with existing imports
 const AdminService = {
   getAllUsers,
@@ -773,7 +923,8 @@ const AdminService = {
   updateBookingStatus,
   getAnalyticsOverview,
   getRevenueAnalytics,
-  getBookingAnalytics
+  getBookingAnalytics,
+  getBookingStats
 };
 
 export default AdminService; 
