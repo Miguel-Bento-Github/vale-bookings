@@ -3,7 +3,7 @@ interface PopulatedObject {
   [key: string]: unknown;
 }
 
-interface DocumentWithToJSON {
+export interface DocumentWithToJSON {
   toJSON?(): Record<string, unknown>;
   [key: string]: unknown;
 }

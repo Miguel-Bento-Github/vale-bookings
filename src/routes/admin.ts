@@ -2,6 +2,8 @@ import { Router } from 'express';
 
 import {
   getAllUsers,
+  createUser,
+  getUserById,
   updateUserRole,
   deleteUser,
   getAllValets,
@@ -21,6 +23,7 @@ import {
   getAnalyticsOverview,
   getRevenueAnalytics,
   getBookingAnalytics,
+  getBookingStats,
   getAllApiKeys,
   createApiKey,
   rotateApiKeyById,
@@ -37,6 +40,12 @@ router.use(authorize(['ADMIN']));
 // Admin user management
 router.get('/users', (req, res, next) => {
   getAllUsers(req, res).catch(next);
+});
+router.post('/users', (req, res, next) => {
+  createUser(req, res).catch(next);
+});
+router.get('/users/:id', (req, res, next) => {
+  getUserById(req, res).catch(next);
 });
 router.put('/users/:id/role', (req, res, next) => {
   updateUserRole(req, res).catch(next);
@@ -93,6 +102,9 @@ router.get('/bookings', (req, res, next) => {
 });
 router.put('/bookings/:id/status', (req, res, next) => {
   updateBookingStatus(req, res).catch(next);
+});
+router.get('/bookings/stats', (req, res, next) => {
+  getBookingStats(req, res).catch(next);
 });
 
 // Admin analytics
