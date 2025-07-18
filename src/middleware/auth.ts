@@ -1,8 +1,8 @@
 import { Response, NextFunction } from 'express';
 
-import { verifyTokenSafely } from '../services/AuthService';
 import { AppError, AuthenticatedRequest, UserRole } from '../types';
 import { sendError } from '../utils/responseHelpers';
+import { verifyTokenSafely } from '../utils/tokenUtils';
 
 export const authenticate = (
   req: AuthenticatedRequest,
