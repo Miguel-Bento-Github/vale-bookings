@@ -1,6 +1,9 @@
+import mongoose from 'mongoose';
+
 import { ERROR_MESSAGES } from '../constants';
 import Booking from '../models/Booking';
 import Location from '../models/Location';
+import Payment from '../models/Payment';
 import Schedule from '../models/Schedule';
 import User from '../models/User';
 import { 
@@ -29,7 +32,7 @@ import {
 } from '../utils/mongoHelpers';
 import { transformBookings } from '../utils/populateHelpers';
 
-import { emitBookingUpdate, sendUserNotification } from './WebSocketService';
+import { emitBookingUpdate, emitUserManagementUpdate, sendUserNotification } from './WebSocketService';
 
 interface IUserWithStatistics extends IUserDocument {
   statistics?: {
@@ -44,6 +47,14 @@ interface IBookingFilters {
   startDate?: string;
   endDate?: string;
   locationId?: string;
+  userId?: string;
+  serviceId?: string;
+  search?: string;
+  includeGuest?: boolean;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 interface IRevenueFilters {
@@ -77,11 +88,22 @@ export const createUser = async (userData: {
     phone?: string;
   };
 }): Promise<IUserDocument> => {
-  return await createWithDuplicateHandling(
+  const user = await createWithDuplicateHandling(
     User,
     userData,
     ERROR_MESSAGES.USER_ALREADY_EXISTS
   );
+
+  // Emit WebSocket event for real-time updates
+  emitUserManagementUpdate({
+    userId: String(user._id),
+    action: 'created',
+    userEmail: user.email,
+    userRole: user.role,
+    timestamp: new Date()
+  });
+
+  return user;
 };
 
 export const getUserById = async (userId: string): Promise<IUserDocument> => {
@@ -156,12 +178,21 @@ export const getAllUsers = async (options: IUserFilters): Promise<{
   };
 };
 
-export const updateUserRole = async (userId: string, role: UserRole): Promise<IUserDocument> => {
-  const user = await standardUpdate(User, userId, { role } as Partial<IUserDocument>);
+export const updateUser = async (userId: string, updateData: Partial<IUserDocument>): Promise<IUserDocument> => {
+  const user = await standardUpdate(User, userId, updateData);
 
   if (!user) {
     throw new AppError('User not found', 404);
   }
+
+  // Emit WebSocket event for real-time updates
+  emitUserManagementUpdate({
+    userId: String(user._id),
+    action: 'updated',
+    userEmail: user.email,
+    userRole: user.role,
+    timestamp: new Date()
+  });
 
   // Remove password from response
   const userObj = user.toObject() as Record<string, unknown>;
@@ -169,20 +200,162 @@ export const updateUserRole = async (userId: string, role: UserRole): Promise<IU
   return userObj as unknown as IUserDocument;
 };
 
+export const updateUserRole = async (userId: string, role: UserRole): Promise<IUserDocument> => {
+  const user = await standardUpdate(User, userId, { role } as Partial<IUserDocument>);
+
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  // Emit WebSocket event for real-time updates
+  emitUserManagementUpdate({
+    userId: String(user._id),
+    action: 'updated',
+    userEmail: user.email,
+    userRole: user.role,
+    timestamp: new Date()
+  });
+
+  // Remove password from response
+  const userObj = user.toObject() as Record<string, unknown>;
+  delete userObj.password;
+  return userObj as unknown as IUserDocument;
+};
+
+interface BookingStatsResult {
+  totalBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  totalSpent: number;
+}
+
+export const getUserStats = async (userId: string): Promise<{
+  totalBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  totalSpent: number;
+  averageRating: number;
+  lastActivity: string;
+}> => {
+  // Ensure user exists
+  await ensureDocumentExists(User, userId, 'User not found');
+
+  // Convert string userId to ObjectId for MongoDB query
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
+  // Get booking statistics
+  const bookingStats = await Booking.aggregate<BookingStatsResult>([
+    { $match: { userId: userObjectId } },
+    {
+      $group: {
+        _id: null,
+        totalBookings: { $sum: 1 },
+        completedBookings: {
+          $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] }
+        },
+        cancelledBookings: {
+          $sum: { $cond: [{ $eq: ['$status', 'CANCELLED'] }, 1, 0] }
+        },
+        totalSpent: {
+          $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, '$price', 0] }
+        }
+      }
+    }
+  ]);
+
+  // Get last activity (most recent booking)
+  const lastBooking = await Booking.findOne({ userId: userObjectId })
+    .sort({ createdAt: -1 })
+    .select('createdAt');
+
+  const stats: BookingStatsResult = bookingStats.length > 0 && bookingStats[0] ? bookingStats[0] : {
+    totalBookings: 0,
+    completedBookings: 0,
+    cancelledBookings: 0,
+    totalSpent: 0
+  };
+
+  return {
+    totalBookings: stats.totalBookings,
+    completedBookings: stats.completedBookings,
+    cancelledBookings: stats.cancelledBookings,
+    totalSpent: stats.totalSpent,
+    averageRating: 0, // TODO: Implement rating system
+    lastActivity: lastBooking?.createdAt ? lastBooking.createdAt.toISOString() : new Date().toISOString()
+  };
+};
+
 export const deleteUser = async (userId: string): Promise<void> => {
   await ensureDocumentExists(User, userId, 'User not found');
 
-  // Check if user has active bookings
-  const activeBookings = await Booking.countDocuments({
-    userId,
-    status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] }
+  // Convert string userId to ObjectId for MongoDB query
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
+  // Check if user has any bookings (including completed/cancelled)
+  const totalBookings = await Booking.countDocuments({
+    userId: userObjectId
   });
 
-  if (activeBookings > 0) {
-    throw new AppError('Cannot delete user with active bookings', 400);
+  // Get detailed information about active bookings
+  const activeBookings = await Booking.find({
+    userId: userObjectId,
+    status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] }
+  })
+    .populate('locationId', 'name')
+    .select('_id status startTime endTime locationId')
+    .lean();
+
+  // Check if user has any payments
+  const totalPayments = await Payment.countDocuments({
+    userId: userObjectId
+  });
+
+  // eslint-disable-next-line no-console
+  console.log(
+    `Delete user ${userId}: Bookings: ${totalBookings}, Active: ${activeBookings.length}, Payments: ${totalPayments}`
+  );
+
+  if (activeBookings.length > 0) {
+    // eslint-disable-next-line no-console
+    console.log('Active bookings details:', activeBookings.map(booking => {
+      const locationId = booking.locationId as { name?: string } | null;
+      return {
+        id: String(booking._id),
+        status: booking.status,
+        startTime: booking.startTime,
+        location: locationId?.name ?? 'Unknown'
+      };
+    }));
+
+    // Create detailed error message with booking information
+    const bookingDetails = activeBookings.map(booking => {
+      const locationId = booking.locationId as { name?: string } | null;
+      const locationName = locationId?.name ?? 'Unknown Location';
+      const startDate = new Date(booking.startTime).toLocaleDateString();
+      return `${booking.status} booking at ${locationName} on ${startDate}`;
+    });
+
+    throw new AppError(
+      `Cannot delete user with ${activeBookings.length} active bookings: ${bookingDetails.join(', ')}. ` +
+      'Please cancel or complete these bookings first.',
+      400
+    );
   }
 
+  // For now, allow deletion even with completed bookings and payments
+  // In a production system, you might want to:
+  // 1. Archive the user instead of deleting
+  // 2. Cascade delete related records
+  // 3. Or prevent deletion entirely if there are any financial records
+
   await safeDelete(User, userId, 'User not found');
+
+  // Emit WebSocket event for real-time updates
+  emitUserManagementUpdate({
+    userId: userId,
+    action: 'deleted',
+    timestamp: new Date()
+  });
 };
 
 // Valet Management Functions
@@ -416,7 +589,19 @@ export const createBulkSchedules = async (
 };
 
 // Booking Management Functions
-export const getAllBookings = async (filters: IBookingFilters): Promise<IBookingDocument[]> => {
+export const getAllBookings = async (filters: IBookingFilters): Promise<{
+  bookings: IBookingDocument[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}> => {
+  const page = (typeof filters.page === 'number' && filters.page > 0) ? filters.page : 1;
+  const limit = (typeof filters.limit === 'number' && filters.limit > 0) ? filters.limit : 10;
+  const skip = (page - 1) * limit;
+
   const query: IBookingQuery = {};
 
   // Apply status filter
@@ -427,6 +612,41 @@ export const getAllBookings = async (filters: IBookingFilters): Promise<IBooking
   // Apply location filter
   if (typeof filters.locationId === 'string' && filters.locationId.trim().length > 0) {
     query.locationId = filters.locationId;
+  }
+
+  // Apply user filter
+  if (typeof filters.userId === 'string' && filters.userId.trim().length > 0) {
+    query.userId = filters.userId;
+  }
+
+  // Apply search filter (search in user email/name)
+  if (typeof filters.search === 'string' && filters.search.trim().length > 0) {
+    const escapedSearch = filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // eslint-disable-next-line security/detect-non-literal-regexp
+    const searchRegex = new RegExp(escapedSearch, 'i');
+    
+    // We need to use aggregation for searching populated fields
+    const userIds: string[] = await User.find({
+      $or: [
+        { email: searchRegex },
+        { 'profile.name': searchRegex }
+      ]
+    }).distinct('_id');
+    
+    if (userIds.length > 0) {
+      query.userId = { $in: userIds };
+    } else {
+      // If no users match, return empty results
+      return {
+        bookings: [],
+        pagination: {
+          currentPage: page,
+          totalPages: 0,
+          totalItems: 0,
+          itemsPerPage: limit
+        }
+      };
+    }
   }
 
   // Apply date range filter
@@ -472,12 +692,34 @@ export const getAllBookings = async (filters: IBookingFilters): Promise<IBooking
     }
   }
 
-  const bookings = await Booking.find(query)
-    .populate('userId', 'email profile.name')
-    .populate('locationId', 'name address')
-    .sort({ startTime: -1 });
+  // Build sort object
+  const sortBy = filters.sortBy ?? 'createdAt';
+  const sortOrder = filters.sortOrder === 'asc' ? 1 : -1;
+  const sort: Record<string, 1 | -1> = {
+    [sortBy]: sortOrder
+  };
 
-  return transformBookings(bookings) as unknown as IBookingDocument[];
+  const [bookings, totalItems] = await Promise.all([
+    Booking.find(query)
+      .populate('userId', 'email profile.name')
+      .populate('locationId', 'name address')
+      .skip(skip)
+      .limit(limit)
+      .sort(sort),
+    Booking.countDocuments(query)
+  ]);
+
+  const totalPages = Math.ceil(totalItems / limit);
+
+  return {
+    bookings: transformBookings(bookings) as unknown as IBookingDocument[],
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems,
+      itemsPerPage: limit
+    }
+  };
 };
 
 export const updateBookingStatus = async (bookingId: string, status: BookingStatus): Promise<IBookingDocument> => {
@@ -723,11 +965,16 @@ export const getBookingAnalytics = async (): Promise<{
       }
     },
     {
-      $unwind: '$location'
+      $unwind: {
+        path: '$location',
+        preserveNullAndEmptyArrays: true
+      }
     },
     {
       $group: {
-        _id: '$location.name',
+        _id: {
+          $ifNull: ['$location.name', 'Unknown Location']
+        },
         count: { $sum: 1 }
       }
     },
