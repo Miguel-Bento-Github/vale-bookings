@@ -4,7 +4,9 @@ import {
   createUser as createUserService,
   getUserById as getUserByIdService,
   getAllUsers as getAllUsersService,
+  updateUser as updateUserService,
   updateUserRole as updateUserRoleService,
+  getUserStats as getUserStatsService,
   deleteUser as deleteUserService,
   getAllValets as getAllValetsService,
   createValet as createValetService,
@@ -259,6 +261,77 @@ export const getUserById = withErrorHandling(async (req: AuthenticatedRequest, r
   }
 
   const user = await getUserByIdService(userId);
+  
+  res.status(200).json({
+    success: true,
+    data: user
+  });
+});
+
+export const getUserStats = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
+  const { id } = req.params;
+
+  if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
+    sendError(res, 'User ID is required', 400);
+    return;
+  }
+
+  const stats = await getUserStatsService(id);
+  
+  res.status(200).json({
+    success: true,
+    data: stats
+  });
+});
+
+export const updateUser = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (req.user?.role !== 'ADMIN') {
+    sendError(res, 'Forbidden: access denied', 403);
+    return;
+  }
+
+  const { id } = req.params;
+
+  if (id === undefined || id === null || typeof id !== 'string' || id.trim().length === 0) {
+    sendError(res, 'User ID is required', 400);
+    return;
+  }
+
+  // Validate update data
+  const updateData = req.body as Record<string, unknown>;
+  const allowedFields = ['email', 'role', 'profile'];
+  const providedFields = Object.keys(updateData);
+  
+  const invalidFields = providedFields.filter(field => !allowedFields.includes(field));
+  if (invalidFields.length > 0) {
+    sendError(res, `Invalid fields: ${invalidFields.join(', ')}`, 400);
+    return;
+  }
+
+  // Validate email format if provided
+  if (typeof updateData.email === 'string' && updateData.email.length > 0) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(updateData.email)) {
+      sendError(res, 'Invalid email format', 400);
+      return;
+    }
+  }
+
+  // Validate role if provided
+  if (typeof updateData.role === 'string' && updateData.role.length > 0) {
+    const validRoles = ['CUSTOMER', 'VALET', 'ADMIN'];
+    if (!validRoles.includes(updateData.role)) {
+      sendError(res, 'Invalid role', 400);
+      return;
+    }
+  }
+
+  const user = await updateUserService(id, updateData);
   
   res.status(200).json({
     success: true,
@@ -564,15 +637,34 @@ export const getAllBookings = withErrorHandling(async (req: AuthenticatedRequest
     return;
   }
 
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const sortBy = req.query.sortBy as string || 'createdAt';
+  const sortOrder = req.query.sortOrder as string || 'desc';
+  const search = req.query.search as string;
+
   const filters = {
     status: req.query.status as BookingStatus,
     startDate: req.query.startDate as string,
     endDate: req.query.endDate as string,
-    locationId: req.query.locationId as string
+    locationId: req.query.locationId as string,
+    userId: req.query.userId as string,
+    serviceId: req.query.serviceId as string,
+    includeGuest: req.query.includeGuest === 'true',
+    page,
+    limit,
+    sortBy,
+    sortOrder,
+    search
   };
 
-  const bookings = await getAllBookingsService(filters);
-  sendSuccess(res, bookings);
+  const result = await getAllBookingsService(filters);
+  
+  res.status(200).json({
+    success: true,
+    data: result.bookings,
+    pagination: result.pagination
+  });
 });
 
 export const updateBookingStatus = withErrorHandling(
