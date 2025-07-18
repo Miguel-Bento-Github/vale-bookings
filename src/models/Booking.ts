@@ -89,6 +89,10 @@ BookingSchema.pre('validate', function (next): void {
 BookingSchema.index({ userId: 1, createdAt: -1 });
 BookingSchema.index({ locationId: 1, startTime: 1 });
 BookingSchema.index({ status: 1, startTime: 1 });
+BookingSchema.index({ createdAt: -1 }); // For default sorting in admin
+BookingSchema.index({ status: 1, createdAt: -1 }); // For status filtering with sorting
+BookingSchema.index({ locationId: 1, createdAt: -1 }); // For location filtering with sorting
+BookingSchema.index({ userId: 1, status: 1, createdAt: -1 }); // For user + status filtering
 
 // Compound index to prevent overlapping bookings for the same location
 BookingSchema.index(
