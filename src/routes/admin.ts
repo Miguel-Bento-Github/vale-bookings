@@ -4,6 +4,8 @@ import {
   getAllUsers,
   createUser,
   getUserById,
+  getUserStats,
+  updateUser,
   updateUserRole,
   deleteUser,
   getAllValets,
@@ -46,6 +48,12 @@ router.post('/users', (req, res, next) => {
 });
 router.get('/users/:id', (req, res, next) => {
   getUserById(req, res).catch(next);
+});
+router.get('/users/:id/stats', (req, res, next) => {
+  getUserStats(req, res).catch(next);
+});
+router.put('/users/:id', (req, res, next) => {
+  updateUser(req, res).catch(next);
 });
 router.put('/users/:id/role', (req, res, next) => {
   updateUserRole(req, res).catch(next);
