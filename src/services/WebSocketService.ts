@@ -36,6 +36,14 @@ interface UserNotificationData {
     timestamp: Date;
 }
 
+interface UserManagementData {
+    userId: string;
+    action: 'created' | 'updated' | 'deleted';
+    userEmail?: string;
+    userRole?: string;
+    timestamp: Date;
+}
+
 // Module-level state
 let io: SocketIOServer | null = null;
 const connectedUsers = new Map<string, string>(); // socketId -> userId
@@ -544,6 +552,28 @@ export function forceAllUsersLogout(reason: string = 'System maintenance'): void
     logInfo(`✅ All users logged out - reason: ${reason}`);
   } catch (error) {
     logError('Failed to force all users logout:', error);
+  }
+}
+
+/**
+ * Emit user management update (for admin dashboard)
+ */
+export function emitUserManagementUpdate(data: UserManagementData): void {
+  if (!io) return;
+
+  try {
+    // Emit to admins only
+    io.to('admins').emit('admin:user_updated', {
+      userId: data.userId,
+      action: data.action,
+      userEmail: data.userEmail,
+      userRole: data.userRole,
+      timestamp: data.timestamp
+    });
+
+    logInfo(`User management update emitted: ${data.action} for user ${data.userId}`);
+  } catch (error) {
+    logError('Failed to emit user management update:', error);
   }
 }
 
