@@ -766,16 +766,25 @@ describe('AdminController', () => {
   describe('getAllBookings', () => {
     it('should get all bookings successfully', async () => {
       mockReq.query = { status: 'PENDING', startDate: '2024-01-01', endDate: '2024-01-31' };
-      const mockBookings = [] as never[];
+      const mockResult = {
+        bookings: [] as never[],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 0,
+          itemsPerPage: 10
+        }
+      };
       (mockAdminService.getAllBookings as jest.MockedFunction<typeof mockAdminService.getAllBookings>)
-        .mockResolvedValue(mockBookings);
+        .mockResolvedValue(mockResult);
 
       await AdminController.getAllBookings(mockReq as AuthenticatedRequest, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        data: mockBookings
+        data: mockResult.bookings,
+        pagination: mockResult.pagination
       });
     });
 
