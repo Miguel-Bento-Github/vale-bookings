@@ -9,7 +9,6 @@ import {
   UserRole,
   AppError
 } from '../types';
-import { logError } from '../utils/logger';
 
 import { createUser, findByEmail, findById } from './UserService';
 import { forceUserLogout } from './WebSocketService';
@@ -59,6 +58,7 @@ export function generateTokens(user: IUserDocument): IAuthTokens {
     role: user.role
   };
 
+  
   const accessToken = sign(
     payload, 
     JWT_SECRET,
@@ -118,22 +118,4 @@ export function invalidateUserToken(userId: string, reason: string = 'Token inva
   }
 }
 
-/**
- * Verify token and handle expiration gracefully
- */
-export function verifyTokenSafely(token: string): IJWTPayload | null {
-  try {
-    return verify(token, JWT_SECRET) as IJWTPayload;
-  } catch (error) {
-    if (error instanceof Error) {
-      // Check if it's a token expiration error
-      if (error.name === 'TokenExpiredError') {
-        // Token expired - handled gracefully
-        return null;
-      }
-      // Other JWT errors (invalid, malformed, etc.)
-      logError('JWT verification error:', error);
-    }
-    return null;
-  }
-} 
+ 
