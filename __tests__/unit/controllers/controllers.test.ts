@@ -2775,7 +2775,16 @@ describe('Controllers', () => {
           { _id: '1', userId: 'user1', locationId: 'loc1', status: 'PENDING' },
           { _id: '2', userId: 'user2', locationId: 'loc2', status: 'CONFIRMED' }
         ];
-        (getAllBookingsService as jest.Mock).mockResolvedValue(mockBookings);
+        const mockResult = {
+          bookings: mockBookings,
+          pagination: {
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: 2,
+            itemsPerPage: 10
+          }
+        };
+        (getAllBookingsService as jest.Mock).mockResolvedValue(mockResult);
 
         adminRequest.query = { status: 'PENDING' };
 
@@ -2784,7 +2793,8 @@ describe('Controllers', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: mockBookings
+          data: mockResult.bookings,
+          pagination: mockResult.pagination
         });
       });
 
