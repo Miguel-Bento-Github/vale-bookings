@@ -17,6 +17,26 @@ import { AppError } from './types';
 import { createPrettyLogger, responseTimeMiddleware, logError } from './utils/logger';
 import { sendError } from './utils/responseHelpers';
 
+// Global error handling for uncaught exceptions and unhandled promise rejections
+process.on('uncaughtException', (error: Error) => {
+  console.error('🚨 UNCAUGHT EXCEPTION - Server will continue running:', error.message);
+  logError('Uncaught Exception:', error);
+  
+  // Log the stack trace for debugging
+  if (error.stack !== undefined && error.stack !== null) {
+    console.error('Stack trace:', error.stack);
+  }
+  
+  // Don't exit the process - keep the server running
+});
+
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  console.error('🚨 UNHANDLED PROMISE REJECTION - Server will continue running:', reason);
+  logError('Unhandled Promise Rejection at:', promise, 'reason:', reason);
+  
+  // Don't exit the process - keep the server running
+});
+
 const app = express();
 
 // Enhanced security headers
@@ -153,7 +173,16 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 
 // Create HTTP server and initialize WebSocket
 const httpServer = createServer(app);
-initializeWebSocket(httpServer);
+
+// Initialize WebSocket with error handling
+try {
+  initializeWebSocket(httpServer);
+  console.info('✅ WebSocket service initialized successfully');
+} catch (error) {
+  console.error('❌ Failed to initialize WebSocket service:', error);
+  logError('WebSocket initialization failed:', error);
+  // Server continues running without WebSocket
+}
 
 export default app;
 export { httpServer }; 
