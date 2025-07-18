@@ -275,7 +275,7 @@ describe('WebSocketService', () => {
       };
 
       expect(() => emitBookingUpdate(updateData)).not.toThrow();
-      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to emit booking update:', expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith('❌ Failed to emit booking update events:', expect.any(Error));
 
       consoleSpy.mockRestore();
     });
