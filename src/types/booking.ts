@@ -39,7 +39,7 @@ export interface IUpdateBookingRequest {
 export interface IBookingQuery extends IMongoQuery {
     status?: BookingStatus;
     startTime?: IDateRangeQuery;
-    userId?: string;
+    userId?: string | { $in: string[] };
     locationId?: string;
 }
 
