@@ -12,7 +12,7 @@ import {
   ensureDocumentExists
 } from '../../utils/mongoHelpers';
 import { transformBookings } from '../../utils/populateHelpers';
-import { emitBookingUpdate } from '../WebSocketService';
+import { emitBookingUpdate, emitCacheInvalidation } from '../WebSocketService';
 
 export interface IBookingFilters {
   status?: BookingStatus;
@@ -185,6 +185,18 @@ export const updateBookingStatus = async (bookingId: string, status: BookingStat
     timestamp: new Date()
   });
 
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'booking',
+    action: 'updated',
+    entityId: String(updatedBooking._id),
+    relatedIds: {
+      userId: String(updatedBooking.userId),
+      locationId: String(updatedBooking.locationId)
+    },
+    timestamp: new Date()
+  });
+
   return updatedBooking;
 };
 
@@ -216,6 +228,18 @@ export const deleteBooking = async (bookingId: string): Promise<void> => {
     status: 'CANCELLED', // Treat deletion as cancellation for WebSocket purposes
     locationId: String(booking.locationId),
     userId: String(booking.userId),
+    timestamp: new Date()
+  });
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'booking',
+    action: 'deleted',
+    entityId: String(booking._id),
+    relatedIds: {
+      userId: String(booking.userId),
+      locationId: String(booking.locationId)
+    },
     timestamp: new Date()
   });
 };

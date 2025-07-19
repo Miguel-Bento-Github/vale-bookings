@@ -16,7 +16,7 @@ import {
   ensureDocumentExists,
   safeDelete
 } from '../../utils/mongoHelpers';
-import { emitUserManagementUpdate } from '../WebSocketService';
+import { emitUserManagementUpdate, emitCacheInvalidation } from '../WebSocketService';
 
 export interface IUserFilters extends IPaginationOptions {
   role?: string;
@@ -54,6 +54,14 @@ export const createUser = async (userData: {
     action: 'created',
     userEmail: user.email,
     userRole: user.role,
+    timestamp: new Date()
+  });
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'user',
+    action: 'created',
+    entityId: String(user._id),
     timestamp: new Date()
   });
 
@@ -146,6 +154,14 @@ export const updateUser = async (userId: string, updateData: Partial<IUserDocume
     timestamp: new Date()
   });
 
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'user',
+    action: 'updated',
+    entityId: String(user._id),
+    timestamp: new Date()
+  });
+
   // Remove password from response
   const userObj = user.toObject() as Record<string, unknown>;
   delete userObj.password;
@@ -165,6 +181,14 @@ export const updateUserRole = async (userId: string, role: UserRole): Promise<IU
     action: 'updated',
     userEmail: user.email,
     userRole: user.role,
+    timestamp: new Date()
+  });
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'user',
+    action: 'updated',
+    entityId: String(user._id),
     timestamp: new Date()
   });
 
@@ -299,6 +323,14 @@ export const deleteUser = async (userId: string): Promise<void> => {
   emitUserManagementUpdate({
     userId: userId,
     action: 'deleted',
+    timestamp: new Date()
+  });
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'user',
+    action: 'deleted',
+    entityId: userId,
     timestamp: new Date()
   });
 };

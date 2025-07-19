@@ -2,7 +2,7 @@ import Booking from '../models/Booking';
 import { IBooking, IBookingDocument, IUpdateBookingRequest, BookingStatus, IBookingModel , AppError } from '../types';
 import { standardUpdate, ensureDocumentExists, safeDelete } from '../utils/mongoHelpers';
 
-import { emitBookingUpdate, sendUserNotification } from './WebSocketService';
+import { emitBookingUpdate, sendUserNotification, emitCacheInvalidation } from './WebSocketService';
 
 export async function createBooking(bookingData: IBooking): Promise<IBookingDocument> {
   // Check for overlapping bookings
@@ -36,6 +36,18 @@ export async function createBooking(bookingData: IBooking): Promise<IBookingDocu
     message: 'Your valet parking booking has been confirmed',
     data: {
       bookingId: String(savedBooking._id),
+      locationId: String(savedBooking.locationId)
+    },
+    timestamp: new Date()
+  });
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'booking',
+    action: 'created',
+    entityId: String(savedBooking._id),
+    relatedIds: {
+      userId: String(savedBooking.userId),
       locationId: String(savedBooking.locationId)
     },
     timestamp: new Date()
@@ -99,7 +111,23 @@ export async function updateBooking(
     }
   }
 
-  return await standardUpdate(Booking, bookingId, updateData as Partial<IBookingDocument>);
+  const updatedBooking = await standardUpdate(Booking, bookingId, updateData as Partial<IBookingDocument>);
+
+  if (updatedBooking) {
+    // Emit cache invalidation for real-time cache updates
+    emitCacheInvalidation({
+      entity: 'booking',
+      action: 'updated',
+      entityId: String(updatedBooking._id),
+      relatedIds: {
+        userId: String(updatedBooking.userId),
+        locationId: String(updatedBooking.locationId)
+      },
+      timestamp: new Date()
+    });
+  }
+
+  return updatedBooking;
 }
 
 export async function updateBookingStatus(
@@ -138,6 +166,18 @@ export async function updateBookingStatus(
         timestamp: new Date()
       });
     }
+
+    // Emit cache invalidation for real-time cache updates
+    emitCacheInvalidation({
+      entity: 'booking',
+      action: 'updated',
+      entityId: String(updatedBooking._id),
+      relatedIds: {
+        userId: String(updatedBooking.userId),
+        locationId: String(updatedBooking.locationId)
+      },
+      timestamp: new Date()
+    });
   }
 
   return updatedBooking;
@@ -159,7 +199,22 @@ export async function cancelBooking(bookingId: string): Promise<IBookingDocument
 }
 
 export async function deleteBooking(bookingId: string): Promise<void> {
+  // Get booking before deletion to extract related IDs for cache invalidation
+  const booking = await ensureDocumentExists(Booking, bookingId, 'Booking not found');
+  
   await safeDelete(Booking, bookingId, 'Booking not found');
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'booking',
+    action: 'deleted',
+    entityId: bookingId,
+    relatedIds: {
+      userId: String(booking.userId),
+      locationId: String(booking.locationId)
+    },
+    timestamp: new Date()
+  });
 }
 
 export async function checkOverlappingBookings(

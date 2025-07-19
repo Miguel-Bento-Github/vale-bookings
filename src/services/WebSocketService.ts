@@ -44,6 +44,19 @@ interface UserManagementData {
     timestamp: Date;
 }
 
+interface CacheInvalidationData {
+    entity: 'user' | 'location' | 'booking' | 'schedule' | 'analytics';
+    action: 'created' | 'updated' | 'deleted';
+    entityId: string;
+    relatedIds?: {
+        userId?: string;
+        locationId?: string;
+        bookingId?: string;
+        scheduleId?: string;
+    };
+    timestamp: Date;
+}
+
 // Module-level state
 let io: SocketIOServer | null = null;
 const connectedUsers = new Map<string, string>(); // socketId -> userId
@@ -574,6 +587,28 @@ export function emitUserManagementUpdate(data: UserManagementData): void {
     logInfo(`User management update emitted: ${data.action} for user ${data.userId}`);
   } catch (error) {
     logError('Failed to emit user management update:', error);
+  }
+}
+
+/**
+ * Emit cache invalidation event for real-time cache management
+ */
+export function emitCacheInvalidation(data: CacheInvalidationData): void {
+  if (!io) return;
+
+  try {
+    // Emit to all connected clients for cache invalidation
+    io.emit('cache:invalidate', {
+      entity: data.entity,
+      action: data.action,
+      entityId: data.entityId,
+      relatedIds: data.relatedIds,
+      timestamp: data.timestamp
+    });
+
+    logInfo(`Cache invalidation emitted: ${data.action} ${data.entity} ${data.entityId}`);
+  } catch (error) {
+    logError('Failed to emit cache invalidation:', error);
   }
 }
 

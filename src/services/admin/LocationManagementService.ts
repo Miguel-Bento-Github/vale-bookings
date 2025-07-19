@@ -18,6 +18,7 @@ import {
   ensureDocumentExists,
   safeDelete
 } from '../../utils/mongoHelpers';
+import { emitCacheInvalidation } from '../WebSocketService';
 
 export interface ILocationFilters extends IPaginationOptions {
   search?: string;
@@ -36,11 +37,21 @@ export interface IBulkScheduleResult {
 
 // Location Management Functions
 export const createLocation = async (locationData: ICreateLocationRequest): Promise<ILocationDocument> => {
-  return await createWithDuplicateHandling(
+  const location = await createWithDuplicateHandling(
     Location,
     locationData,
     ERROR_MESSAGES.LOCATION_ALREADY_EXISTS
   );
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'location',
+    action: 'created',
+    entityId: String(location._id),
+    timestamp: new Date()
+  });
+
+  return location;
 };
 
 export const getLocationById = async (locationId: string): Promise<ILocationDocument> => {
@@ -117,6 +128,14 @@ export const updateLocation = async (
   if (!location) {
     throw new AppError('Location not found', 404);
   }
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'location',
+    action: 'updated',
+    entityId: String(location._id),
+    timestamp: new Date()
+  });
   
   return location;
 };
@@ -135,6 +154,14 @@ export const deleteLocation = async (locationId: string): Promise<void> => {
   }
   
   await safeDelete(Location, locationId, 'Location not found');
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'location',
+    action: 'deleted',
+    entityId: locationId,
+    timestamp: new Date()
+  });
 };
 
 // Schedule Management Functions
@@ -172,11 +199,24 @@ export const createSchedule = async (scheduleData: ICreateScheduleRequest): Prom
     throw new AppError('Schedule overlaps with existing schedule', 409);
   }
   
-  return await createWithDuplicateHandling(
+  const schedule = await createWithDuplicateHandling(
     Schedule,
     scheduleData,
     ERROR_MESSAGES.SCHEDULE_ALREADY_EXISTS
   );
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'schedule',
+    action: 'created',
+    entityId: String(schedule._id),
+    relatedIds: {
+      locationId: scheduleData.locationId
+    },
+    timestamp: new Date()
+  });
+
+  return schedule;
 };
 
 export const getScheduleById = async (scheduleId: string): Promise<IScheduleDocument> => {
@@ -239,12 +279,37 @@ export const updateSchedule = async (
   if (!updatedSchedule) {
     throw new AppError('Schedule not found', 404);
   }
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'schedule',
+    action: 'updated',
+    entityId: String(updatedSchedule._id),
+    relatedIds: {
+      locationId: String(updatedSchedule.locationId)
+    },
+    timestamp: new Date()
+  });
   
   return updatedSchedule;
 };
 
 export const deleteSchedule = async (scheduleId: string): Promise<void> => {
+  // Get schedule before deletion to extract locationId for cache invalidation
+  const schedule = await ensureDocumentExists(Schedule, scheduleId, 'Schedule not found');
+  
   await safeDelete(Schedule, scheduleId, 'Schedule not found');
+
+  // Emit cache invalidation for real-time cache updates
+  emitCacheInvalidation({
+    entity: 'schedule',
+    action: 'deleted',
+    entityId: scheduleId,
+    relatedIds: {
+      locationId: String(schedule.locationId)
+    },
+    timestamp: new Date()
+  });
 };
 
 export const createBulkSchedules = async (
