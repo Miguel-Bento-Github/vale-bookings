@@ -40,14 +40,16 @@ export const getOverviewStats = async (): Promise<AnalyticsOverview> => {
     Location.countDocuments({ isActive: true })
   ]);
 
-  const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].total : 0;
+  const totalRevenue = totalRevenueResult.length > 0 && totalRevenueResult[0] !== null && totalRevenueResult[0] !== undefined
+    ? (totalRevenueResult[0] as { total: number }).total 
+    : 0;
 
   return {
     totalUsers,
     totalBookings,
     totalRevenue,
     activeLocations
-  };
+  } as AnalyticsOverview;
 };
 
 export const getBookingAnalytics = async (): Promise<{
@@ -178,12 +180,12 @@ export const getRevenueAnalytics = async (filters: {
 }> => {
   // Build date match condition
   const dateMatch: Record<string, unknown> = {};
-  if (filters.startDate || filters.endDate) {
+  if ((filters.startDate && filters.startDate.length > 0) || (filters.endDate && filters.endDate.length > 0)) {
     const dateRange: Record<string, Date> = {};
-    if (filters.startDate) {
+    if (filters.startDate && filters.startDate.length > 0) {
       dateRange.$gte = new Date(filters.startDate);
     }
-    if (filters.endDate) {
+    if (filters.endDate && filters.endDate.length > 0) {
       const endDate = new Date(filters.endDate);
       endDate.setHours(23, 59, 59, 999);
       dateRange.$lte = endDate;
@@ -197,7 +199,9 @@ export const getRevenueAnalytics = async (filters: {
     { $group: { _id: null, total: { $sum: '$price' } } }
   ]);
 
-  const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].total : 0;
+  const totalRevenue = totalRevenueResult.length > 0 && totalRevenueResult[0] !== null && totalRevenueResult[0] !== undefined
+    ? (totalRevenueResult[0] as { total: number }).total 
+    : 0;
 
   // Get monthly revenue
   const monthlyRevenueResult = await Booking.aggregate([
@@ -233,7 +237,7 @@ export const getRevenueAnalytics = async (filters: {
     { $sort: { month: 1 } }
   ]);
 
-  const monthlyRevenue = monthlyRevenueResult.map((item: { month: string; revenue: number }) => ({
+  const monthlyRevenue = (monthlyRevenueResult as Array<{ month: string; revenue: number }>).map(item => ({
     month: item.month,
     revenue: item.revenue
   }));

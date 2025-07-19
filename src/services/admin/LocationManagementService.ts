@@ -108,7 +108,10 @@ export const getAllLocations = async (filters: ILocationFilters): Promise<{
   };
 };
 
-export const updateLocation = async (locationId: string, updateData: IUpdateLocationRequest): Promise<ILocationDocument> => {
+export const updateLocation = async (
+  locationId: string,
+  updateData: IUpdateLocationRequest
+): Promise<ILocationDocument> => {
   const location = await standardUpdate(Location, locationId, updateData);
   
   if (!location) {
@@ -122,9 +125,12 @@ export const deleteLocation = async (locationId: string): Promise<void> => {
   await ensureDocumentExists(Location, locationId, 'Location not found');
   
   // Check if location has active bookings
-  const activeBookings = await checkDocumentExists('Booking', { locationId, status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] } });
+  const activeBookings = await checkDocumentExists(
+    'Booking',
+    { locationId, status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] } }
+  );
   
-  if (activeBookings) {
+  if (activeBookings !== null) {
     throw new AppError('Cannot delete location with active bookings', 400);
   }
   
@@ -177,13 +183,18 @@ export const getScheduleById = async (scheduleId: string): Promise<IScheduleDocu
   return await ensureDocumentExists(Schedule, scheduleId, 'Schedule not found');
 };
 
-export const getLocationSchedules = async (locationId: string): Promise<IScheduleDocument[]> => {
+export const getLocationSchedules = async (
+  locationId: string
+): Promise<IScheduleDocument[]> => {
   await ensureDocumentExists(Location, locationId, 'Location not found');
   
   return await Schedule.find({ locationId }).sort({ dayOfWeek: 1, startTime: 1 });
 };
 
-export const updateSchedule = async (scheduleId: string, updateData: IUpdateScheduleRequest): Promise<IScheduleDocument> => {
+export const updateSchedule = async (
+  scheduleId: string,
+  updateData: IUpdateScheduleRequest
+): Promise<IScheduleDocument> => {
   const schedule = await ensureDocumentExists(Schedule, scheduleId, 'Schedule not found');
   
   // If updating time or day, check for overlaps

@@ -1,4 +1,3 @@
-import { ERROR_MESSAGES } from '../../constants';
 import Booking from '../../models/Booking';
 import User from '../../models/User';
 import { 
@@ -164,7 +163,7 @@ export const updateBookingStatus = async (bookingId: string, status: BookingStat
   };
 
   const currentStatus = booking.status;
-  if (!validTransitions[currentStatus]?.includes(status)) {
+  if (currentStatus && validTransitions[currentStatus] && !validTransitions[currentStatus].includes(status)) {
     throw new AppError(`Cannot transition from ${currentStatus} to ${status}`, 400);
   }
 

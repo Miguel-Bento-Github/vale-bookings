@@ -196,7 +196,7 @@ export const assignValetToLocation = async (valetId: string, locationId: string)
   }
 
   // Add location to assigned locations if not already present
-  const assignedLocationIds = valet.assignedLocationIds || [];
+  const assignedLocationIds = Array.isArray(valet.assignedLocationIds) ? valet.assignedLocationIds : [];
   if (!assignedLocationIds.includes(locationId)) {
     assignedLocationIds.push(locationId);
   }
@@ -226,7 +226,9 @@ export const unassignValetFromLocation = async (valetId: string, locationId: str
   }
 
   // Remove location from assigned locations
-  const assignedLocationIds = (valet.assignedLocationIds || []).filter(id => id !== locationId);
+  const assignedLocationIds = Array.isArray(valet.assignedLocationIds) 
+    ? valet.assignedLocationIds.filter((id: string) => id !== locationId) 
+    : [];
 
   const updatedValet = await standardUpdate(User, valetId, {
     assignedLocationIds
