@@ -159,7 +159,12 @@ describe('AdminController', () => {
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
         data: mockResult.valets,
-        pagination: mockResult.pagination
+        pagination: {
+          page: mockResult.pagination.currentPage,
+          limit: mockResult.pagination.itemsPerPage,
+          total: mockResult.pagination.totalItems,
+          totalPages: mockResult.pagination.totalPages
+        }
       });
     });
   });
