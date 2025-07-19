@@ -18,7 +18,7 @@ import {
 } from '../../utils/mongoHelpers';
 import { emitUserManagementUpdate } from '../WebSocketService';
 
-interface IUserFilters extends IPaginationOptions {
+export interface IUserFilters extends IPaginationOptions {
   role?: string;
   search?: string;
   status?: string;

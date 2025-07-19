@@ -20,14 +20,14 @@ import {
   checkDocumentExists
 } from '../../utils/mongoHelpers';
 
-interface ILocationFilters extends IPaginationOptions {
+export interface ILocationFilters extends IPaginationOptions {
   search?: string;
   isActive?: boolean;
   sortBy?: string;
   sortOrder?: string;
 }
 
-interface IBulkScheduleResult {
+export interface IBulkScheduleResult {
   successful: IScheduleDocument[];
   failed: Array<{
     schedule: ICreateScheduleRequest;

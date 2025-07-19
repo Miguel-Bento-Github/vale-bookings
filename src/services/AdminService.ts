@@ -7,6 +7,33 @@ import * as LocationManagement from './admin/LocationManagementService';
 import * as UserManagement from './admin/UserManagementService';
 import * as ValetManagement from './admin/ValetManagementService';
 
+// Re-export types to fix TypeScript export errors
+export type { 
+  AnalyticsOverview,
+  BookingsByStatus,
+  BookingsByLocation,
+  DailyBookings
+} from './admin/AnalyticsService';
+
+export type {
+  IBookingFilters
+} from './admin/BookingManagementService';
+
+export type {
+  ILocationFilters,
+  IBulkScheduleResult
+} from './admin/LocationManagementService';
+
+export type {
+  IUserFilters
+} from './admin/UserManagementService';
+
+export type {
+  IValetFilters,
+  ICreateValetData,
+  IUpdateValetData
+} from './admin/ValetManagementService';
+
 // User Management
 export const createUser = UserManagement.createUser;
 export const getUserById = UserManagement.getUserById;

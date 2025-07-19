@@ -1,7 +1,12 @@
+import mongoose from 'mongoose';
+
 import { ERROR_MESSAGES } from '../../constants';
+import Booking from '../../models/Booking';
+import Payment from '../../models/Payment';
 import User from '../../models/User';
 import { 
   IUserDocument,
+  UserRole,
   AppError,
   IPaginationOptions
 } from '../../types';
@@ -12,7 +17,12 @@ import {
   safeDelete
 } from '../../utils/mongoHelpers';
 
-interface IValetFilters extends IPaginationOptions {
+// Extended interface for valet-specific fields
+interface IValetDocument extends IUserDocument {
+  assignedLocationIds?: string[];
+}
+
+export interface IValetFilters extends IPaginationOptions {
   search?: string;
   isActive?: boolean;
   locationId?: string;
@@ -20,7 +30,7 @@ interface IValetFilters extends IPaginationOptions {
   sortOrder?: string;
 }
 
-interface ICreateValetData {
+export interface ICreateValetData {
   email: string;
   password: string;
   profile: {
@@ -33,7 +43,7 @@ interface ICreateValetData {
   isActive?: boolean;
 }
 
-interface IUpdateValetData {
+export interface IUpdateValetData {
   email?: string;
   profile?: {
     name?: string;
@@ -155,7 +165,7 @@ export const updateValet = async (valetId: string, updateData: IUpdateValetData)
     throw new AppError('Valet not found', 404);
   }
 
-  const valet = await standardUpdate(User, valetId, updateData);
+  const valet = await standardUpdate(User, valetId, updateData as Partial<IValetDocument>);
 
   if (!valet) {
     throw new AppError('Valet not found', 404);
@@ -196,14 +206,15 @@ export const assignValetToLocation = async (valetId: string, locationId: string)
   }
 
   // Add location to assigned locations if not already present
-  const assignedLocationIds = Array.isArray(valet.assignedLocationIds) ? valet.assignedLocationIds : [];
+  const valetDoc = valet as IValetDocument;
+  const assignedLocationIds = Array.isArray(valetDoc.assignedLocationIds) ? valetDoc.assignedLocationIds : [];
   if (!assignedLocationIds.includes(locationId)) {
     assignedLocationIds.push(locationId);
   }
 
   const updatedValet = await standardUpdate(User, valetId, {
     assignedLocationIds
-  });
+  } as Partial<IValetDocument>);
 
   if (!updatedValet) {
     throw new AppError('Failed to assign valet to location', 500);
@@ -226,13 +237,14 @@ export const unassignValetFromLocation = async (valetId: string, locationId: str
   }
 
   // Remove location from assigned locations
-  const assignedLocationIds = Array.isArray(valet.assignedLocationIds) 
-    ? valet.assignedLocationIds.filter((id: string) => id !== locationId) 
+  const valetDoc = valet as IValetDocument;
+  const assignedLocationIds = Array.isArray(valetDoc.assignedLocationIds) 
+    ? valetDoc.assignedLocationIds.filter((id: string) => id !== locationId) 
     : [];
 
   const updatedValet = await standardUpdate(User, valetId, {
     assignedLocationIds
-  });
+  } as Partial<IValetDocument>);
 
   if (!updatedValet) {
     throw new AppError('Failed to unassign valet from location', 500);

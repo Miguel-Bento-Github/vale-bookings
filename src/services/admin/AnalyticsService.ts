@@ -2,24 +2,24 @@ import Booking from '../../models/Booking';
 import Location from '../../models/Location';
 import User from '../../models/User';
 
-interface AnalyticsOverview {
+export interface AnalyticsOverview {
   totalUsers: number;
   totalBookings: number;
   totalRevenue: number;
   activeLocations: number;
 }
 
-interface BookingsByLocation {
+export interface BookingsByLocation {
   location: string;
   count: number;
 }
 
-interface BookingsByStatus {
+export interface BookingsByStatus {
   status: string;
   count: number;
 }
 
-interface DailyBookings {
+export interface DailyBookings {
   date: string;
   count: number;
 }

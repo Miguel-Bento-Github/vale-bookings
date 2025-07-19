@@ -14,7 +14,7 @@ import {
 import { transformBookings } from '../../utils/populateHelpers';
 import { emitBookingUpdate } from '../WebSocketService';
 
-interface IBookingFilters {
+export interface IBookingFilters {
   status?: BookingStatus;
   startDate?: string;
   endDate?: string;
