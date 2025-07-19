@@ -402,7 +402,13 @@ export const getAllValets = withErrorHandling(async (req: AuthenticatedRequest, 
   };
 
   const result = await getAllValetsService(filters);
-  sendSuccessWithPagination(res, result.valets, result.pagination);
+  const paginationMeta = {
+    page: result.pagination.currentPage,
+    limit: result.pagination.itemsPerPage,
+    total: result.pagination.totalItems,
+    totalPages: result.pagination.totalPages
+  };
+  sendSuccessWithPagination(res, result.valets, paginationMeta);
 });
 
 export const createValet = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -627,7 +633,7 @@ export const createBulkSchedules = withErrorHandling(
     const { locationId } = bodyObj;
     const validatedSchedules = validatedScheduleData;
 
-    const result = await createBulkSchedulesService(locationId, validatedSchedules);
+    const result = await createBulkSchedulesService(validatedSchedules);
 
     if (result.failed.length > 0) {
       res.status(207).json({

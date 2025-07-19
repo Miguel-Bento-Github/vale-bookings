@@ -1,4 +1,5 @@
 import { ERROR_MESSAGES } from '../../constants';
+import Booking from '../../models/Booking';
 import Location from '../../models/Location';
 import Schedule from '../../models/Schedule';
 import { 
@@ -126,8 +127,9 @@ export const deleteLocation = async (locationId: string): Promise<void> => {
   
   // Check if location has active bookings
   const activeBookings = await checkDocumentExists(
-    'Booking',
-    { locationId, status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] } }
+    Booking,
+    { locationId, status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] } },
+    'Active bookings exist for this location'
   );
   
   if (activeBookings !== null) {
