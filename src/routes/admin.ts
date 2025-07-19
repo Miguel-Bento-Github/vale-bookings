@@ -22,7 +22,7 @@ import {
   createBulkSchedules,
   getAllBookings,
   updateBookingStatus,
-  getAnalyticsOverview,
+  getOverviewStats,
   getRevenueAnalytics,
   getBookingAnalytics,
   getBookingStats,
@@ -117,7 +117,7 @@ router.get('/bookings/stats', (req, res, next) => {
 
 // Admin analytics
 router.get('/analytics/overview', (req, res, next) => {
-  getAnalyticsOverview(req, res).catch(next);
+  getOverviewStats(req, res).catch(next);
 });
 router.get('/analytics/revenue', (req, res, next) => {
   getRevenueAnalytics(req, res).catch(next);
