@@ -2357,18 +2357,22 @@ describe('Controllers', () => {
 
     describe('getAllValets', () => {
       it('should get all valets successfully', async () => {
-        const mockValets = [
-          { _id: '1', email: 'valet1@example.com', role: 'VALET' },
-          { _id: '2', email: 'valet2@example.com', role: 'VALET' }
-        ];
-        (getAllValetsService as jest.Mock).mockResolvedValue(mockValets);
+        const mockResult = {
+          valets: [
+            { _id: '1', email: 'valet1@example.com', role: 'VALET' },
+            { _id: '2', email: 'valet2@example.com', role: 'VALET' }
+          ],
+          pagination: { currentPage: 1, totalPages: 1, totalItems: 2, itemsPerPage: 10 }
+        };
+        (getAllValetsService as jest.Mock).mockResolvedValue(mockResult);
 
         await getAllValets(adminRequest as unknown as AuthenticatedRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          data: mockValets
+          data: mockResult.valets,
+          pagination: mockResult.pagination
         });
       });
 

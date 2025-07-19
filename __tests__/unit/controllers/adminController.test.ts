@@ -894,13 +894,13 @@ describe('AdminController', () => {
     });
   });
 
-  describe('getAnalyticsOverview', () => {
+  describe('getOverviewStats', () => {
     it('should get analytics overview successfully', async () => {
       const mockAnalytics = {} as never;
       (mockAdminService.getOverviewStats)
         .mockResolvedValue(mockAnalytics);
 
-      await AdminController.getAnalyticsOverview(mockReq as AuthenticatedRequest, mockRes as Response);
+      await AdminController.getOverviewStats(mockReq as AuthenticatedRequest, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -914,7 +914,7 @@ describe('AdminController', () => {
       (mockAdminService.getOverviewStats)
         .mockRejectedValue(appError);
 
-      await AdminController.getAnalyticsOverview(mockReq as AuthenticatedRequest, mockRes as Response);
+      await AdminController.getOverviewStats(mockReq as AuthenticatedRequest, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -927,7 +927,7 @@ describe('AdminController', () => {
       (mockAdminService.getOverviewStats)
         .mockRejectedValue(new Error('Generic error'));
 
-      await AdminController.getAnalyticsOverview(mockReq as AuthenticatedRequest, mockRes as Response);
+      await AdminController.getOverviewStats(mockReq as AuthenticatedRequest, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({
