@@ -11,6 +11,14 @@ export function handleDuplicateKeyError(error: unknown, defaultMessage: string):
   if (error instanceof Error && 'code' in error && error.code === 11000) {
     throw new AppError(defaultMessage, 409);
   }
+  
+  // Handle Mongoose validation errors
+  if (error instanceof Error && error.name === 'ValidationError') {
+    const validationError = error as { errors: Record<string, { message: string }> };
+    const firstErrorMessage = Object.values(validationError.errors)[0]?.message || 'Validation failed';
+    throw new AppError(firstErrorMessage, 400);
+  }
+  
   throw error;
 }
 

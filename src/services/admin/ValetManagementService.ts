@@ -136,10 +136,21 @@ export const getAllValets = async (filters: IValetFilters): Promise<{
     User.countDocuments(query)
   ]);
 
+  // Add statistics for each valet
+  const valetsWithStats = await Promise.all(
+    valets.map(async (valet) => {
+      const stats = await getValetStats(String(valet._id));
+      return {
+        ...valet.toObject(),
+        statistics: stats
+      };
+    })
+  );
+
   const totalPages = Math.ceil(totalItems / limit);
 
   return {
-    valets,
+    valets: valetsWithStats as IUserDocument[],
     pagination: {
       currentPage: page,
       totalPages,

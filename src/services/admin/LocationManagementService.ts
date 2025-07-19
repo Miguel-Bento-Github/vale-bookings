@@ -126,13 +126,12 @@ export const deleteLocation = async (locationId: string): Promise<void> => {
   await ensureDocumentExists(Location, locationId, 'Location not found');
   
   // Check if location has active bookings
-  const activeBookings = await checkDocumentExists(
-    Booking,
-    { locationId, status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] } },
-    'Active bookings exist for this location'
-  );
+  const activeBooking = await Booking.findOne({
+    locationId,
+    status: { $in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] }
+  });
   
-  if (activeBookings !== null) {
+  if (activeBooking) {
     throw new AppError('Cannot delete location with active bookings', 400);
   }
   
@@ -171,7 +170,7 @@ export const createSchedule = async (scheduleData: ICreateScheduleRequest): Prom
   });
   
   if (overlapping) {
-    throw new AppError('Schedule overlaps with existing schedule', 400);
+    throw new AppError('Schedule overlaps with existing schedule', 409);
   }
   
   return await createWithDuplicateHandling(
