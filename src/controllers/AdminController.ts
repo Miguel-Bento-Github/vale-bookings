@@ -44,6 +44,7 @@ import {
 } from '../types';
 import {
   sendSuccess,
+  sendSuccessWithPagination,
   sendError,
   withErrorHandling
 } from '../utils/responseHelpers';
@@ -401,7 +402,7 @@ export const getAllValets = withErrorHandling(async (req: AuthenticatedRequest, 
   };
 
   const result = await getAllValetsService(filters);
-  sendSuccess(res, result.valets, result.pagination);
+  sendSuccessWithPagination(res, result.valets, result.pagination);
 });
 
 export const createValet = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -708,7 +709,7 @@ export const updateBookingStatus = withErrorHandling(
   });
 
 // Analytics
-export const getAnalyticsOverview = withErrorHandling(
+export const getOverviewStats = withErrorHandling(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (req.user?.role !== 'ADMIN') {
       sendError(res, 'Forbidden: access denied', 403);
