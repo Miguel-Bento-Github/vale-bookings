@@ -32,6 +32,7 @@ export const deleteLocation = LocationManagement.deleteLocation;
 // Schedule Management
 export const createSchedule = LocationManagement.createSchedule;
 export const getScheduleById = LocationManagement.getScheduleById;
+export const getAllSchedules = LocationManagement.getAllSchedules;
 export const getLocationSchedules = LocationManagement.getLocationSchedules;
 export const updateSchedule = LocationManagement.updateSchedule;
 export const deleteSchedule = LocationManagement.deleteSchedule;

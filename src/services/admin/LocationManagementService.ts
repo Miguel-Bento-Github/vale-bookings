@@ -267,3 +267,9 @@ export const createBulkSchedules = async (
   
   return { successful, failed };
 };
+
+export const getAllSchedules = async (): Promise<IScheduleDocument[]> => {
+  return await Schedule.find({})
+    .populate('locationId', 'name address')
+    .sort({ locationId: 1, dayOfWeek: 1, startTime: 1 });
+};
