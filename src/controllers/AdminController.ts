@@ -393,8 +393,8 @@ export const getAllValets = withErrorHandling(async (req: AuthenticatedRequest, 
   }
 
   const filters = {
-    page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
-    limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 10,
+    page: req.query.page !== undefined ? parseInt(req.query.page as string, 10) : 1,
+    limit: req.query.limit !== undefined ? parseInt(req.query.limit as string, 10) : 10,
     search: req.query.search as string,
     isActive: req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined,
     locationId: req.query.locationId as string

@@ -163,7 +163,10 @@ export const updateBookingStatus = async (bookingId: string, status: BookingStat
   };
 
   const currentStatus = booking.status;
-  if (currentStatus && validTransitions[currentStatus] && !validTransitions[currentStatus].includes(status)) {
+  const allowedTransitions = currentStatus 
+    ? validTransitions[currentStatus as keyof typeof validTransitions] 
+    : undefined;
+  if (currentStatus && allowedTransitions && !allowedTransitions.includes(status)) {
     throw new AppError(`Cannot transition from ${currentStatus} to ${status}`, 400);
   }
 
