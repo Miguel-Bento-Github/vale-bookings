@@ -16,16 +16,16 @@ import {
   updateLocation as updateLocationService,
   deleteLocation as deleteLocationService,
   getAllSchedules as getAllSchedulesService,
+  getLocationSchedules as getLocationSchedulesService,
   createSchedule as createScheduleService,
   updateSchedule as updateScheduleService,
   deleteSchedule as deleteScheduleService,
   createBulkSchedules as createBulkSchedulesService,
   getAllBookings as getAllBookingsService,
   updateBookingStatus as updateBookingStatusService,
-  getAnalyticsOverview as getAnalyticsOverviewService,
+  getOverviewStats as getOverviewStatsService,
   getRevenueAnalytics as getRevenueAnalyticsService,
-  getBookingAnalytics as getBookingAnalyticsService,
-  getBookingStats as getBookingStatsService
+  getBookingAnalytics as getBookingAnalyticsService
 } from '../services/AdminService';
 import {
   generateApiKey,
@@ -392,8 +392,16 @@ export const getAllValets = withErrorHandling(async (req: AuthenticatedRequest, 
     return;
   }
 
-  const valets = await getAllValetsService();
-  sendSuccess(res, valets);
+  const filters = {
+    page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
+    limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 10,
+    search: req.query.search as string,
+    isActive: req.query.isActive ? req.query.isActive === 'true' : undefined,
+    locationId: req.query.locationId as string
+  };
+
+  const result = await getAllValetsService(filters);
+  sendSuccess(res, result.valets, result.pagination);
 });
 
 export const createValet = withErrorHandling(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -707,7 +715,7 @@ export const getAnalyticsOverview = withErrorHandling(
       return;
     }
 
-    const analytics = await getAnalyticsOverviewService();
+    const analytics = await getOverviewStatsService();
     sendSuccess(res, analytics);
   });
 
@@ -744,7 +752,7 @@ export const getBookingStats = withErrorHandling(
       sendError(res, 'Forbidden: access denied', 403);
       return;
     }
-    const stats = await getBookingStatsService();
+    const stats = await getBookingAnalyticsService();
     sendSuccess(res, stats);
   });
 
