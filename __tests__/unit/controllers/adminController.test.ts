@@ -1,12 +1,12 @@
 import { Response } from 'express';
 
 import * as AdminController from '../../../src/controllers/AdminController';
-import AdminService from '../../../src/services/AdminService';
+import * as AdminService from '../../../src/services/AdminService';
 import { AppError, AuthenticatedRequest, UserRole } from '../../../src/types';
 
 jest.mock('../../../src/services/AdminService');
 
-const mockAdminService = AdminService;
+const mockAdminService = AdminService as jest.Mocked<typeof AdminService>;
 
 describe('AdminController', () => {
   let mockReq: Partial<AuthenticatedRequest>;
@@ -146,16 +146,20 @@ describe('AdminController', () => {
 
   describe('getAllValets', () => {
     it('should get all valets successfully', async () => {
-      const mockValets = [] as never[];
+      const mockResult = {
+        valets: [],
+        pagination: { currentPage: 1, totalPages: 1, totalItems: 0, itemsPerPage: 10 }
+      };
       (mockAdminService.getAllValets)
-        .mockResolvedValue(mockValets);
+        .mockResolvedValue(mockResult);
 
       await AdminController.getAllValets(mockReq as AuthenticatedRequest, mockRes as Response);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        data: mockValets
+        data: mockResult.valets,
+        pagination: mockResult.pagination
       });
     });
   });
@@ -893,7 +897,7 @@ describe('AdminController', () => {
   describe('getAnalyticsOverview', () => {
     it('should get analytics overview successfully', async () => {
       const mockAnalytics = {} as never;
-      (mockAdminService.getAnalyticsOverview)
+      (mockAdminService.getOverviewStats)
         .mockResolvedValue(mockAnalytics);
 
       await AdminController.getAnalyticsOverview(mockReq as AuthenticatedRequest, mockRes as Response);
@@ -907,7 +911,7 @@ describe('AdminController', () => {
 
     it('should handle AppError in getAnalyticsOverview', async () => {
       const appError = new AppError('Analytics error', 400);
-      (mockAdminService.getAnalyticsOverview)
+      (mockAdminService.getOverviewStats)
         .mockRejectedValue(appError);
 
       await AdminController.getAnalyticsOverview(mockReq as AuthenticatedRequest, mockRes as Response);
@@ -920,7 +924,7 @@ describe('AdminController', () => {
     });
 
     it('should handle generic error in getAnalyticsOverview', async () => {
-      (mockAdminService.getAnalyticsOverview)
+      (mockAdminService.getOverviewStats)
         .mockRejectedValue(new Error('Generic error'));
 
       await AdminController.getAnalyticsOverview(mockReq as AuthenticatedRequest, mockRes as Response);
