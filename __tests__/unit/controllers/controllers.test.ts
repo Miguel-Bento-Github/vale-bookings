@@ -18,7 +18,7 @@ import {
   createBulkSchedules,
   getAllBookings,
   updateBookingStatus as updateAdminBookingStatus,
-  getAnalyticsOverview,
+  getOverviewStats,
   getRevenueAnalytics,
   getBookingAnalytics
 } from '../../../src/controllers/AdminController';
@@ -59,7 +59,7 @@ import {
   createBulkSchedules as createBulkSchedulesService,
   getAllBookings as getAllBookingsService,
   updateBookingStatus as updateBookingStatusService,
-  getAnalyticsOverview as getAnalyticsOverviewService,
+  getOverviewStats as getOverviewStatsService,
   getRevenueAnalytics as getRevenueAnalyticsService,
   getBookingAnalytics as getBookingAnalyticsService
 } from '../../../src/services/AdminService';
@@ -2827,7 +2827,7 @@ describe('Controllers', () => {
       });
     });
 
-    describe('getAnalyticsOverview', () => {
+    describe('getOverviewStats', () => {
       it('should get analytics overview successfully', async () => {
         const mockAnalytics = {
           totalUsers: 100,
@@ -2835,9 +2835,9 @@ describe('Controllers', () => {
           totalRevenue: 1000,
           averageBookingValue: 20
         };
-        (getAnalyticsOverviewService as jest.Mock).mockResolvedValue(mockAnalytics);
+        (getOverviewStatsService as jest.Mock).mockResolvedValue(mockAnalytics);
 
-        await getAnalyticsOverview(adminRequest, mockResponse as Response);
+        await getOverviewStats(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(200);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2847,9 +2847,9 @@ describe('Controllers', () => {
       });
 
       it('should handle service errors', async () => {
-        (getAnalyticsOverviewService as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
+        (getOverviewStatsService as jest.Mock).mockRejectedValue(new AppError('Database error', 500));
 
-        await getAnalyticsOverview(adminRequest, mockResponse as Response);
+        await getOverviewStats(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
@@ -2859,9 +2859,9 @@ describe('Controllers', () => {
       });
 
       it('should handle unexpected errors', async () => {
-        (getAnalyticsOverviewService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
+        (getOverviewStatsService as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
-        await getAnalyticsOverview(adminRequest, mockResponse as Response);
+        await getOverviewStats(adminRequest, mockResponse as Response);
 
         expect(mockResponse.status).toHaveBeenCalledWith(500);
         expect(mockResponse.json).toHaveBeenCalledWith({
