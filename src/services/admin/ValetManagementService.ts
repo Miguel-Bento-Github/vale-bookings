@@ -1,12 +1,7 @@
-import mongoose from 'mongoose';
-
 import { ERROR_MESSAGES } from '../../constants';
-import Booking from '../../models/Booking';
-import Payment from '../../models/Payment';
 import User from '../../models/User';
 import { 
   IUserDocument,
-  UserRole,
   AppError,
   IPaginationOptions
 } from '../../types';

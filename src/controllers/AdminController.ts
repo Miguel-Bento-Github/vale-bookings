@@ -16,7 +16,6 @@ import {
   updateLocation as updateLocationService,
   deleteLocation as deleteLocationService,
   getAllSchedules as getAllSchedulesService,
-  getLocationSchedules as getLocationSchedulesService,
   createSchedule as createScheduleService,
   updateSchedule as updateScheduleService,
   deleteSchedule as deleteScheduleService,
@@ -397,7 +396,7 @@ export const getAllValets = withErrorHandling(async (req: AuthenticatedRequest, 
     page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
     limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 10,
     search: req.query.search as string,
-    isActive: req.query.isActive ? req.query.isActive === 'true' : undefined,
+    isActive: req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined,
     locationId: req.query.locationId as string
   };
 
@@ -630,7 +629,6 @@ export const createBulkSchedules = withErrorHandling(
       validatedScheduleData.push(scheduleWithLocation);
     }
 
-    const { locationId } = bodyObj;
     const validatedSchedules = validatedScheduleData;
 
     const result = await createBulkSchedulesService(validatedSchedules);
