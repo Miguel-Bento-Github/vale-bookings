@@ -14,8 +14,8 @@ export function handleDuplicateKeyError(error: unknown, defaultMessage: string):
   
   // Handle Mongoose validation errors
   if (error instanceof Error && error.name === 'ValidationError') {
-    const validationError = error as { errors: Record<string, { message: string }> };
-    const firstErrorMessage = Object.values(validationError.errors)[0]?.message || 'Validation failed';
+    const validationError = error as unknown as { errors: Record<string, { message: string }> };
+    const firstErrorMessage = Object.values(validationError.errors)[0]?.message ?? 'Validation failed';
     throw new AppError(firstErrorMessage, 400);
   }
   

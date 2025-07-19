@@ -150,7 +150,7 @@ export const getAllValets = async (filters: IValetFilters): Promise<{
   const totalPages = Math.ceil(totalItems / limit);
 
   return {
-    valets: valetsWithStats as IUserDocument[],
+    valets: valetsWithStats as unknown as IUserDocument[],
     pagination: {
       currentPage: page,
       totalPages,

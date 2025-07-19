@@ -16,8 +16,7 @@ import {
   standardUpdate,
   createWithDuplicateHandling,
   ensureDocumentExists,
-  safeDelete,
-  checkDocumentExists
+  safeDelete
 } from '../../utils/mongoHelpers';
 
 export interface ILocationFilters extends IPaginationOptions {
